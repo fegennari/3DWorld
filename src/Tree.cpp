@@ -47,7 +47,6 @@ vector<tree_cylin >   tree_builder_t::cylin_cache;
 vector<tree_branch>   tree_builder_t::branch_cache;
 vector<tree_branch *> tree_builder_t::branch_ptr_cache;
 
-
 bool has_any_billboard_coll(0), next_has_any_billboard_coll(0), tree_4th_branches(0);
 unsigned max_unique_trees(0);
 int tree_mode(1), tree_coll_level(2); // tree_mode: 0 = no trees, 1 = large only, 2 = small only, 3 = both large and small
@@ -91,7 +90,6 @@ colorRGBA get_avg_leaf_color(unsigned type) {
 
 // better place for this?
 struct render_to_texture_shader_t : public render_to_texture_t {
-
 	shader_t shaders[2]; // color, normal
 
 	render_to_texture_shader_t(unsigned tsize_) : render_to_texture_t(tsize_) {}
@@ -113,9 +111,8 @@ struct render_to_texture_shader_t : public render_to_texture_t {
 };
 
 struct render_tree_to_texture_t : public render_to_texture_shader_t {
-
-	tree_data_t *cur_tree;
-	render_tree_to_texture_t(unsigned tsize_) : render_to_texture_shader_t(tsize_), cur_tree(NULL) {}
+	tree_data_t *cur_tree=nullptr;
+	render_tree_to_texture_t(unsigned tsize_) : render_to_texture_shader_t(tsize_) {}
 
 	tree_type const &get_tree_type() const {
 		assert(cur_tree);
@@ -124,7 +121,6 @@ struct render_tree_to_texture_t : public render_to_texture_shader_t {
 };
 
 struct render_tree_leaves_to_texture_t : public render_tree_to_texture_t {
-
 	render_tree_leaves_to_texture_t(unsigned tsize_) : render_tree_to_texture_t(tsize_) {}
 
 	void set_other_shader_consts(bool ix) {
@@ -152,7 +148,6 @@ struct render_tree_leaves_to_texture_t : public render_tree_to_texture_t {
 };
 
 struct render_tree_branches_to_texture_t : public render_tree_to_texture_t {
-
 	render_tree_branches_to_texture_t(unsigned tsize_) : render_tree_to_texture_t(tsize_) {}
 
 	virtual void draw_geom(bool is_normal_pass) {
@@ -215,14 +210,12 @@ float get_tree_z_bottom(float z, point const &pos) {
 
 
 bool tree::is_over_mesh() const {
-
 	//if (world_mode != WMODE_GROUND) return 1; // ???
 	float const r(tdata().sphere_radius);
 	int const x1(get_xpos(tree_center.x - r)), y1(get_ypos(tree_center.y - r));
 	int const x2(get_xpos(tree_center.x + r)), y2(get_ypos(tree_center.y + r));
 	return (x1 < MESH_X_SIZE && y1 < MESH_Y_SIZE && x2 >= 0 && y2 >= 0); // completely off the mesh
 }
-
 
 void tree::add_tree_collision_objects() {
 
@@ -262,18 +255,15 @@ void tree::add_tree_collision_objects() {
 	}
 }
 
-
 void tree::remove_collision_objects() {
 	for (unsigned i = 0; i < branch_cobjs.size(); i++) {remove_reset_coll_obj(branch_cobjs[i]);}
 	for (unsigned i = 0; i < leaf_cobjs  .size(); i++) {remove_reset_coll_obj(leaf_cobjs  [i]);}
 	branch_cobjs.clear();
 	leaf_cobjs  .clear();
 }
-
 void tree_cont_t::remove_cobjs() {
 	for (iterator i = begin(); i != end(); ++i) {i->remove_collision_objects();}
 }
-
 
 bool tree::check_sphere_coll(point &center, float radius) const { // collision with the trunk
 	// 10.7% of CPU time, 4.5x slower than scenery coll
@@ -372,7 +362,6 @@ float get_plant_leaf_wind_mag(bool shadow_only) {
 }
 
 void setup_leaf_wind(shader_t &s, float wind_mag, bool underwater) {
-
 	if (wind_mag == 0.0) return;
 	s.add_uniform_float("wind_mag",   wind_mag);
 	s.add_uniform_float("wind_scale", 1.0);
@@ -467,7 +456,6 @@ void tree_cont_t::post_leaf_draw(shader_t &shader, bool shadow_only) {
 	shader.disable();
 }
 
-
 void tree_cont_t::draw(bool shadow_only, bool reflection_pass) {
 
 	if (empty()) return;
@@ -517,17 +505,13 @@ void tree_data_t::make_private_copy(tree_data_t &dest) const {
 	dest.clear_vbo_ixs();
 }
 
-
 void tree::make_private_tdata_copy() {
-
 	if (!tree_data || td_is_private()) return; // tree pointer is NULL or already private
 	tree_data->make_private_copy(priv_tree_data);
 	tree_data = NULL;
 }
 
-
 void tree::bind_to_td(tree_data_t *td) {
-
 	assert(td);
 	assert(!created); // too strong?
 	assert(leaf_cobjs.empty() && branch_cobjs.empty());
@@ -535,26 +519,21 @@ void tree::bind_to_td(tree_data_t *td) {
 	tree_data = td;
 }
 
-
 coll_obj &tree::get_leaf_cobj(unsigned i) const {
-
 	assert(i < leaf_cobjs.size());
 	return coll_objects.get_cobj(leaf_cobjs[i]);
 }
 
 
 void tree_data_t::mark_leaf_changed(unsigned ix) {
-
 	assert(ix < leaves.size());
 	leaf_change_start = min(ix,   leaf_change_start);
 	leaf_change_end   = max(ix+1, leaf_change_end);
 }
 
-
 void tree_data_t::gen_leaf_color() {leaf_color = get_leaf_base_color(tree_type)*leaf_color_coherence;}
 
 inline colorRGB tree_leaf::calc_leaf_color(colorRGBA const &leaf_color, colorRGBA const &base_color) const {
-
 	float const color(lcolor/1000.0), ilch((1.0 - leaf_color_coherence)/255.0); // scale by 255 to convert uchar to 0-1 range
 	return colorRGB(max(0.0f, (color*(leaf_color.R + ilch*lred  ) + base_color.R*tree_color_coherence)),
 		            max(0.0f, (color*(leaf_color.G + ilch*lgreen) + base_color.G*tree_color_coherence)), 0.0);
@@ -571,7 +550,6 @@ colorRGB tree_data_t::get_leaf_color(unsigned i) const {
 }
 
 void tree_data_t::update_leaf_color(unsigned i, bool no_mark_changed) {
-
 	assert(i < leaves.size());
 	color_wrapper cw(leaves[i].calc_leaf_color(leaf_color, base_color));
 	UNROLL_4X(leaf_data[i_+(i<<2)].copy_color(cw);)
@@ -584,14 +562,11 @@ void tree_data_t::update_all_leaf_colors() {
 
 
 void tree::update_leaf_cobj_color(unsigned i) {
-
 	// update cobj color so that leaf water reflection is correct (Note: not always correct with tree instancing)
 	get_leaf_cobj(i).cp.color = colorRGBA(tdata().get_leaf_color(i)).modulate_with(get_leaf_texture_color(type));
 }
 
-
 void tree::copy_color(unsigned i, bool no_mark_changed) {
-
 	if (!has_leaf_data()) return;
 	tdata().update_leaf_color(i, no_mark_changed);
 	if (!leaf_cobjs.empty()) {update_leaf_cobj_color(i);}
@@ -625,9 +600,7 @@ void tree::remove_leaf(unsigned i, bool update_data) {
 	tdata().remove_leaf_ix(i, update_data);
 }
 
-
 bool tree::spraypaint_leaves(point const &pos, float radius, colorRGBA const &color) {
-
 	if (!td_is_private()) { // using shared tdata, can't just modify the leaves, need to make a private copy if any leaf colors will be modified
 		if (!tdata().spraypaint_leaves((pos - tree_center), radius, color, 1)) return 0; // check returns false, we're done
 		make_private_tdata_copy(); // check returned true, make a private copy then go back and modify the leaf colors
@@ -682,25 +655,20 @@ void tree::burn_leaves() {
 	}
 }
 
-
 bool tree::physics_enabled() const {
 	return (created && (tree_mode & 1) && world_mode == WMODE_GROUND);
 }
-
 
 void tree::get_abs_leaf_pts(point pts[4], unsigned ix) const {
 	vector<tree_leaf> const &leaves(tdata().get_leaves());
 	UNROLL_4X(pts[i_] = leaves[ix].pts[i_]+tree_center;)
 }
 
-
 void tree::create_leaf_obj(unsigned ix) const {
-
 	point pts[4];
 	get_abs_leaf_pts(pts, ix);
 	gen_leaf_at(pts, tdata().get_leaves()[ix].norm, type, tdata().get_leaf_color(ix));
 }
-
 
 bool tree::damage_leaf(unsigned i, float damage_done, rand_gen_t &rgen) {
 
@@ -727,7 +695,6 @@ bool tree::damage_leaf(unsigned i, float damage_done, rand_gen_t &rgen) {
 	}
 	return 0;
 }
-
 
 void tree::blast_damage(blastr const *const blast_radius) {
 
@@ -794,13 +761,10 @@ void tree::apply_fire_damage(vector<fire_damage_t> const &fire_damage, unsigned 
 	damage = min(1.0f, damage);
 }
 
-
 void tree::lightning_damage(point const &ltpos) {
-
 	blastr const br(0, ETYPE_FIRE, NO_SOURCE, BURN_RADIUS, BURN_DAMAGE, ltpos, plus_z, LITN_C, LITN_C);
 	blast_damage(&br);
 }
-
 
 void tree::drop_leaves() {
 
@@ -842,9 +806,7 @@ void tree_data_t::on_leaf_color_change() {
 	render_leaf_texture.free_context();
 }
 
-
 unsigned tree_data_t::get_gpu_mem() const {
-
 	unsigned mem(branch_manager.gpu_mem + (leaf_vbo ? get_leaf_data_mem() : 0));
 	unsigned const bbsz(TREE_BILLBOARD_SIZE*TREE_BILLBOARD_SIZE*8); // 8 bytes per pixel
 	if (render_leaf_texture.is_valid  ()) {mem += bbsz;}
@@ -879,7 +841,6 @@ void tree_data_t::check_render_textures() {
 	}
 }
 
-
 void tree_data_t::pre_branch_draw(shader_t &s, bool shadow_only) {
 	glEnable(GL_CULL_FACE);
 	s.enable_vnct_atribs(1, !shadow_only, !shadow_only, 0); // vertices only in shadow_only mode
@@ -896,18 +857,14 @@ void tree_data_t::post_leaf_draw() {
 	bind_vbo(0, 0);
 }
 
-
 void tree_data_t::draw_leaf_quads_from_vbo(unsigned max_leaves) const {
-
 	check_bind_vbo(leaf_vbo);
 	leaf_vert_type_t::set_vbo_arrays(0);
 	assert(max_leaves <= leaves.size() && leaf_data.size() >= 4*leaves.size());
 	draw_quads_as_tris(4*max_leaves);
 }
 
-
 void tree_data_t::draw_leaves_shadow_only(float size_scale) {
-
 	if (leaves.empty()) return;
 	select_texture(tree_types[tree_type].leaf_tex);
 	draw_leaves(size_scale); // could disable normals and colors, but that doesn't seem to help much
@@ -987,7 +944,6 @@ void tree::draw_branches_top(shader_t &s, tree_lod_render_t &lod_renderer, bool 
 	post_transform();
 }
 
-
 void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool shadow_only, bool reflection_pass, vector3d const &xlate,
 	int wsoff_loc, int tex0_off, vector<tree *> &to_update_leaves)
 {
@@ -1051,7 +1007,6 @@ void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool sh
 
 
 template <typename T> void add_cylin_indices_tris(vector<T> &idata, unsigned ndiv, unsigned ix_start, unsigned &idix, unsigned step) {
-
 	for (unsigned S = 0; S < ndiv; S += step) {
 		bool const last_edge(S == ndiv-step);
 		unsigned const ix0(ix_start + S), ixs[4] = {0, ndiv, (last_edge ? step : step+ndiv), (last_edge ? step-ndiv : step)};
@@ -1122,9 +1077,7 @@ void tree_data_t::ensure_branch_vbo() {
 	if (num_unique_pts >= (1 << 16)) {create_branch_vbo<unsigned>();} else {create_branch_vbo<unsigned short>();}
 }
 
-
 void tree_data_t::draw_branches(float size_scale, bool force_low_detail, bool shadow_pass) {
-
 	unsigned const num((size_scale == 0.0) ? num_branch_quads : min(num_branch_quads, max((num_branch_quads/40), unsigned(1.5*num_branch_quads*size_scale*get_size_scale_mult())))); // branch LOD
 	bool low_detail(force_low_detail || (size_scale > 0.0 && size_scale < 2.0));
 	// need high detail when using 4th order branches, since otherwise they would only have ndiv=2 (zero width); but this is okay for the shadow pass
@@ -1137,9 +1090,7 @@ void tree_data_t::draw_branches(float size_scale, bool force_low_detail, bool sh
 	branch_manager.post_render();
 }
 
-
 void tree_data_t::update_normal_for_leaf(unsigned i) {
-
 	assert(i < leaves.size());
 	vector3d const &normal(leaves[i].norm); // standard leaf plane normal
 	//vector3d const &normal(leaves[i].get_center().get_norm()); // use position of leaf relative to tree center (could also mix in leaf normal)
@@ -1148,16 +1099,13 @@ void tree_data_t::update_normal_for_leaf(unsigned i) {
 	mark_leaf_changed(i);
 }
 
-
 void tree_data_t::reset_leaf_pos_norm() {
-
 	for (unsigned i = 0; i < (unsigned)leaves.size(); i++) { // process leaf points - reset to default positions and normals
 		UNROLL_4X(leaf_data[i_+(i<<2)].v = leaves[i].pts[i_];)
 		update_normal_for_leaf(i);
 	}
 	reset_leaves = 0;
 }
-
 
 void tree_data_t::ensure_leaf_vbo() {
 
@@ -1176,18 +1124,14 @@ void tree_data_t::ensure_leaf_vbo() {
 	leaf_change_end   = 0;
 }
 
-
 void tree_data_t::draw_leaves(float size_scale) {
-
 	ensure_leaf_vbo();
 	unsigned nl(leaves.size());
 	if (ENABLE_CLIP_LEAVES && size_scale > 0.0) {nl = min(nl, max((nl/8), unsigned(4.0*nl*size_scale*get_size_scale_mult())));} // leaf LOD
 	draw_leaf_quads_from_vbo(nl);
 }
 
-
 bool tree_data_t::leaf_draw_setup(bool no_leaf_reset) {
-
 	bool const gen_arrays(!leaf_data_allocated());
 	if (gen_arrays) {alloc_leaf_data();}
 	if (gen_arrays || (reset_leaves && !no_leaf_reset)) {reset_leaf_pos_norm();}
@@ -1195,7 +1139,6 @@ bool tree_data_t::leaf_draw_setup(bool no_leaf_reset) {
 	if (gen_arrays || leaf_color_changed) {update_all_leaf_colors();}
 	return gen_arrays;
 }
-
 
 void tree_data_t::bend_leaf(unsigned i, float angle) { // Note: slow
 
@@ -1214,9 +1157,7 @@ void tree_data_t::bend_leaf(unsigned i, float angle) { // Note: slow
 	reset_leaves = 1; // do we want to update the normals as well?
 }
 
-
 bool tree_data_t::check_if_needs_updated() {
-
 	bool const do_update(last_update_frame < frame_counter);
 	last_update_frame = frame_counter;
 	return do_update;
@@ -1330,7 +1271,6 @@ int tree::delete_tree() {
 }
 
 void tree_data_t::clear_data() {
-	
 	clear_context();
 	clear_cont(all_cylins);
 	clear_cont(leaf_data);
@@ -1341,7 +1281,6 @@ void tree_data_t::clear_data() {
 void copy_cylins(tree_cylin *start_cylin, int num, tree_cylin *&cur_cylin) {
 	for (int i = 0; i < num; ++i) {*cur_cylin = *(start_cylin+i); ++cur_cylin;}
 }
-
 
 void tree_builder_t::create_all_cylins_and_leaves(vector<draw_cylin> &all_cylins, vector<tree_leaf> &leaves,
 	int tree_type, float deadness, float br_scale, float nl_scale, bool has_4th_branches, int tree_size)
@@ -1422,7 +1361,6 @@ void tree_xform_t::rotate_cylin(tree_cylin &c) {
 }
 
 void tree_xform_t::set_sin_cos_terms(float deg_rotate) {
-
 	if (deg_rotate == last_deg_rotate) return; // already set
 	float const angle(deg_rotate/TO_DEG);
 	cos_term = cos(angle);
@@ -1447,14 +1385,12 @@ void tree_xform_t::rotate_pts_around_axis(point const &p, point const &rotate, f
 }
 
 void tree_xform_t::rotate_around_axis(tree_cylin const &c) {
-
 	set_sin_cos_terms(c.deg_rotate);
 	float const yv(-sin_term*c.length);
 	re_matrix.assign(-c.rotate.y*yv, c.rotate.x*yv, cos_term*c.length);
 }
 
 void tree_xform_t::gen_cylin_rotate(vector3d &rotate, vector3d &lrotate, float rotate_start) {
-
 	float temp_deg(safe_acosf(lrotate.x));
 	if (lrotate.y < 0.0) {temp_deg *= -1.0;}
 	setup_rotate(rotate, rotate_start, temp_deg);
@@ -1488,8 +1424,6 @@ bool adjust_tree_zval(point &pos, int size, int type, bool create_bush, tile_t c
 }
 
 
-//gen_tree(pos, size, ttype>=0, calc_z, 0, 1);
-//gen_tree(pos, 0, -1, 1, 1, 0);
 void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs, bool user_placed, rand_gen_t &rgen,
 	float height_scale, float br_scale_mult, float nl_scale, bool has_4th_branches, bool allow_bushes, bool force_bushes)
 {
@@ -1772,7 +1706,6 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 	return base_radius;
 }
 
-
 inline float tree_builder_t::gen_bc_size(float branch_var) {
 	return (rgen.rand_int((int)branch_var - 5, (int)branch_var + 5)/100.0)*(num_cylin_factor/ncib);
 }
@@ -1781,15 +1714,12 @@ inline float tree_builder_t::gen_bc_size2(float branch_var) {
 	return rgen.rand_int((int)branch_var - 5, (int)branch_var + 5)/100.0;
 }
 
-
 void tree_builder_t::gen_next_cylin(tree_cylin &cylin, tree_cylin &lcylin, float var, float rad_var, int level, int branch_id, bool rad_var_test) {
-
 	cylin.assign_params(level, branch_id, lcylin.r2, (rad_var_test ? lcylin.r1*gen_bc_size(rad_var) : 0.0f),
 		((level == 4) ? branch_4_length*var : lcylin.length*gen_bc_size(var)), lcylin.deg_rotate);
 	rotate_around_axis(lcylin);
 	cylin.p1 = lcylin.p1 + BRANCH_LEN_SCALE*re_matrix;
 }
-
 
 void tree_builder_t::gen_first_cylin(tree_cylin &cylin, tree_cylin &src_cylin, float bstart, float rad_var, float rotate_start, int level, int branch_id) {
 
@@ -1806,7 +1736,6 @@ void tree_builder_t::gen_first_cylin(tree_cylin &cylin, tree_cylin &src_cylin, f
 	deg_rotate += src_cylin.deg_rotate;
 	cylin.assign_params(level, branch_id, radius1, radius1*gen_bc_size2(rad_var), bstart*src_cylin.length*(num_cylin_factor/ncib), deg_rotate);
 }
-
 
 void tree_builder_t::create_1_order_branch(int base_cylin_num, float rotate_start, int branch_num) {
 
@@ -1876,7 +1805,6 @@ void tree_builder_t::create_1_order_branch(int base_cylin_num, float rotate_star
 	} // for j
 }
 
-
 void tree_builder_t::create_2nd_order_branch(int i, int j, int cylin_num, bool branch_deflected, int rotation) {
 	
 	int index(0), num_3_branches_created(0);
@@ -1932,7 +1860,6 @@ void tree_builder_t::create_2nd_order_branch(int i, int j, int cylin_num, bool b
 	num_34_branches[0] += num_3_branches_created;
 }
 
-
 void tree_builder_t::create_3rd_order_branch(int i, int j, int cylin_num, int branch_num, bool branch_deflected, int rotation) {
 	
 	int index(0);
@@ -1962,7 +1889,6 @@ void tree_builder_t::create_3rd_order_branch(int i, int j, int cylin_num, int br
 	}
 }
 
-
 void tree_builder_t::gen_b4(tree_branch &branch, int &branch_num, int num_4_branches, int i, int k) {
 
 	int ncib(branch.num_cylins);
@@ -1981,7 +1907,6 @@ void tree_builder_t::gen_b4(tree_branch &branch, int &branch_num, int num_4_bran
 		}
 	}
 }
-
 
 void tree_builder_t::create_4th_order_branches(int nbranches, float branch_scale) {
 
@@ -2004,7 +1929,6 @@ void tree_builder_t::create_4th_order_branches(int nbranches, float branch_scale
 	}
 	num_34_branches[1] = branch_num;
 }
-
 
 void tree_builder_t::generate_4th_order_branch(tree_branch &src_branch, int j, float rotate_start, float temp_deg, int branch_num) {
 	
@@ -2038,12 +1962,10 @@ void tree_builder_t::generate_4th_order_branch(tree_branch &src_branch, int j, f
 
 
 void tree_leaf::create_init_color(rand_gen_t &rgen) {
-
 	lcolor = 1000;
 	lred   = rgen.rand() & 255;
 	lgreen = rgen.rand() & 255;
 }
-
 
 void tree_builder_t::add_leaves_to_cylin(unsigned cylin_ix, int tree_type, float rel_leaf_size, float deadness, vector<tree_leaf> &leaves) {
 
@@ -2079,10 +2001,9 @@ void tree_builder_t::add_leaves_to_cylin(unsigned cylin_ix, int tree_type, float
 	} // for l
 }
 
-
 int tree_builder_t::generate_next_cylin(int cylin_num, int ncib, bool branch_just_created, bool &branch_deflected) {
 
-	//vars used in generating deg_rotate for cylinders
+	// vars used in generating deg_rotate for cylinders
 	float const PI_16(PI/16.0);
 	float const t_start(TWO_PI/rgen.rand_int(3,8)); //start in the first pi
 	float const t_end(((rgen.rand_int(1,3) == 1) ? 1.0f : 5.0f)*PI_TWO + rgen.rand_int(2,8)*PI_16); //either PI/2 to PI or 5*PI/2 to 3*PI - controls branch droopiness
@@ -2129,7 +2050,6 @@ unsigned tree_cont_t::scroll_trees(int ext_x1, int ext_x2, int ext_y1, int ext_y
 	return nkeep;
 }
 
-
 void tree_cont_t::post_scroll_remove() {
 
 	for (unsigned i = 0; i < size(); ++i) {
@@ -2144,7 +2064,6 @@ void tree_cont_t::post_scroll_remove() {
 		}
 	}
 }
-
 
 void tree_cont_t::gen_deterministic(int x1, int y1, int x2, int y2, float vegetation_, float mesh_dz, tile_t const *const cur_tile) { // default full tile generation function
 	gen_trees_tt_within_radius(x1, y1, x2, y2, all_zeros, 0.0, 0, mesh_dz, cur_tile, vegetation_, 1); // not using bounding sphere
@@ -2371,9 +2290,7 @@ bool tree_cont_t::update_zvals(int x1, int y1, int x2, int y2) {
 	return updated;
 }
 
-
 void tree_cont_t::spraypaint_leaves(point const &pos, float radius, colorRGBA const &color) {
-
 	for (iterator i = begin(); i != end(); ++i) {
 		if (dist_less_than(pos, i->sphere_center(), (radius + i->get_radius()))) {i->spraypaint_leaves(pos, radius, color);}
 	}
@@ -2502,7 +2419,6 @@ void clear_tree_context() {
 unsigned const MAX_BRANCH_BURN_LEVEL = 3;
 
 void tree::add_fire(point const &pos, float radius, float val, bool spread_mode) {
-
 	if (spread_mode && tree_fire != nullptr && tree_fire->is_burning()) return; // this tree is already on fire
 	if (val < 100.0 && !spread_mode) return; // too small optimization
 	if (!enable_grass_fire || !physics_enabled()) return;
@@ -2541,9 +2457,7 @@ void draw_tree_fires(shader_t &s) {t_trees.draw_fire(s);}
 bool any_trees_on_fire() {return t_trees.has_any_fire();}
 
 
-tree_fire_t::tree_fire_t(vector<draw_cylin> const &branches_, point const &tree_center_, float tree_base_radius) :
-	branches(branches_), tree_center(tree_center_), update_ix(0), has_fire(0)
-{
+tree_fire_t::tree_fire_t(vector<draw_cylin> const &branches_, point const &tree_center_, float tree_base_radius) : branches(branches_), tree_center(tree_center_) {
 	rand_gen_t rgen;
 	unsigned num(branches.size());
 

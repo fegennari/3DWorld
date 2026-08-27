@@ -191,9 +191,7 @@ void update_tiled_grass_colors() {grass_tile_manager.clear();} // regenerate gra
 
 // *** heightmap management ***
 
-
 class tiled_terrain_hmap_manager_t : public terrain_hmap_manager_t {
-
 	tile_t *cur_tile=nullptr;
 	bool modified[3][3];
 
@@ -279,15 +277,12 @@ float get_tiled_terrain_height_tex(float xval, float yval, bool nearest_texel) {
 vector3d get_tiled_terrain_height_tex_norm(int x, int y) {return terrain_hmap_manager.get_norm(x, y);}
 
 bool read_default_hmap_modmap() {
-
 	if (read_hmap_modmap_fn.empty()) return 0;
 	if (!terrain_hmap_manager.read_and_apply_mod(read_hmap_modmap_fn)) return 0;
 	cout << "Read heightmap modmap " << read_hmap_modmap_fn << endl;
 	return 1;
 }
-
 bool write_default_hmap_modmap() {
-
 	if (write_hmap_modmap_fn.empty()) return 0;
 	if (!terrain_hmap_manager.write_mod(write_hmap_modmap_fn)) return 0;
 	cout << "Wrote heightmap modmap " << write_hmap_modmap_fn << endl;
@@ -317,7 +312,6 @@ float tile_t::get_draw_priority() const {
 	return (p2p_dist_xy(get_camera_pos(), get_center()) + (is_visible() ? 0.0 : FAR_CLIP)); // prioritize visible tiles
 }
 
-
 void tile_t::update_terrain_params() { // setup biomes
 
 	float const dirt_mult(1.0), veg_mult(5.0);
@@ -340,7 +334,6 @@ void tile_t::update_terrain_params() { // setup biomes
 	}
 }
 
-
 // used to determine what adjacent tiles modifying this location in global space can affect
 void tile_t::fill_adj_mask(bool mask[3][3], int x, int y) const { // mask is {y-1, y, y+1} x {x-1, x, x+1}
 
@@ -349,7 +342,6 @@ void tile_t::fill_adj_mask(bool mask[3][3], int x, int y) const { // mask is {y-
 	if (x >= x2) {mask[1][2] |= 1; mask[0][2] |= (y <= y1); mask[2][2] |= (y >= y2);} // right + top/bottom right corners
 	mask[0][1] |= (y <= y1); mask[2][1] |= (y >= y2); // top/bottom edges
 }
-
 
 float tile_t::get_min_dist_to_pt(point const &pt, bool xy_only, bool mesh_only) const {
 
@@ -366,7 +358,6 @@ float tile_t::get_min_dist_to_pt(point const &pt, bool xy_only, bool mesh_only) 
 float tile_t::get_bsphere_radius_inc_water() const {
 	return ((is_water_enabled() && mzmax < water_plane_z) ? max(radius, (water_plane_z - 0.5f*(mzmin + mzmax))) : radius); // include water
 }
-
 
 size_t tile_t::get_gpu_mem() const {
 
@@ -397,7 +388,6 @@ unsigned tile_t::get_tree_cpu_mem() const { // only accounts for top-level class
 unsigned tile_t::get_tree_gpu_mem() const { // Note: decid_trees instances are already accounted for by tree_data_manager
 	return (pine_trees.get_gpu_mem() /*+ decid_trees.get_gpu_mem()*/ + pine_trees.palm_vbo_mem);
 }
-
 
 void tile_t::clear() {
 
@@ -720,7 +710,6 @@ void tile_t::proc_tile_queue(tile_t *init_tile, unsigned l) {
 	} // end while()
 }
 
-
 void tile_t::calc_shadows(bool calc_sun, bool calc_moon, bool no_push) {
 
 	bool calc_light[NUM_LIGHT_SRC] = {};
@@ -736,15 +725,12 @@ void tile_t::calc_shadows(bool calc_sun, bool calc_moon, bool no_push) {
 	}
 }
 
-
 void tile_t::push_tree_ao_shadow(int dx, int dy, point const &pos, float tradius) const {
-
 	tile_t *const adj_tile(get_adj_tile_smap(dx, dy));
 	if (!adj_tile || adj_tile->is_distant) return;
 	point const pos2(pos + mesh_off.subtract_from(adj_tile->mesh_off));
 	adj_tile->add_tree_ao_shadow(pos2, tradius, 1);
 }
-
 
 void tile_t::add_tree_ao_shadow(point const &pos, float tradius, bool no_adj_test) {
 
@@ -816,7 +802,6 @@ void tile_t::apply_ao_shadows_for_trees(tile_t const *const tile, bool no_adj_te
 	}
 }
 
-
 void tile_t::apply_tree_ao_shadows() { // should this generate a float or unsigned char shadow weight instead?
 
 	if (is_distant) return; // not needed/used
@@ -826,7 +811,6 @@ void tile_t::apply_tree_ao_shadows() { // should this generate a float or unsign
 	bool const no_adj_test(trmax < min(DX_VAL, DY_VAL));
 	apply_ao_shadows_for_trees(this, no_adj_test);
 }
-
 
 void tile_t::check_shadow_map_and_normal_texture(bool no_push) {
 
@@ -864,7 +848,6 @@ void create_or_update_texture(unsigned &tid, bool tid_is_valid, unsigned tsize, 
 
 void tile_t::upload_normal_texture(bool tid_is_valid) {
 
-	//timer_t timer("Create Normal Texture");
 	vector<unsigned char> normal_data(4*stride*stride, 0);
 	min_normal_z = 1.0;
 
@@ -881,7 +864,6 @@ void tile_t::upload_normal_texture(bool tid_is_valid) {
 
 void tile_t::upload_shadow_map_texture(bool tid_is_valid) {
 
-	//timer_t timer("Create Shadow Map Texture");
 	bool const has_sun(light_factor >= 0.4), has_moon(light_factor <= 0.6), mesh_shadows(mesh_shadows_enabled());
 	vector<unsigned char> shadow_data(4*stride*stride, 0);
 	vector<unsigned char> const &cur_smask(smask[has_sun ? (unsigned)LIGHT_SUN : (unsigned)LIGHT_MOON]);
@@ -1034,9 +1016,7 @@ void tile_t::clear_shadow_map(tile_shadow_map_manager *smap_manager) {
 
 // *** mesh creation ***
 
-
 void tile_t::ensure_height_tid() {
-
 	if (height_tid || is_distant) return; // already exists, or tile is distant and height_tid is unnecessary
 	assert(zvals.size() == zvsize*zvsize);
 	setup_texture(height_tid, 0, 0, 0, 0, 0);
@@ -1060,7 +1040,6 @@ void get_texture_ixs(int &sand_tex_ix, int &dirt_tex_ix, int &grass_tex_ix, int 
 	}
 	assert(sand_tex_ix >= 0 && dirt_tex_ix >= 0 && grass_tex_ix >= 0 && rock_tex_ix >= 0 && snow_tex_ix >= 0);
 }
-
 
 bool check_region_int(cube_t const &region, vect_cube_t const &cubes) { // has_bcube_int_xy(), but without pad
 	for (cube_t const &c : cubes) {
@@ -1350,7 +1329,6 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 	create_or_update_weight_tex(); // create
 }
 
-
 void tile_t::add_grass_block_at(unsigned x, unsigned y, float mhmin, float mhmax, unsigned grass_block_dim) {
 
 	if (is_distant || x >= size || y >= size || !gen_grass_map()) return;
@@ -1369,7 +1347,6 @@ void tile_t::add_grass_block_at(unsigned x, unsigned y, float mhmin, float mhmax
 		max_eq(gb.zmax, mhmax);
 	}
 }
-
 
 void tile_t::create_or_update_weight_tex() {
 
@@ -1401,7 +1378,6 @@ void tile_t::create_or_update_weight_tex() {
 	avg_mesh_tex_color  = (avg_mesh_tex_color*0.2 + WHITE*0.8); // 20% tinted
 }
 
-
 bool tile_t::update_range(tile_shadow_map_manager &smap_manager) { // if returns 0, tile will be deleted
 
 	update_pine_tree_state(0, 0); // can free pine tree vbos
@@ -1428,7 +1404,6 @@ bool tile_t::can_have_decid_trees() const {
 }
 
 void tile_t::init_pine_tree_draw() {
-
 	float const density[4] = {params[0][0].veg, params[0][1].veg, params[1][0].veg, params[1][1].veg};
 	ptree_off.set_from_xyoff2();
 	if (enable_instanced_pine_trees()) {pine_trees.enable_instanced();}
@@ -1466,7 +1441,6 @@ void tile_t::draw_pine_trees(shader_t &s, vector<tile_t *> &to_draw_trunk_pts, b
 	bool draw_far_leaves, bool shadow_pass, bool reflection_pass, bool enable_smap, int xlate_loc)
 {
 	if (pine_trees.empty() || /*!can_have_pine_palm_trees()*/!can_have_trees()) return; // Note: skip water check for palm trees
-	//timer_t timer("Draw Pine Trees");
 	point const camera(get_camera_pos());
 	vector3d const xlate(ptree_off.get_xlate());
 	vector2d const camera_xlate(xlate.x-camera.x, xlate.y-camera.y);
@@ -1526,12 +1500,10 @@ void tile_t::draw_pine_trees(shader_t &s, vector<tile_t *> &to_draw_trunk_pts, b
 }
 
 void tile_t::draw_trunk_pts(shader_t &s) {
-
 	assert(!pine_trees.empty());
 	s.add_uniform_vector3d("xlate", ptree_off.get_xlate());
 	pine_trees.draw_trunk_pts();
 }
-
 
 void tile_t::gen_decid_trees_if_needed() {
 
@@ -1566,7 +1538,6 @@ void tile_t::draw_decid_trees(shader_t &s, tree_lod_render_t &lod_renderer, bool
 // *** scenery/grass/flowers ***
 
 void tile_t::update_scenery() {
-
 	if (!scenery_enabled() || is_distant) return; // no scenery
 	float const dist_scale(get_scenery_dist_scale(0)); // tree_dist_scale should correlate with mesh scale
 	if (scenery.generated && dist_scale > 1.2) {scenery.clear();} // too far away
@@ -1578,7 +1549,6 @@ void tile_t::update_scenery() {
 }
 
 void tile_t::draw_scenery(shader_t &s, shader_t &vrs, bool draw_opaque, bool draw_leaves, bool reflection_pass, bool shadow_pass, bool enable_shadow_maps) {
-
 	if (!scenery.generated || get_scenery_dist_scale(reflection_pass) > 1.0) return;
 	//timer_t timer("Draw Scenery");
 	fgPushMatrix();
@@ -1592,7 +1562,6 @@ void tile_t::draw_scenery(shader_t &s, shader_t &vrs, bool draw_opaque, bool dra
 }
 
 void tile_t::pre_draw_grass_flowers(shader_t &s, bool use_cloud_shadows) const {
-
 	assert(height_tid > 0);
 	assert(normal_tid > 0);
 	assert(shadow_tid > 0);
@@ -1664,7 +1633,6 @@ unsigned tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool 
 }
 
 unsigned tile_t::draw_flowers(shader_t &s, bool use_cloud_shadows) {
-
 	if (!has_grass()) return 0; // no grass, no flowers
 	float const flower_thresh(FLOWER_REL_DIST*get_grass_thresh_pad());
 	if (get_min_dist_to_pt(get_camera_pos()) > flower_thresh) return 0; // too far away to draw
@@ -1708,7 +1676,6 @@ void tile_cloud_t::draw(vpc_shader_t &s, vector3d const &xlate, float alpha_mult
 }
 
 void tile_cloud_manager_t::gen_new_cloud() {
-
 	push_back(tile_cloud_t());
 	tile_cloud_t &c(back());
 	c.pos   = rgen.gen_rand_cube_point(range);
@@ -1720,7 +1687,6 @@ void tile_cloud_manager_t::gen_new_cloud() {
 }
 
 void tile_cloud_manager_t::gen(int x1, int y1, int x2, int y2) {
-
 	if (generated) return; // already generated
 	generated = 1;
 	rgen.set_state(x1+123, y1+321);
@@ -1735,7 +1701,6 @@ void tile_cloud_manager_t::choose_num_clouds() { // this tile will always create
 }
 
 void tile_cloud_manager_t::populate_clouds() {
-
 	assert(empty());
 	bcube.set_to_zeros();
 	reserve(num_clouds);
@@ -1743,9 +1708,7 @@ void tile_cloud_manager_t::populate_clouds() {
 }
 
 void tile_cloud_manager_t::try_add_cloud(tile_cloud_t const &cloud) {
-
 	if (!generated) return;
-	//assert(range.contains_pt(cloud.pos)); // TESTING
 	push_back(cloud);
 	update_bcube(cloud);
 }
@@ -1820,7 +1783,6 @@ void tile_cloud_manager_t::get_draw_list(cloud_draw_list_t &clouds_to_draw, floa
 }
 
 unsigned tile_t::update_tile_clouds() {
-
 	if (animate2) {clouds.move_by_wind(*this);}
 	clouds.gen(x1, y1, x2, y2);
 	return clouds.size();
@@ -1896,16 +1858,13 @@ void tile_t::update_animals() {
 
 // *** rendering ***
 
-
 void tile_t::pre_draw(mesh_xy_grid_cache_t &height_gen) {
-
 	assert(!zvals.empty());
 	if (tree_map.empty() && any_trees_enabled()) {apply_tree_ao_shadows();}
 	if (weight_tid == 0 || recalc_tree_grass_weights) {create_texture(height_gen);}
 	check_shadow_map_and_normal_texture();
 	ensure_height_tid();
 }
-
 
 unsigned tile_t::get_lod_level(int reflection_pass) const {
 
@@ -1967,9 +1926,7 @@ bool tile_t::try_bind_shadow_map(shader_t &s, bool check_only, unsigned *lod_lev
 	return 1;
 }
 
-
 void tile_t::bind_textures() const {
-
 	assert(weight_tid > 0);
 	assert(height_tid > 0);
 	assert(normal_tid > 0);
@@ -2016,7 +1973,6 @@ void crack_ibuf_t::gen_offsets(vector<unsigned> &indices, unsigned size) {
 	} // for dim
 }
 
-
 unsigned crack_ibuf_t::get_index(unsigned dim, unsigned dir, unsigned cur_lod, unsigned adj_lod) const {
 	assert(dim < 2 && dir < 2 && cur_lod < NUM_LODS && adj_lod < NUM_LODS);
 	return (NUM_LODS*(NUM_LODS*(2*dim + dir) + cur_lod) + adj_lod);
@@ -2024,7 +1980,6 @@ unsigned crack_ibuf_t::get_index(unsigned dim, unsigned dir, unsigned cur_lod, u
 
 
 void tile_t::draw_mesh_vbo(indexed_vbo_manager_t const &vbo_mgr, unsigned const ivbo_ixs[NUM_LODS+1], unsigned lod_level) const {
-
 	assert(size > 0);
 	unsigned const start_ix(ivbo_ixs[lod_level]), end_ix(ivbo_ixs[lod_level+1]), num_ixs(end_ix - start_ix);
 	assert(start_ix < end_ix);
@@ -2079,7 +2034,6 @@ void tile_t::draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned co
 }
 
 void tile_t::draw_shadow_pass(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned const ivbo_ixs[NUM_LODS+1], int xlate_loc) { // not const because creates height_tid
-
 	if (inside_city == 2) return; // don't need to draw terrain if fully inside a city
 	ensure_height_tid();
 	s.set_uniform_vector3d(xlate_loc, get_mesh_xlate());
@@ -2088,7 +2042,6 @@ void tile_t::draw_shadow_pass(shader_t &s, indexed_vbo_manager_t const &vbo_mgr,
 	draw_mesh_vbo(vbo_mgr, ivbo_ixs, 0); // LOD is always 0
 	bind_vbo(0, 0); // unbind vertex buffer
 }
-
 
 void tile_t::draw_water_cap(shader_t &s, bool textures_already_set) const {
 
@@ -2127,7 +2080,6 @@ void tile_t::draw_water_cap(shader_t &s, bool textures_already_set) const {
 	}
 }
 
-
 bool tile_t::is_water_visible() const {
 	return (!is_distant && has_water() && rel_dist_to_camera_xy_lt(DRAW_DIST_TILES) && is_visible());
 }
@@ -2140,7 +2092,6 @@ void tile_t::draw_water(shader_t &s, float z) const {
 	bind_and_setup_shadow_map(s); // okay if shadow maps haven't been created yet
 	draw_one_tquad(xv1, yv1, xv2, yv2, z, (use_water_plane_tess() ? GL_PATCHES : GL_TRIANGLE_FAN));
 }
-
 
 bool tile_t::check_sphere_collision(point &pos, float sradius, bool inc_dtrees, bool inc_ptrees, bool inc_scenery) const { // pos is in camera space
 
@@ -2170,7 +2121,6 @@ bool tile_t::check_cube_int_trees(cube_t const &c) const { // cube is in camera 
 	if (decid_trees.empty()) return 0;
 	return decid_trees.check_cube_int(c - dtree_off.get_xlate());
 }
-
 
 bool tile_t::line_intersect_mesh(point const &v1, point const &v2, float &t, int &xpos, int &ypos, float inc_trees) const {
 
@@ -2218,9 +2168,7 @@ bool tile_t::line_intersect_mesh(point const &v1, point const &v2, float &t, int
 // *** lightning_strike_t ***
 
 point lightning_strike_t::get_pos() const {
-
 	assert(path.points.size() >= 2);
-	//return path.points[path.points.size()-2];
 	point avg_pos;
 	for (point const &p : path.points) {avg_pos += p;}
 	return avg_pos / path.points.size();
@@ -2283,13 +2231,11 @@ void lightning_strike_t::end_draw() const {
 
 // *** tile_draw_t ***
 
-
 tile_draw_t::tile_draw_t() : lod_renderer(USE_TREE_BILLBOARDS) {
 	assert(MESH_X_SIZE == MESH_Y_SIZE && X_SCENE_SIZE == Y_SCENE_SIZE);
 }
 
 void tile_draw_t::clear(bool no_regen_buildings) {
-
 	clear_vbos_tids(); // needed to clear vbo, ivbo, and free list
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->clear();} // may not be necessary
 	to_draw.clear();
@@ -2465,7 +2411,6 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 		--num_shadow_updates;
 	}
 	// Note: we could regen trees and scenery if water was just turned on to remove underwater vegetation
-	//if ((GET_TIME_MS() - timer1) > 100) {PRINT_TIME("Tiled Terrain Update");}
 	return terrain_zmin;
 }
 
@@ -2506,14 +2451,11 @@ colorRGBA get_avg_color_for_landscape_tex(unsigned id) {
 
 
 void setup_tt_fog_pre(shader_t &s) {
-
 	s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
 	if (nonunif_fog_enabled()) {s.set_prefix("#define USE_NONUNIFORM_FOG", 1);} // FS
 	if (volume_lighting && is_cloudy && light_factor >= 0.6) {s.set_prefix("#define GOD_RAYS", 1);} // FS (sun out and cloudy)
 }
-
 void setup_tt_fog_post(shader_t &s) {
-
 	s.setup_fog_scale();
 	s.add_uniform_float("fog_bot", get_tt_fog_top());
 	s.add_uniform_float("fog_top", get_tt_fog_bot());
@@ -2521,14 +2463,12 @@ void setup_tt_fog_post(shader_t &s) {
 }
 
 void tile_draw_t::shared_shader_lighting_setup(shader_t &s, unsigned lighting_shader) {
-
 	s.setup_enabled_lights(3, (1 << lighting_shader)); // sun, moon, and lightning
 	if (!underwater && clouds_enabled()) {s.set_prefix("#define FOG_FADE_TO_TRANSPARENT", 1);} // FS - fade distant hills into background clouds
 	setup_tt_fog_pre(s);
 }
 
 void tile_draw_t::lighting_with_cloud_shadows_setup(shader_t &s, unsigned lighting_shader, bool cloud_shadows) {
-
 	shared_shader_lighting_setup(s, lighting_shader);
 	s.set_prefix("#define NUM_OCTAVES 4", lighting_shader); // for clouds
 	if (cloud_shadows) {s.set_prefix("#define APPLY_CLOUD_SHADOWS", lighting_shader);}
@@ -2537,7 +2477,6 @@ void tile_draw_t::lighting_with_cloud_shadows_setup(shader_t &s, unsigned lighti
 float get_cloud_coverage(float cloud_cover_factor) {return (is_cloudy ? 1.0 : (cloud_cover + cloud_cover_factor*(1.0 - cloud_cover)));}
 
 void setup_cloud_plane_uniforms(shader_t &s, float cloud_cover_factor=0.535, bool match_cloud_layer=0) {
-
 	float cloud_zmax;
 	if (match_cloud_layer) {cloud_zmax = get_cloud_zmax();} // follows the camera zval - matches the drawn cloud layer but moves clouds on the terrain
 	else {cloud_zmax = 0.5f*(zmin + zmax) + max(zmax, CLOUD_CEILING);} // fixed z value - independent of camera z so stays in place, but disagrees with drawn clouds
@@ -2548,7 +2487,6 @@ void setup_cloud_plane_uniforms(shader_t &s, float cloud_cover_factor=0.535, boo
 }
 
 void set_tile_xy_vals(shader_t &s) {
-
 	float const inv_scale(1.0/(get_tile_size() + 1.0));
 	s.add_uniform_float("x1", -0.5*DX_VAL);
 	s.add_uniform_float("y1", -0.5*DY_VAL);
@@ -2557,7 +2495,6 @@ void set_tile_xy_vals(shader_t &s) {
 }
 
 void setup_tile_shader_shadow_map(shader_t &s) {
-
 	for (unsigned i = 0; i < NUM_LIGHT_SRC; ++i) {
 		string sm_tex_str("sm_tex");
 		s.add_uniform_int(append_ix(sm_tex_str, i, 0), TILE_SMAP_START_TU_ID+i);
@@ -2625,7 +2562,6 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass, boo
 	s.add_uniform_float("triplanar_texture_scale", 1.0f/(X_SCENE_SIZE + Y_SCENE_SIZE));
 }
 
-
 bool tile_draw_t::can_have_reflection_recur(tile_t const *const tile, point const corners[3], unsigned dim_ix) {
 
 	point const camera(get_camera_pos());
@@ -2659,7 +2595,6 @@ bool tile_draw_t::can_have_reflection_recur(tile_t const *const tile, point cons
 	tile->vis_ref_call = 0;
 	return ret;
 }
-
 
 bool tile_draw_t::can_have_reflection(tile_t const *const tile) {
 
@@ -2732,7 +2667,6 @@ uint64_t tile_draw_t::show_debug_stats(bool calc_mem_only) const {
 	show_gpu_mem_info(); // shows total and available video memory
 	return tot_mem;
 }
-
 
 void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 
@@ -2816,9 +2750,7 @@ void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 	for (tile_t *t : to_update_shadows) {t->setup_shadow_maps(smap_manager, 0);} // cleanup_only=0
 }
 
-
 void tile_draw_t::occluder_pts_t::calc_cube_top_points(cube_t const &bcube) { // copied from cube_t::get_points()
-
 	unsigned i[3] = {0,0,1};
 
 	for (i[0] = 0; i[0] < 2; ++i[0]) {
@@ -2932,7 +2864,6 @@ void tile_draw_t::draw(int reflection_pass) { // reflection_pass: 0=none, 1=wate
 }
 
 void tile_draw_t::end_lightning() const {lightning_strike.end_draw();} // in case it was enabled
-
 
 void tile_draw_t::draw_tiles(int reflection_pass, bool enable_shadow_map) const {
 
@@ -3056,7 +2987,6 @@ void tile_draw_t::draw_shadow_pass(point const &lpos, tile_t *tile, bool decid_t
 	camera_pdu.near_ = orig_near_plane;
 }
 
-
 void tile_draw_t::draw_smap_debug_vis() const {
 	cout << "smap sizes: ";
 	shader_t s;
@@ -3068,7 +2998,6 @@ void tile_draw_t::draw_smap_debug_vis() const {
 	cout << endl;
 }
 
-
 void tile_draw_t::draw_water(shader_t &s, float zval) const {
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->draw_water(s, zval);}
 }
@@ -3078,7 +3007,6 @@ colorRGBA get_color_scale(float mag=1.0, float cloud_cover_factor=0.0) {
 	float const lcscale(mag*(cloud_shadows_enabled() ? (1.0 - 0.5*get_cloud_coverage(cloud_cover_factor)) : 1.0)); // cloud scale is nominally 0.75 with cloud_cover_factor=0.5
 	return colorRGBA(lcscale, lcscale, lcscale, 1.0);
 }
-
 
 /*static*/ void tile_draw_t::set_noise_tex(shader_t &s, unsigned tu_id) {
 	select_texture(DITHER_NOISE_TEX, tu_id);
@@ -3105,14 +3033,11 @@ colorRGBA get_color_scale(float mag=1.0, float cloud_cover_factor=0.0) {
 	check_gl_error(302);
 }
 
-
 void tile_draw_t::draw_pine_tree_bl(shader_t &s, bool branches, bool near_leaves, bool far_leaves, bool shadow_pass, bool reflection_pass, bool enable_smap, int xlate_loc) {
-
 	for (unsigned i = 0; i < to_draw.size(); ++i) { // near leaves
 		to_draw[i].second->draw_pine_trees(s, to_draw_trunk_pts, branches, near_leaves, far_leaves, shadow_pass, reflection_pass, enable_smap, xlate_loc);
 	}
 }
-
 
 void tile_draw_t::draw_pine_trees(bool reflection_pass, bool shadow_pass) { // and palm trees
 
@@ -3190,17 +3115,13 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass, bool shadow_pass) { // a
 	to_draw_trunk_pts.clear();
 }
 
-
 void tile_draw_t::draw_decid_tree_bl(shader_t &s, tree_lod_render_t &lod_renderer, bool branches, bool leaves, bool reflection_pass, bool shadow_pass, bool enable_smap) {
-
 	for (unsigned i = 0; i < to_draw.size(); ++i) { // near leaves
 		to_draw[i].second->draw_decid_trees(s, lod_renderer, branches, leaves, reflection_pass, shadow_pass, enable_smap);
 	}
 }
 
-
 void tile_draw_t::billboard_tree_shader_setup(shader_t &s) {
-
 	shared_shader_lighting_setup(s, 1);
 	s.begin_shader();
 	setup_tt_fog_post(s);
@@ -3209,7 +3130,6 @@ void tile_draw_t::billboard_tree_shader_setup(shader_t &s) {
 	s.add_uniform_int("tc_start_ix", 0);
 	set_tree_dither_noise_tex(s, 2); // TU=2
 }
-
 
 void tile_draw_t::tree_branch_shader_setup(shader_t &s, bool enable_shadow_maps, bool enable_opacity, bool shadow_only, bool enable_dlights) {
 
@@ -3245,7 +3165,6 @@ void tile_draw_t::tree_branch_shader_setup(shader_t &s, bool enable_shadow_maps,
 		set_city_lighting_shader_opts(s, lights_bcube, 1, 0); // will reset some values
 	}
 }
-
 
 void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 
@@ -3318,7 +3237,6 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 	if (!reflection_pass) {leaf_color_changed = 0;} // Note: only trees in visible tiles will be updated
 }
 
-
 void tile_draw_t::draw_scenery(bool reflection_pass, bool shadow_pass) {
 
 	bool const enable_shadow_maps(!shadow_pass && shadow_map_enabled());
@@ -3365,7 +3283,6 @@ void tile_draw_t::setup_grass_flower_shader(shader_t &s, bool enable_wind, bool 
 		s.add_uniform_vector4d("clip_box2", vec4_from_cube_xy(grass_exclude2)); // can be zero area
 	}
 }
-
 
 // tu's used: 0: grass, 1: wind noise, 2: heightmap, 3: grass weight, 4: normal map, 5: noise, 6: shadow map, 9: cloud noise
 void tile_draw_t::draw_grass(bool reflection_pass) {
@@ -3455,7 +3372,6 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 	if (DEBUG_TILES) {cout << "grass blades drawn: " << num_grass_drawn << ", flowers drawn: " << num_flowers_drawn << endl;} // up to 2M / 100K
 }
 
-
 void tile_draw_t::draw_animals(bool reflection_pass) {
 
 	shader_t s;
@@ -3504,7 +3420,6 @@ void tile_draw_t::draw_tile_clouds(bool reflection_pass) { // reflection_pass is
 	s.end_shader();
 }
 
-
 void tile_draw_t::update_lightning(bool reflection_pass) {
 	if (!reflection_pass) {lightning_strike.update();}
 	lightning_strike.draw();
@@ -3520,7 +3435,6 @@ void tile_draw_t::clear_vbos_tids() {
 void tile_draw_t::clear_flowers() {
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->clear_flowers();}
 }
-
 
 tile_t *tile_draw_t::get_tile_from_xy(tile_xy_pair const &tp) const {
 	tile_map::const_iterator it(tiles.find(tp));
@@ -3575,7 +3489,6 @@ bool tile_draw_t::check_cube_int_trees(cube_t const &c) const {
 	return (tile ? tile->check_cube_int_trees(c) : 0);
 }
 
-
 bool tile_draw_t::line_intersect_mesh(point const &v1, point const &v2, float &t, tile_t *&intersected_tile, int &xpos, int &ypos, float inc_trees) const {
 
 	t = 2.0; // > 1.0
@@ -3600,7 +3513,6 @@ bool tile_draw_t::line_intersect_mesh(point const &v1, point const &v2, float &t
 	return 0;
 }
 
-
 tile_draw_t terrain_tile_draw;
 
 
@@ -3614,7 +3526,6 @@ void tile_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 }
 
 bool tile_smap_data_t::needs_update(point const &lpos) {
-
 	//return smap_data_t::needs_update(lpos);
 	// Note: it would be better if we could just translate the shadow map when the scene shifts, but this seems fairly complex to track and get right
 	int const new_dxoff(xoff - xoff2), new_dyoff(yoff - yoff2);
@@ -3646,7 +3557,6 @@ bool line_intersect_tiled_mesh_get_tile(point const &v1, point const &v2, point 
 }
 
 void draw_brush_shape(float xval, float yval, float radius, float z1, float z2, bool is_square) {
-
 	if (is_square) { // square, projected to cube
 		draw_cube(point(xval, yval, 0.5f*(z1 + z2)), 2.0f*radius, 2.0f*radius, z2-z1, 0);
 	}
@@ -3677,7 +3587,6 @@ void draw_tiled_terrain(int reflection_pass) {
 	if (player_in_basement)  {glDisable(GL_CULL_FACE); glCullFace(GL_BACK);}
 	if (disable_dclamp) {glEnable (GL_DEPTH_CLAMP);} // restore
 	if (enable_dclamp)  {glDisable(GL_DEPTH_CLAMP);} // restore
-	//glFinish(); PRINT_TIME("Tiled Terrain Draw"); //exit(0);
 	if (reflection_pass) return; // nothing else to do
 
 	if (inf_terrain_fire_mode != FM_NONE) { // use a bool instead?
@@ -3739,7 +3648,6 @@ void invalidate_tile_smap_at_pt(point const &pos, float radius, bool repeat_next
 
 // *** tree/grass addition/removal ***
 
-
 void tile_draw_t::add_or_remove_trees_at(point const &pos, float radius, bool add_trees, int brush_shape) {
 
 	static point last_pos;
@@ -3774,7 +3682,6 @@ void update_trees_bcube(point const &tpos, float tradius, cube_t &bcube) {
 	if (bcube.is_all_zeros()) {bcube.set_from_sphere(tpos, tradius);} else {bcube.union_with_sphere(tpos, tradius);}
 }
 template <typename T> bool remove_tree(vector<T> &v, unsigned &i, point const &pos, float rradius, bool is_square, point const &xlate, cube_t &rem_bcube) {
-
 	point const &tpos(v[i].get_center());
 	if (fabs(tpos.x - pos.x) > rradius || fabs(tpos.y - pos.y) > rradius) return 0;
 	if (!is_square && !dist_xy_less_than(tpos, pos, rradius)) return 0;
@@ -3947,7 +3854,6 @@ bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_gr
 
 // *** heightmap modification and queries ***
 
-
 bool line_intersect_tiled_mesh(point const &v1, point const &v2, point &p_int, bool inc_trees) {
 	tile_t *tile(nullptr); // unused
 	return line_intersect_tiled_mesh_get_tile(v1, v2, p_int, tile, inc_trees);
@@ -3970,7 +3876,6 @@ void change_inf_terrain_fire_mode(int val, bool mouse_wheel) {
 }
 
 tile_t *get_tile_for_xy(int x, int y) {
-
 	int const tsz(get_tile_size());
 	if (x < 0) {x -= tsz-1;} // handle truncation toward lower integer
 	if (y < 0) {y -= tsz-1;}

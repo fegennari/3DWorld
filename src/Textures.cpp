@@ -1710,7 +1710,6 @@ void gen_tex_height_tables() {
 	clip_hd1 = (0.90*h_dirt[1] + 0.10*h_dirt[0]);
 }
 
-
 void set_texgen_vec4(vector4d const &v, bool s_or_t, shader_t &shader, int mode) {
 	switch (mode) { // mode: 0 = shader uniform, 1 = shader attrib, 2 = shader uniform #2
 	case 0: shader.add_uniform_vector4d((s_or_t ? "texgen_t"  : "texgen_s" ), v); break;

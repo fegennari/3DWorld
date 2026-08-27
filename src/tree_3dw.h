@@ -21,7 +21,6 @@ enum {TREE_CLASS_NONE=0, TREE_CLASS_PINE, TREE_CLASS_DECID, TREE_CLASS_PALM, TRE
 
 
 class tree_lod_render_t {
-
 	struct entry_t {
 		tree_data_t const *td=nullptr;
 		point pos;
@@ -228,7 +227,6 @@ struct fire_damage_t : public sphere_t {
 };
 
 class tree_fire_t {
-
 	struct tree_fire_elem_t : public fire_elem_t {
 		point pos;
 		float branch_bradius=0.0;
@@ -239,8 +237,8 @@ class tree_fire_t {
 	vector<fire_damage_t> fire_damage; // reused across update calls
 	point const &tree_center; // by reference, so that it gets update if the tree is moved
 	float fire_radius;
-	unsigned update_ix;
-	bool has_fire;
+	unsigned update_ix=0;
+	bool has_fire=0;
 public:
 	tree_fire_t(vector<draw_cylin> const &branches_, point const &tree_center_, float tree_base_radius);
 	bool is_burning() const {return has_fire;}
@@ -253,7 +251,6 @@ public:
 
 
 class tree {
-
 	tree_data_t priv_tree_data;
 	tree_data_t *tree_data=nullptr;
 	void make_private_tdata_copy();
@@ -391,7 +388,6 @@ public:
 
 
 struct tree_placer_t {
-
 	struct tree_ref {
 		point pos;
 		float size, pine_xy_sz;

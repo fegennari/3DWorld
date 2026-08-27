@@ -46,7 +46,6 @@ void gen_rx_ry(float &rx, float &ry);
 
 // if size==old_size, we do nothing; if size==0, we only free the texture
 void noise_texture_manager_t::procedural_gen(unsigned size, int rseed, float mag, float freq, vector3d const &offset) { // for asteroids and rocks
-
 	if (size == tsize) return; // nothing to do (check mag, freq, etc.?)
 	clear();
 	tsize = size;
@@ -61,7 +60,6 @@ void noise_texture_manager_t::ensure_tid() {
 	noise_tid = voxels.upload_to_3d_texture(GL_MIRRORED_REPEAT);
 	assert(noise_tid);
 }
-
 void noise_texture_manager_t::bind_texture(unsigned tu_id) const {
 	bind_texture_tu(noise_tid, tu_id);
 }
@@ -143,10 +141,8 @@ template<> void voxel_grid<float>::init_from_heightmap(float **height, unsigned 
 		}
 	}
 }
-
 template<> void voxel_grid<cube_t>::init_from_heightmap(float **height, unsigned mesh_nx, unsigned mesh_ny,
 	unsigned zsteps, float mesh_xsize, float mesh_ysize, unsigned num_blocks, bool invert) {assert(0);} // not supported
-
 
 template<> void voxel_grid<float>::downsample_2x() { // modify in place, perserving total size, center, and lo_pos
 
@@ -167,12 +163,9 @@ template<> void voxel_grid<float>::downsample_2x() { // modify in place, perserv
 	nx = dsnx; ny = dsny; nz = dsnz;
 	vsz *= 2.0;
 }
-
 template<> void voxel_grid<cube_t>::downsample_2x() {assert(0);} // not supported
 
-
 template<typename V> void voxel_grid<V>::get_bcube_ix_bounds(cube_t const &bcube, int llc[3], int urc[3]) const {
-
 	get_xyz(bcube.get_llc(), llc);
 	get_xyz(bcube.get_urc(), urc);
 	UNROLL_3X(assert(llc[i_] <= urc[i_]);)
@@ -198,7 +191,6 @@ template<typename T> bool write_pod(T const &v, FILE *fp, char const *const name
 	return 1;
 }
 
-
 template<typename V> bool voxel_grid<V>::read(FILE *fp) {
 
 	assert(fp);
@@ -221,7 +213,6 @@ template<typename V> bool voxel_grid<V>::read(FILE *fp) {
 	}
 	return 1;
 }
-
 
 template<typename V> bool voxel_grid<V>::write(FILE *fp) const {
 
@@ -253,7 +244,6 @@ bool voxel_model::from_file(string const &fn) {
 	return success;
 }
 
-
 bool voxel_model::to_file(string const &fn) const {
 
 	FILE *fp(fopen(fn.c_str(), "wb"));
@@ -269,11 +259,9 @@ bool voxel_model::to_file(string const &fn) const {
 
 
 void voxel_manager::clear() {
-	
 	outside.clear();
 	float_voxel_grid::clear();
 }
-
 
 void voxel_manager::create_procedural(float mag, float freq, vector3d const &offset, bool normalize_to_1, int rseed1, int rseed2, int gen_mode, bool verbose) {
 
@@ -345,15 +333,12 @@ void voxel_manager::create_procedural(float mag, float freq, vector3d const &off
 	}
 }
 
-
 void voxel_manager::create_from_cobjs(coll_obj_group &cobjs, float filled_val) {
-
 	for (coll_obj_group::iterator i = cobjs.begin(); i != cobjs.end(); ++i) { // doesn't seem to parallelize well
 		if (i->cp.cobj_type != COBJ_TYPE_VOX_TERRAIN) continue; // skip it
 		add_cobj_voxels(*i, filled_val);
 	}
 }
-
 
 void voxel_manager::add_cobj_voxels(coll_obj &cobj, float filled_val) {
 
@@ -399,7 +384,6 @@ void voxel_manager::add_cobj_voxels(coll_obj &cobj, float filled_val) {
 	} // for y
 }
 
-
 void voxel_manager::atten_at_edges(float val) { // and top (5 edges)
 
 #pragma omp parallel for schedule(static)
@@ -416,7 +400,6 @@ void voxel_manager::atten_at_edges(float val) { // and top (5 edges)
 		}
 	}
 }
-
 
 void voxel_manager::atten_at_top_only(float val) {
 
@@ -452,7 +435,6 @@ void voxel_manager::atten_at_top_only(float val) {
 	}
 }
 
-
 void voxel_manager::atten_to_sphere(float val, float inner_radius, bool atten_inner, bool no_atten_zbot) {
 
 	float const two_nz_inv(2.0/float(nz));
@@ -481,9 +463,7 @@ void voxel_manager::atten_to_sphere(float val, float inner_radius, bool atten_in
 	}
 }
 
-
 point voxel_manager::interpolate_pt(float isolevel, point const &pt1, point const &pt2, float const val1, float const val2) const {
-
 	if (abs(isolevel - val1) < TOLERANCE) return pt1;
 	if (abs(isolevel - val2) < TOLERANCE) return pt2;
 	if (abs(val1     - val2) < TOLERANCE) return pt1;
@@ -492,7 +472,6 @@ point voxel_manager::interpolate_pt(float isolevel, point const &pt1, point cons
 	UNROLL_3X(pt[i_] = pt1[i_] + mu * (pt2[i_] - pt1[i_]););
 	return pt;
 }
-
 
 unsigned voxel_manager::add_triangles_for_voxel(tri_data_t::value_type &tri_verts, voxel_ix_cache &vix_cache,
 	unsigned x, unsigned y, unsigned z, unsigned block_x0, unsigned block_y0, bool count_only, unsigned lod_level) const
@@ -573,15 +552,12 @@ bool val_is_outside(float val, voxel_params_t const &params) {
 	return ((val == params.isolevel) ? 1 : (((val < params.isolevel) ^ params.invert) ? 1 : 0));
 }
 
-
 void voxel_manager::calc_outside_val(unsigned x, unsigned y, unsigned z, bool is_under_mesh) {
-
 	bool const on_edge(params.make_closed_surface && ((x == 0 || x == nx-1) || (y == 0 || y == ny-1) || (z == 0 || z == nz-1)));
 	unsigned char ival(on_edge ? ON_EDGE_BIT : val_is_outside(get(x, y, z), params)); // Note: on_edge is considered outside
 	if (is_under_mesh) {ival |= UNDER_MESH_BIT;}
 	outside.set(x, y, z, ival);
 }
-
 
 void voxel_manager::determine_voxels_outside() { // determine inside/outside points
 
@@ -602,9 +578,7 @@ void voxel_manager::determine_voxels_outside() { // determine inside/outside poi
 	}
 }
 
-
 void voxel_manager::remove_unconnected_outside() { // check for voxels connected to the mesh surface
-
 	bool const keep_at_edge(params.keep_at_scene_edge == 1 || (params.keep_at_scene_edge == 2 && dynamic_mesh_scroll));
 	remove_unconnected_outside_range(keep_at_edge, 0, 0, nx, ny, NULL, NULL);
 }
@@ -753,7 +727,6 @@ void voxel_manager::flood_fill_range(unsigned x1, unsigned y1, unsigned x2, unsi
 	} // while
 }
 
-
 // outside: 0=inside, 1=outside, 2=on_edge, 4-bit set=anchored, 8-bit set=under mesh
 // NOTE: not thread safe due to class member <work>
 void voxel_manager::remove_unconnected_outside_range(bool keep_at_edge, unsigned x1, unsigned y1, unsigned x2, unsigned y2,
@@ -827,7 +800,6 @@ void voxel_manager::remove_unconnected_outside_range(bool keep_at_edge, unsigned
 	}
 }
 
-
 void voxel_manager::remove_interior_holes() {
 
 	vector<unsigned> &work(temp_work); // stack of voxels to process
@@ -857,7 +829,6 @@ void voxel_manager::remove_interior_holes() {
 	}
 }
 
-
 void voxel_manager::make_voxel_outside(unsigned ix) {
 	outside[ix] = 1; // make outside
 	operator[](ix) = params.isolevel - (params.invert ? -TOLERANCE : TOLERANCE); // change voxel value to be outside
@@ -867,22 +838,17 @@ void voxel_manager::make_voxel_inside(unsigned ix) {
 	operator[](ix) = params.isolevel + (params.invert ? -TOLERANCE : TOLERANCE); // change voxel value to be inside
 }
 
-
 bool voxel_manager::point_inside_volume(point const &pos) const {
-
 	if (outside.empty()) return 0;
 	unsigned ix(0);
 	return (outside.get_ix(pos, ix) && !is_outside(ix));
 }
 
-
 bool voxel_manager::point_intersect(point const &center, point *int_pt) const {
-
 	if (!point_inside_volume(center)) return 0;
 	if (int_pt) {*int_pt = center;}
 	return 1;
 }
-
 
 bool voxel_manager::sphere_intersect(point const &center, float radius, point *int_pt) const {
 
@@ -909,7 +875,6 @@ bool voxel_manager::sphere_intersect(point const &center, float radius, point *i
 	return 0;
 }
 
-
 bool voxel_manager::line_intersect(point const &p1, point const &p2, point *int_pt) const {
 
 	if (outside.empty()) return 0;
@@ -931,7 +896,6 @@ bool voxel_manager::line_intersect(point const &p1, point const &p2, point *int_
 	return 0;
 }
 
-
 unsigned voxel_manager::upload_to_3d_texture(int wrap) const { // only works for float type
 
 	vector<unsigned char> data;
@@ -945,7 +909,6 @@ unsigned voxel_manager::upload_to_3d_texture(int wrap) const { // only works for
 
 
 float voxel_model::get_ao_lighting_val(point const &pos) const {
-
 	if (ao_lighting.empty()) return 1.0;
 	unsigned ix(0);
 	if (!ao_lighting.get_ix(pos, ix)) return 1.0; // off the voxel grid
@@ -953,20 +916,16 @@ float voxel_model::get_ao_lighting_val(point const &pos) const {
 	return ao_lighting[ix]/255.0;
 }
 
-
 sphere_t voxel_model::get_bsphere() const {
 
 	sphere_t bsphere(center, 0.0);
 	
 	for (tri_data_t::const_iterator i = tri_data[0].begin(); i != tri_data[0].end(); ++i) {
-		for (vector<vertex_type_t>::const_iterator v = i->begin(); v != i->end(); ++v) {
-			bsphere.radius = max(bsphere.radius, p2p_dist_sq(center, v->v));
-		}
+		for (vector<vertex_type_t>::const_iterator v = i->begin(); v != i->end(); ++v) {max_eq(bsphere.radius, p2p_dist_sq(center, v->v));}
 	}
 	bsphere.radius = sqrt(bsphere.radius);
 	return bsphere;
 }
-
 
 bool voxel_model::has_triangles() const {
 	for (tri_data_t::const_iterator i = tri_data[0].begin(); i != tri_data[0].end(); ++i) {
@@ -974,7 +933,6 @@ bool voxel_model::has_triangles() const {
 	}
 	return 0;
 }
-
 
 bool voxel_model::has_filled_at_edges() const {
 
@@ -994,13 +952,11 @@ bool voxel_model::has_filled_at_edges() const {
 	return 0;
 }
 
-
 unsigned voxel_model::get_block_ix(unsigned voxel_ix) const {
 	assert(voxel_ix < size());
 	unsigned const y(voxel_ix/(nz*nx)), vxz(voxel_ix - y*nz*nx), x(vxz/nz), bx(x/xblocks), by(y/yblocks);
 	return by*params.num_blocks + bx;
 }
-
 
 voxel_model::voxel_model(noise_texture_manager_t *ntg, bool use_mesh_, unsigned num_lod_levels) : voxel_manager(use_mesh_), noise_tex_gen(ntg) {
 	assert(num_lod_levels > 0);
@@ -1030,13 +986,11 @@ void voxel_model::clear() {
 	volume_added = 0;
 }
 
-
 void voxel_model_ground::clear() {
 	voxel_model::clear();
 	for (unsigned i = 0; i < data_blocks.size(); ++i) {clear_block(i);} // unnecessary?
 	data_blocks.clear();
 }
-
 
 // returns true if something was cleared
 bool voxel_model::clear_block(unsigned block_ix) {
@@ -1051,7 +1005,6 @@ bool voxel_model::clear_block(unsigned block_ix) {
 	}
 	return was_nonempty;
 }
-
 
 bool voxel_model_ground::clear_block(unsigned block_ix) {
 
@@ -1102,7 +1055,6 @@ unsigned voxel_model::create_block(voxel_ix_cache &vix_cache, unsigned block_ix,
 	}
 	return count;
 }
-
 
 unsigned voxel_model::create_block_all_lods(unsigned block_ix, bool first_create, bool count_only) {
 
@@ -1188,7 +1140,6 @@ void voxel_model::calc_ao_dirs() {
 	}
 }
 
-
 void voxel_model::calc_ao_lighting_for_block(unsigned block_ix, bool increase_only) {
 
 	if (ao_lighting.empty()) return; // nothing to do
@@ -1254,13 +1205,10 @@ void voxel_model::calc_ao_lighting_for_block(unsigned block_ix, bool increase_on
 	} // for y
 }
 
-
 void voxel_model_space::calc_ao_lighting_for_block(unsigned block_ix, bool increase_only) {
-
 	voxel_model::calc_ao_lighting_for_block(block_ix, increase_only);
 	free_ao_and_shadow_texture(); // will be recalculated if needed
 }
-
 
 void voxel_model::calc_ao_lighting() {
 
@@ -1360,7 +1308,6 @@ unsigned voxel_model::get_texture_at(point const &pos) const {
 	return params.tids[fabs(eval_noise_texture_at(pos)) > 0.5];
 }
 
-
 void voxel_model::proc_pending_updates(bool postproc_brushes_mode) {
 
 	if (modified_blocks.empty()) return;
@@ -1419,7 +1366,6 @@ void update_ao_texture(block_group_t const &group) {
 	update_smoke_indir_tex_range(group.v[0][0], group.v[0][1], group.v[1][0], group.v[1][1]);
 }
 
-
 void voxel_model_ground::update_blocks_hook(vector<unsigned> const &blocks_to_update, unsigned num_added) {
 
 	if (!ao_lighting.empty()) {
@@ -1452,7 +1398,6 @@ void voxel_model_ground::update_blocks_hook(vector<unsigned> const &blocks_to_up
 
 
 void voxel_model::merge_vn_t::finalize() {
-
 	assert(num > 0);
 	if (num == 1) {normal = vn[0]->n; return;}
 	normal = zero_vector;
@@ -1460,7 +1405,6 @@ void voxel_model::merge_vn_t::finalize() {
 	normal /= num;
 	for (unsigned n = 0; n < num; ++n) {vn[n]->n = normal;} // make them equal
 }
-
 
 void voxel_model::update_boundary_normals_for_block(unsigned block_ix, bool calc_average) {
 
@@ -1479,16 +1423,11 @@ void voxel_model::update_boundary_normals_for_block(unsigned block_ix, bool calc
 	}
 }
 
-
 void voxel_model::finalize_boundary_vmap() {
-
 	for (unsigned lod = 0; lod < boundary_vnmap.size(); ++lod) {
-		for (vert_norm_map_t::iterator i = boundary_vnmap[lod].begin(); i != boundary_vnmap[lod].end(); ++i) {
-			i->second.finalize();
-		}
+		for (vert_norm_map_t::iterator i = boundary_vnmap[lod].begin(); i != boundary_vnmap[lod].end(); ++i) {i->second.finalize();}
 	}
 }
-
 
 void voxel_model::build(bool verbose, bool do_ao_lighting) {
 
@@ -1573,9 +1512,7 @@ void voxel_model_ground::pre_build_hook() {
 	}
 }
 
-
 void voxel_model_ground::build(bool add_cobjs_, bool add_as_fixed_, bool verbose) {
-
 	add_cobjs    = add_cobjs_;
 	add_as_fixed = add_as_fixed_;
 	cobj_tree.init(params.num_blocks, params.num_blocks);
@@ -1603,7 +1540,6 @@ void voxel_model::setup_tex_gen_for_rendering(shader_t &s) {
 
 
 void voxel_model_ground::setup_tex_gen_for_rendering(shader_t &s) {
-
 	s.add_uniform_vector3d("tex_eval_offset", vector3d(DX_VAL*xoff2, DY_VAL*yoff2, 0.0));
 	voxel_model::setup_tex_gen_for_rendering(s);
 }
@@ -1624,7 +1560,6 @@ void voxel_model_space::calc_shadows(voxel_grid<unsigned char> &shadow_data) con
 		}
 	}
 }
-
 
 void voxel_model_space::extract_shadow_edges(voxel_grid<unsigned char> const &shadow_data) {
 
@@ -1654,7 +1589,6 @@ void voxel_model_space::extract_shadow_edges(voxel_grid<unsigned char> const &sh
 		last = pos;
 	}
 }
-
 
 void voxel_model_space::setup_tex_gen_for_rendering(shader_t &s) {
 
@@ -1692,7 +1626,6 @@ void voxel_model::core_render(shader_t &s, unsigned lod_level, bool is_shadow_pa
 	}
 }
 
-
 void voxel_model::render(unsigned lod_level, bool is_shadow_pass) { // not const because of vbo caching, etc.
 
 	if (empty()) return; // nothing to do
@@ -1722,12 +1655,10 @@ void voxel_model::render(unsigned lod_level, bool is_shadow_pass) { // not const
 	s.end_shader();
 }
 
-
 void voxel_model::free_context() {
 	for (unsigned i = 0; i < tri_data.size(); ++i) {tri_data[i].free_vbos();}
 	if (noise_tex_gen) {noise_tex_gen->clear();}
 }
-
 
 float voxel_model::eval_noise_texture_at(point const &pos) const {
 	
@@ -1761,19 +1692,14 @@ void voxel_model_space::clone(voxel_model_space &dest) const {
 
 
 void voxel_query_tree::bvh_tree_row::init(coll_obj_group const *cobjs, unsigned sz) {
-
 	for (unsigned i = 0; i < sz; ++i) {push_back(cobj_bvh_tree(cobjs, 1, 0, 0, 0, 1));}
 }
-
 void voxel_query_tree::bvh_tree_matrix::init(coll_obj_group const *cobjs, unsigned sz, unsigned row_sz) {
-
 	resize(sz);
 	for (iterator i = begin(); i != end(); ++i) {i->init(cobjs, row_sz);}
 }
 
-
 void voxel_query_tree::add_cobjs_for_block(vector<unsigned> const &cids, unsigned block_x, unsigned block_y) {
-
 	assert(block_y < tree_matrix.size());
 	assert(block_x < tree_matrix[block_y].size());
 	cobj_bvh_tree &tree(tree_matrix[block_y][block_x]);
@@ -1784,7 +1710,6 @@ void voxel_query_tree::add_cobjs_for_block(vector<unsigned> const &cids, unsigne
 	tree_matrix[block_y].update_bcube(block_x); // push the bcube up
 	tree_matrix.update_bcube(block_y); // push the bcube up
 }
-
 
 bool voxel_query_tree::check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, int ignore_cobj, bool exact) const {
 
@@ -1858,7 +1783,6 @@ void setup_voxel_landscape(voxel_params_t const &params, float default_val) {
 	terrain_voxel_model.init(nx, ny, nz, vsz, center, default_val, params.num_blocks);
 }
 
-
 void gen_voxel_landscape() {
 
 	RESET_TIME;
@@ -1876,7 +1800,6 @@ void gen_voxel_landscape() {
 		PRINT_TIME(" Apply Voxel Brushes");
 	}
 }
-
 
 bool gen_voxels_from_cobjs(coll_obj_group &cobjs) {
 
@@ -1898,7 +1821,6 @@ bool gen_voxels_from_cobjs(coll_obj_group &cobjs) {
 	return 1;
 }
 
-
 void gen_voxel_spherical(voxel_model &model, voxel_params_t &params, point const &center, float radius, unsigned size, int rseed, int gen_mode) {
 
 	params.remove_unconnected = 2; // always, but not holes
@@ -1916,7 +1838,6 @@ void gen_voxel_spherical(voxel_model &model, voxel_params_t &params, point const
 	model.init(size, size, size, vector3d(vsz, vsz, vsz), center, -1.0, params.num_blocks);
 	model.create_procedural(params.mag, params.freq, zero_vector, params.normalize_to_1, params.geom_rseed, rseed, gen_mode, 0); // verbose=0
 }
-
 
 float gen_voxel_rock(voxel_model &model, point const &center, float radius, unsigned size, unsigned num_blocks, int rseed) {
 
@@ -1942,7 +1863,6 @@ void voxel_file_err(string const &str, int &error) {
 	cout << "Error reading voxel config option " << str << "." << endl;
 	error = 1;
 }
-
 
 bool parse_voxel_option(FILE *fp) {
 
@@ -2133,10 +2053,8 @@ unsigned const vheader_sig  = 0xbeefdead;
 unsigned const vtrailer_sig = 0xdeadbeef;
 
 class voxel_brush_manager_t {
-
 	static unsigned const FLAG_FALLING = 0x01;
 	vector<voxel_brush_t> brush_vect;
-
 public:
 	void clear() {brush_vect.clear();}
 	void add_brush(voxel_brush_t const &brush) {brush_vect.push_back(brush);}
@@ -2219,25 +2137,20 @@ voxel_brush_manager_t brush_manager;
 
 
 bool read_voxel_brushes() {
-
 	if (read_voxel_brush_fn.empty()) return 0;
 	if (!brush_manager.read(read_voxel_brush_fn)) return 0;
 	brush_manager.apply_all_brushes();
 	cout << "Read Voxel Brushes " << read_voxel_brush_fn << endl;
 	return 1;
 }
-
 bool write_voxel_brushes() {
-
 	if (write_voxel_brush_fn.empty()) return 0;
 	if (!brush_manager.write(write_voxel_brush_fn)) return 0;
 	cout << "Wrote Voxel Brushes " << write_voxel_brush_fn << endl;
 	return 1;
 }
 
-
 void change_voxel_editing_mode(int val) {
-
 	unsigned const NUM_MODES = 3;
 	voxel_editing = (voxel_editing + NUM_MODES + val) % NUM_MODES;
 	string const modes[NUM_MODES] = {"Not Editing Voxels", "Increase Voxel Weight/Add", "Decrease Voxel Weight/Remove"};
@@ -2249,7 +2162,6 @@ void apply_brush(voxel_brush_t const &brush) {brush_manager.apply_brush(brush);}
 void undo_voxel_brush() {brush_manager.undo_last_brush();}
 
 bool get_voxel_edit_pos(point &coll_pos, int &cindex) {
-
 	if (!coll_objects.has_voxel_cobjs) return 0; // no voxels to modify
 	point const pos(get_camera_pos());
 	vector3d coll_norm; // unused

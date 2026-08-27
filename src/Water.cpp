@@ -51,13 +51,12 @@ enum {SPILL_NONE, SPILL_OUTSIDE, SPILL_INSIDE};
 
 
 struct water_spring { // size = 40;
-	int enabled;
-	float dpf, diff, acc;
+	int enabled=0;
+	float dpf=0.0, diff=0.0, acc=0.0;
 	point pos;
 	vector3d vel;
 
-	water_spring() : enabled(0), dpf(0.0f), diff(0.0f), acc(0.0f) {}
-
+	water_spring() {}
 	water_spring(int en, float dpf_, float diff_, float acc_, point const &pos_, vector3d const &vel_)
 		: enabled(en), dpf(dpf_), diff(diff_), acc(acc_), pos(pos_), vel(vel_) {}
 };
@@ -122,7 +121,6 @@ inline bool cont_surf(int wsi, int wsi2, float zval) {
 }
 
 bool get_water_enabled(int x, int y) {
-
 	if (water_enabled == NULL) return 1;
 	int const xx(x + xoff2), yy(y + yoff2);
 	return (point_outside_mesh(xx, yy) || water_enabled[yy][xx]);
@@ -131,14 +129,11 @@ bool get_water_enabled(int x, int y) {
 bool has_water(int x, int y) {
 	return (world_mode == WMODE_GROUND && !point_outside_mesh(x, y) && wminside[y][x] && get_water_enabled(x, y));
 }
-
 bool mesh_is_underwater(int x, int y) {
 	return (has_water(x, y) && mesh_height[y][x] < water_matrix[y][x]);
 }
 
-
 void water_color_atten_at_pos(colorRGBA &c, point const &pos) {
-
 	if (DISABLE_WATER || world_mode == WMODE_UNIVERSE || pos.z > ((world_mode == WMODE_GROUND) ? max_water_height : water_plane_z)) return;
 	int const x(get_xpos(pos.x)), y(get_ypos(pos.y));
 		
@@ -147,7 +142,6 @@ void water_color_atten_at_pos(colorRGBA &c, point const &pos) {
 		water_color_atten((float *)&(c.R), x, y, pos);
 	}
 }
-
 
 void select_water_ice_texture(shader_t &shader, colorRGBA &color) {
 
@@ -164,17 +158,13 @@ void select_water_ice_texture(shader_t &shader, colorRGBA &color) {
 	color *= DARK_WATER_ATTEN;
 }
 
-
 void set_tt_water_specular(shader_t &shader) {
-
 	if (water_is_lava) {shader.set_specular(0.2, 20.0); return;} // 2x low specular
 	bool const is_ice(get_cur_temperature() <= W_FREEZE_POINT);
 	shader.set_specular(2.0*w_spec[is_ice][0], 2.0*w_spec[is_ice][1]); // 2x specular
 }
 
-
 colorRGBA get_tt_water_color() {
-
 	if (water_is_lava) {return LAVA_COLOR;}
 	bool const is_ice(get_cur_temperature() <= W_FREEZE_POINT);
 	colorRGBA color((is_ice ? ICE_C : WATER_C).modulate_with(texture_color(is_ice ? (int)ICE_TEX : (int)WATER_TEX)));
@@ -185,9 +175,7 @@ colorRGBA get_tt_water_color() {
 	return color;
 }
 
-
 colorRGBA get_landscape_color(int xpos, int ypos) {
-
 	int cindex; // unused
 	assert(!point_outside_mesh(xpos, ypos));
 	point const pos(get_xval(xpos), get_yval(ypos), mesh_height[ypos][xpos]);
@@ -195,9 +183,7 @@ colorRGBA get_landscape_color(int xpos, int ypos) {
 	return get_landscape_texture_color(xpos, ypos)*(0.5*(1.0 + diffuse)); // half ambient and half diffuse
 }
 
-
 void get_object_color(int cindex, colorRGBA &color) {
-
 	coll_obj const &cobj(coll_objects.get_cobj(cindex));
 	if (cobj.cp.coll_func == smiley_collision && has_invisibility(cobj.cp.cf_index)) return; // invisible simleys don't have a reflection
 	color = cobj.get_avg_color();
@@ -205,11 +191,10 @@ void get_object_color(int cindex, colorRGBA &color) {
 
 
 struct water_vertex_calc_t {
-
-	bool draw_fast;
+	bool draw_fast=0;
 	float zval1, zval2;
 
-	water_vertex_calc_t() : draw_fast(0), zval1(def_water_level), zval2(def_water_level) {}
+	water_vertex_calc_t() : zval1(def_water_level), zval2(def_water_level) {}
 
 	void calc_zvals(int i, int j, int wsi, int dx, int dy, bool outside_water) {
 		float const water_zmin(zbottom - MIN_WATER_DZ);
@@ -342,9 +327,7 @@ public:
 };
 
 
-class water_strip_drawer : public mesh_strip_drawer, public water_vertex_calc_t {
-
-public:
+struct water_strip_drawer : public mesh_strip_drawer, public water_vertex_calc_t {
 	void add_segment(int i, int j, int wsi, int dx, int dy) {
 		calc_zvals(i, j, wsi, dx, dy, 1); // outside_water=1
 
@@ -393,18 +376,15 @@ public:
 
 
 class water_surface_draw : public water_vertex_calc_t {
-
 	struct color_scale_ix {
 		vector3d n;
 		color_wrapper cw;
-		int ix;
-		color_scale_ix() : ix(-1) {}
+		int ix=-1;
+		color_scale_ix() {}
 		color_scale_ix(color_wrapper const &cw_, vector3d const &n_, int ix_) : n(n_), cw(cw_), ix(ix_) {}
 	};
-
 	vector<color_scale_ix> last_row_colors;
 	vector<vert_norm_color> verts;
-
 public:
 	water_surface_draw() {last_row_colors.resize(MESH_X_SIZE);}
 	vector<vert_norm_color> &get_verts() {return verts;}
@@ -662,13 +642,11 @@ void calc_water_normals() {
 	} // for i
 }
 
-
 inline void update_water_edges(int i, int j) {
 	if (i > 0 && wminside[i-1][j] == 1)      {water_matrix[i][j] = valleys[watershed_matrix[i-1][j].wsi].zval;}
 	else if (j > 0 && wminside[i][j-1] == 1) {water_matrix[i][j] = valleys[watershed_matrix[i][j-1].wsi].zval;}
 	else                                     {water_matrix[i][j] = def_water_level;}
 }
-
 
 void compute_ripples() {
 
@@ -893,7 +871,6 @@ void add_splash(point const &pos, int xpos, int ypos, float energy, float radius
 	start_ripple = 1;
 }
 
-
 void add_waves() { // add waves due to wind
 
 	if (DISABLE_WATER || !(display_mode & 0x04) || !(display_mode & 0x0100) || water_is_lava) return;
@@ -934,7 +911,6 @@ void add_waves() { // add waves due to wind
 
 // *** BEGIN VALLEYS/SPILLOVER ***
 
-
 void check_spillover(int i, int j, int ii, int jj, int si, int sj, float zval, int wsi) { // does wsi overflow?
 
 	float const z_over(zval - mesh_height[ii][jj]);
@@ -953,7 +929,6 @@ void check_spillover(int i, int j, int ii, int jj, int si, int sj, float zval, i
 	}
 }
 
-
 void sync_water_height(int wsi, int skip_ix, float zval, float z_over, vector<unsigned> &cc) {
 
 	spill.get_connected_components(wsi, cc);
@@ -968,7 +943,6 @@ void sync_water_height(int wsi, int skip_ix, float zval, float z_over, vector<un
 		v.blood_mix = valleys[wsi].blood_mix;
 	}
 }
-
 
 void update_valleys_and_draw_spillover() {
 
@@ -1097,7 +1071,6 @@ void update_valleys_and_draw_spillover() {
 	} // for i
 }
 
-
 void update_water_volumes() {
 
 	for (unsigned i = 0; i < valleys.size(); ++i) {
@@ -1126,7 +1099,6 @@ void update_water_volumes() {
 
 
 // *** END VALLEYS/SPILLOVER ***
-
 
 int draw_spill_section(vector<vert_norm_color> &verts, int x1, int y1, int x2, int y2, float z1, float z2, float width, int volume, int index, float blood_mix, float mud_mix) {
 
@@ -1252,15 +1224,12 @@ void float_downstream(point &pos, float radius) {
 	pos += (spill_pt - pos)*(min(0.005f, vel)/dist);
 }
 
-
 void change_water_level(float water_level) {
-
 	water_h_off_rel = 0.0; // so that get_rel_wpz() will return the base water level
 	water_h_off_rel = water_level - get_rel_wpz();
 	def_water_level = water_plane_z = get_water_z_height(); // ???
 	calc_watershed();
 }
-
 
 void calc_watershed() {
 
@@ -1365,7 +1334,6 @@ void calc_watershed() {
 	} // for i
 }
 
-
 int calc_rest_pos(vector<int> &path_x, vector<int> &path_y, vector<char> &rp_set, int &x, int &y) { // return 0 if off the map
 
 	int path_counter(0), x2(0), y2(0);
@@ -1403,15 +1371,12 @@ int calc_rest_pos(vector<int> &path_x, vector<int> &path_y, vector<char> &rp_set
 	return found;
 }
 
-
 bool add_water_section(float x1, float y1, float x2, float y2, float zval, float wvol) {
-
 	water_section ws(x1, y1, x2, y2, zval, wvol);
 	if (!ws.is_nonzero()) return 0;
 	wsections.push_back(ws);
 	return 1;
 }
-
 
 void calc_water_flow() {
 
@@ -1535,7 +1500,6 @@ void init_water_springs(int nws) {
 	}
 }
 
-
 void process_water_springs() {
 
 	if (DISABLE_WATER && INIT_DISABLE_WATER) return;
@@ -1564,9 +1528,7 @@ void process_water_springs() {
 	}
 }
 
-
 void add_water_spring(point const &pos, vector3d const &vel, float rate, float diff, int calc_z, int gen_vel) {
-
 	vector3d const vel0(gen_vel ? gen_rand_vector(5.0, 3.0, PI_TWO) : vel);
 	water_spring ws(1, rate, diff, 0.0, pos, vel0);
 	if (calc_z) ws.pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1) + 0.02;
@@ -1574,14 +1536,10 @@ void add_water_spring(point const &pos, vector3d const &vel, float rate, float d
 	++added_wsprings;
 }
 
-
 void shift_water_springs(vector3d const &vd) {
-
 	if (added_wsprings == 0) return; // dynamically created, not placed
 
-	for (unsigned i = 0; i < water_springs.size(); ++i) {
-		water_springs[i].pos += vd;
-	}
+	for (unsigned i = 0; i < water_springs.size(); ++i) {water_springs[i].pos += vd;}
 }
 
 
@@ -1589,15 +1547,12 @@ float get_water_zmin(float mheight) {
 	return max(def_water_level, (mheight - (float)G_W_START_DEPTH));
 }
 
-
 void make_outside_water(int x, int y) {
-
 	if (wminside[y][x] == 2) return; // already outside water
 	wminside[y][x] = 2; // make outside water (anything else we need to update? what if all of a valley disappears?)
 	watershed_matrix[y][x].wsi = -1; // invalid
 	water_matrix[y][x] = water_plane_z; // may be unnecessary
 }
-
 
 void update_water_zval(int x, int y, float old_mh) {
 
@@ -1622,7 +1577,6 @@ void update_water_zval(int x, int y, float old_mh) {
 	v.x        = x;
 	v.y        = y;
 }
-
 
 bool is_underwater(point const &pos, int check_bottom, float *depth) { // or under ice
 	
@@ -1650,7 +1604,6 @@ bool is_underwater(point const &pos, int check_bottom, float *depth) { // or und
 	return 0;
 }
 
-
 void update_accumulation(int xpos, int ypos) {
 
 	float acc(accumulation_matrix[ypos][xpos]);
@@ -1666,9 +1619,7 @@ void update_accumulation(int xpos, int ypos) {
 	}
 }
 
-
 int get_water_wsi(int xpos, int ypos) {
-
 	if (point_outside_mesh(xpos, ypos) || wminside[ypos][xpos] != 1) return -1;
 	int const wsi(watershed_matrix[ypos][xpos].wsi);
 	assert(size_t(wsi) < valleys.size());
@@ -1676,7 +1627,6 @@ int get_water_wsi(int xpos, int ypos) {
 }
 
 void select_liquid_color(colorRGBA &color, int xpos, int ypos) {
-
 	int const wsi(get_water_wsi(xpos, ypos));
 	if (wsi < 0) return;
 	if (water_is_lava) {color = LAVA_COLOR; return;}
@@ -1689,9 +1639,7 @@ void select_liquid_color(colorRGBA &color, point const &pos) {
 	select_liquid_color(color, get_xpos(pos.x), get_ypos(pos.y));
 }
 
-
 float get_blood_mix(point const &pos) {
-
 	int const wsi(get_water_wsi(get_xpos(pos.x), get_ypos(pos.y)));
 	if (wsi < 0) return 0.0;
 	return valleys[wsi].blood_mix;
@@ -1699,7 +1647,6 @@ float get_blood_mix(point const &pos) {
 
 
 void valley::copy_state_from(valley const &v) {
-
 	zval      = v.zval;
 	w_volume  = v.w_volume;
 	blood_mix = v.blood_mix;
@@ -1708,7 +1655,6 @@ void valley::copy_state_from(valley const &v) {
 	dz        = v.dz;
 	lwv       = v.lwv;
 }
-
 
 void valley::create(int wsi) {
 
@@ -1725,11 +1671,7 @@ void valley::create(int wsi) {
 	}
 }
 
-
 float valley::get_volume() const {
-
 	return (blood_mix*BLOOD_VOLUME + (1.0 - blood_mix)*RAIN_VOLUME);
 }
-
-
 
