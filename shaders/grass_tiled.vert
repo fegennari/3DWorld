@@ -54,11 +54,15 @@ void main() {
 	// calculate lighting
 	vec3 shadow  = mix(vec3(1.0), texture(shadow_tex, tc2).rgb, (is_city ? 0.25 : 1.0)); // {mesh_shadow, tree_shadow, ambient_occlusion}; low city shadows, since no mesh shadows
 	float ambient_scale = 1.5*shadow.b * (1.5 - 0.75*tc.s); // decreased ambient at base, increased ambient at tip
-	vec3 eye_norm = normalize(fg_NormalMatrix * (2.0*texture(normal_tex, tc2).xyz - vec3(1.0))); // eye space
+	vec3 normal   = (2.0*texture(normal_tex, tc2).xyz - vec3(1.0));
+	vec3 eye_norm = normalize(fg_NormalMatrix * normal); // eye space
 	vec4 ad_color = mix(gl_Color, vec4(1.0, 0.7, 0.4, 1.0), weights.r); // mix in yellow-brown grass color to match sand
 	float diffuse_scale = min(shadow.r, shadow.g); // min of mesh and tree shadow
 	bool apply_cloud_shadows = !is_city; // skip cloud shadows in city because the ground doesn't have cloud shadows
 	vec3 color    = do_shadowed_lighting(vertex, epos, eye_norm, ad_color, ambient_scale, diffuse_scale, apply_cloud_shadows);
+#ifdef ENABLE_DYNAMIC_LIGHTS
+	if (enable_dlights) {add_dlights(color.rgb, fin_vert.xyz, epos, normal, ad_color.rgb);}
+#endif
 	float alpha   = fg_Color.a * ascale * ((grass_weight < noise_weight) ? 0.0 : 1.0); // skip some grass blades by making them transparent
 	fg_Color_vf   = vec4(color, alpha);
 	vertex_from_vs= fin_vert.xyz;
