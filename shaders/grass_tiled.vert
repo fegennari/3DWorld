@@ -60,9 +60,6 @@ void main() {
 	float diffuse_scale = min(shadow.r, shadow.g); // min of mesh and tree shadow
 	bool apply_cloud_shadows = !is_city; // skip cloud shadows in city because the ground doesn't have cloud shadows
 	vec3 color    = do_shadowed_lighting(vertex, epos, eye_norm, ad_color, ambient_scale, diffuse_scale, apply_cloud_shadows);
-#ifdef ENABLE_DYNAMIC_LIGHTS
-	if (enable_dlights) {add_dlights(color.rgb, fin_vert.xyz, epos, normal, ad_color.rgb);}
-#endif
 	float alpha   = fg_Color.a * ascale * ((grass_weight < noise_weight) ? 0.0 : 1.0); // skip some grass blades by making them transparent
 	fg_Color_vf   = vec4(color, alpha);
 	vertex_from_vs= fin_vert.xyz;

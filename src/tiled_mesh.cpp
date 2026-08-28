@@ -3294,9 +3294,7 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 	bool const use_cloud_shadows(GRASS_CLOUD_SHADOWS && cloud_shadows_enabled());
 	unsigned num_grass_drawn(0), num_flowers_drawn(0);
 	if (use_grass_tess && !check_for_tess_shader()) {use_grass_tess = 0;} // disable tess - not supported
-	bool enable_dlights(0 && (display_mode & 0x10)); // TESTING
 	bool const enable_dlights_smap(0);
-	cube_t const lights_bcube(get_lights_bcube_if_enabled(enable_dlights));
 
 	for (unsigned wpass = 0; wpass < 2; ++wpass) { // wind, no wind
 		for (unsigned spass = 0; spass < 2; ++spass) { // shadow maps, no shadow maps
@@ -3308,16 +3306,13 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 			// Note: when tt_grass_scale_factor is small, we can have a transition from nearby wind to distant within the same tile, so we need to enable height adjust in both cases
 			if (wpass == 1 || tt_grass_scale_factor < 1.0) {s.set_prefix("#define DEC_HEIGHT_WHEN_FAR", 0);} // VS
 			if (!grass_exclude1.is_all_zeros()) {s.set_prefix("#define ENABLE_VERTEX_CLIP", 0);} // VS - based on primary cube
-			if (enable_dlights) {s.set_prefix("#define ENABLE_DYNAMIC_LIGHTS", 0);} // VS
-			set_dlights_booleans(s, enable_dlights, 0, !enable_dlights_smap);
 			//if (!underwater) {s.set_prefix("#define NO_FOG", 1);} // FS - faster, but reduced quality grass/texture blend
 			set_smap_enable_for_shader(s, (spass == 0), 0); // VS
 			s.set_prefix(make_shader_bool_prefix("enable_grass_wind", enable_wind), 0); // VS
 			if (enable_tess) {s.set_prefix("#define NO_FOG_FRAG_COORD", 1);} // FS - needed on some drivers because TC/TE don't have fg_FogFragCoord
 			else             {s.set_prefix("#define NO_GRASS_TESS",     0);} // VS
-			string vs_parts("ads_lighting.part*+perlin_clouds.part*+shadow_map.part*+tiled_shadow_map.part*+wind.part*+grass_texture.part");
-			if (enable_dlights) {vs_parts += "+dynamic_lighting.part*";}
-			s.set_vert_shader(vs_parts + "+grass_tiled");
+			// Note: it would be nice to enable dlights for city grass, but it's too difficult to get this working with the grass instancing system and also likely too slow
+			s.set_vert_shader("ads_lighting.part*+perlin_clouds.part*+shadow_map.part*+tiled_shadow_map.part*+wind.part*+grass_texture.part+grass_tiled");
 			s.set_frag_shader("linear_fog.part+grass_tiled");
 
 			if (enable_tess) {
@@ -3326,12 +3321,6 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 				glPatchParameteri(GL_PATCH_VERTICES, 3); // triangles
 			}
 			setup_grass_flower_shader(s, enable_wind, (spass == 0), 1.0); // calls begin_shader()
-
-			if (enable_dlights) {
-				setup_dlight_textures(s, enable_dlights_smap);
-				s.add_uniform_vector3d("camera_pos", get_camera_pos());
-				set_city_lighting_shader_opts(s, lights_bcube, enable_dlights, 0, 1.0);
-			}
 			s.add_uniform_int("weight_tex", 3);
 			set_noise_tex(s, 5);
 			s.add_uniform_float("height", grass_length);
