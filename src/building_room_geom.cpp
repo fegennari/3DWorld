@@ -6568,6 +6568,7 @@ void add_tv_or_monitor_screen(room_object_t const &c, rgeom_mat_t &mat, std::str
 	}
 }
 int get_tv_or_monitor_tid(room_object_t const &c) {
+	if (c.is_broken2()) return PS_NOISE_TEX; // static
 	return ((c.shape == SHAPE_SHORT) ? c.get_comp_monitor_tid() : c.get_tv_tid()); // computer monitor vs. TV
 }
 void building_room_geom_t::add_tv_picture(room_object_t const &c) {

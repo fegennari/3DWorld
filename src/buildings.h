@@ -2733,6 +2733,7 @@ private:
 	bool place_obj_on_surface(rand_gen_t &rgen, cube_t const &surface, unsigned room_id, float tot_light_amt, unsigned objs_start,
 		room_object obj_type, float length, float width, float height);
 	bool place_tv_remote_on_surface(rand_gen_t &rgen, cube_t const &surface, unsigned room_id, float tot_light_amt, unsigned objs_start);
+	bool place_tv_static_on_surface(rand_gen_t &rgen, cube_t const &surface, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	bool place_cards_on_surface(rand_gen_t &rgen, cube_t const &surface, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	void place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room, unsigned room_id, float tot_light_amt,
 		unsigned objs_start, unsigned floor, bool is_basement, bool not_private);

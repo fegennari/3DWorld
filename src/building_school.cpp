@@ -495,8 +495,12 @@ bool building_t::place_obj_on_table(rand_gen_t rgen, unsigned room_id, float tot
 		if (obj.type != TYPE_TABLE) continue;
 		cube_t const surface(get_table_inner_bcube(obj));
 		// use i+1 to check for intersections with objects placed after the table
-		if      (obj_type == TYPE_CARD_DECK) {return place_cards_on_surface    (rgen, surface, room_id, tot_light_amt, i+1);}
-		else if (obj_type == TYPE_TV_REMOTE) {return place_tv_remote_on_surface(rgen, surface, room_id, tot_light_amt, i+1);}
+		switch (obj_type) {
+		case TYPE_CARD_DECK: return place_cards_on_surface    (rgen, surface, room_id, tot_light_amt, i+1);
+		case TYPE_TV_REMOTE: return place_tv_remote_on_surface(rgen, surface, room_id, tot_light_amt, i+1);
+		case TYPE_TV:        return place_tv_static_on_surface(rgen, surface, room_id, tot_light_amt, i+1);
+		default: assert(0);
+		}
 	} // for i
 	return 0;
 }

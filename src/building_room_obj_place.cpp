@@ -2125,6 +2125,25 @@ bool building_t::place_tv_remote_on_surface(rand_gen_t &rgen, cube_t const &surf
 	return place_obj_on_surface(rgen, surface, room_id, tot_light_amt, objs_start, TYPE_TV_REMOTE, length, width, height);
 }
 
+bool building_t::place_tv_static_on_surface(rand_gen_t &rgen, cube_t const &surface, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_TV)) return 0;
+	vector2d const surface_sz(surface.get_size_xy());
+	bool const dim((surface_sz.x == surface_sz.y) ? rgen.rand_bool() : (surface_sz.y < surface_sz.x)); // facing short dim
+	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TV)); // D, W, H
+	float const floor_spacing(get_window_vspace());
+	float const tv_width(min(surface_sz[!dim], 0.5f*floor_spacing)*rgen.rand_uniform(0.7, 0.9)), tv_depth(tv_width*sz.x/sz.y), tv_height(tv_width*sz.z/sz.y);
+	if (surface.dz() + tv_height > 0.8*get_floor_ceil_gap()) return 0; // too tall
+	if (tv_depth > 0.5*surface_sz[dim]) return 0; // too narrow a surface
+	cube_t tv;
+	set_cube_zvals(tv, surface.z2(), surface.z2()+tv_height);
+	set_wall_width(tv, (surface.get_center_dim(!dim) + 0.1*tv_width*rgen.signed_rand_float()), 0.5*tv_width, !dim);
+	set_wall_width(tv, (surface.get_center_dim( dim) + 0.5*tv_depth*rgen.signed_rand_float()), 0.5*tv_depth,  dim);
+	if (overlaps_other_room_obj(tv, objs_start, 1)) return 0; // check_all=1
+	interior->room_geom->objs.emplace_back(tv, TYPE_TV, room_id, dim, rgen.rand_bool(), RO_FLAG_BROKEN2, tot_light_amt, SHAPE_CUBE, BLACK); // with static
+	//set_obj_id(interior->room_geom->objs);
+	return 1;
+}
+
 // Note: this room is decided by the caller and the failure to add objects doesn't make it not a dining room
 void building_t::add_diningroom_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	//if (!is_house || room.is_hallway || room.is_sec_bldg || room.is_office) return; // still applies, but unnecessary
