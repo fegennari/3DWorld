@@ -488,6 +488,7 @@ bool building_t::place_cards_on_surface(rand_gen_t &rgen, cube_t const &surface,
 bool building_t::place_obj_on_table(rand_gen_t rgen, unsigned room_id, float tot_light_amt, unsigned objs_start, room_object obj_type) {
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const objs_end(objs.size());
+	rgen.rand_mix();
 
 	for (unsigned i = objs_start; i < objs_end; ++i) { // find the first table; can't iterate over objs because we modify it
 		room_object_t const &obj(objs[i]);

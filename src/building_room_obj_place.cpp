@@ -4814,6 +4814,12 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 			laptop_prob = 0.3*place_laptop_prob;
 			pizza_prob  = 0.8*place_pizza_prob;
 			banana_prob = 0.7*place_banana_prob;
+
+			if (rtype == RTYPE_LIVING || rtype == RTYPE_FAMILY) { // avoid overlapping the TV remote
+				for (unsigned j = i+1; j < objs_end; ++j) {
+					if (objs[j].type == TYPE_TV_REMOTE) {avoid.push_back(objs[j]); break;}
+				}
+			}
 			if ((is_house || (is_apartment() && !not_private)) && !is_kitchen) {toy_prob = 0.5;} // toys are in houses and private apartments rooms only; not on kitchen tables
 		}
 		else if (obj.type == TYPE_CONF_TABLE) {
