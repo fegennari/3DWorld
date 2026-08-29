@@ -30,7 +30,6 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 
 // **************** Cobj Destroy Code ****************
 
-
 void destroy_coll_objs(point const &pos, float damage, int shooter, int damage_type, float force_radius, cube_t const &custom_cube) {
 
 	assert(damage >= 0.0);
@@ -181,7 +180,6 @@ void get_all_connected(unsigned cobj, vector<unsigned> &out) {
 	get_intersecting_cobjs_tree(coll_objects.get_cobj(cobj), out, cobj, TOLERANCE, 0, 1, cobj);
 }
 
-
 void check_cobjs_anchored(vector<unsigned> to_check, set<unsigned> anchored[2]) {
 
 	vector<unsigned> out;
@@ -231,9 +229,7 @@ void check_cobjs_anchored(vector<unsigned> to_check, set<unsigned> anchored[2]) 
 		if (is_anchored) { // all open is anchored as well
 			copy(open.begin(), open.end(), inserter(anchored[is_anchored], anchored[is_anchored].begin()));
 		}
-		else {
-			assert(open.empty());
-		}
+		else {assert(open.empty());}
 	} // for j
 }
 
@@ -246,7 +242,6 @@ void add_to_falling_cobjs(set<unsigned> const &ids) {
 		falling_cobjs.push_back(*i);
 	}
 }
-
 
 void invalidate_static_cobjs() {build_cobj_tree(0, 0);}
 
@@ -349,9 +344,7 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 	if (!to_remove.empty()) {invalidate_static_cobjs();} // after destroyed cobj removal
 
 	// add new waypoints (after build_cobj_tree and end_batch)
-	for (vector<int>::const_iterator i = just_added.begin(); i != just_added.end(); ++i) {
-		cobjs[*i].add_connect_waypoint(); // slow
-	}
+	for (vector<int>::const_iterator i = just_added.begin(); i != just_added.end(); ++i) {cobjs[*i].add_connect_waypoint();} // slow
 
 	// process unanchored cobjs
 	if (LET_COBJS_FALL || REMOVE_UNANCHORED) {
@@ -426,7 +419,6 @@ void check_falling_cobjs() {
 
 
 // **************** Cobj Connectivity Code ****************
-
 
 bool is_pt_under_mesh(point const &p) {
 	//return is_under_mesh(p); // too slow?
