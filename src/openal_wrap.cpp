@@ -375,7 +375,7 @@ void openal_source::setup(openal_buffer const &buffer, point const &pos, unsigne
 	params = sound_params_t(pos, sound_id, gain, pitch, rel_to_listener);
 }
 void openal_source::update(unsigned sid, point const &pos, float gain, float pitch) { // no velocity update
-	if (sid != params.sound_id) return; // wrong sound
+	if (sid != (int)params.sound_id) return; // wrong sound
 	if (params.pos != pos && gain < params.gain) return; // only update if same pos or higher gain (closer/louder)
 	set_pos (pos);
 	set_gain(gain);

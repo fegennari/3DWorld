@@ -1609,7 +1609,7 @@ bool building_t::add_mall_table_with_chairs(rand_gen_t &rgen, cube_t const &tabl
 		}
 	}
 	if (!is_prison() && rgen.rand_float() < 0.04) { // add phone - rare
-		float const one_inch(get_one_inch()), phone_length(6.3*one_inch), phone_width(3.3*one_inch), height(0.4*one_inch); // with a case
+		float const one_inch(get_one_inch()), phone_length(6.3*one_inch), phone_width(3.3*one_inch); // with a case
 
 		if (phone_length < 0.5*table_width) { // should be true
 			room_object_t phone;
