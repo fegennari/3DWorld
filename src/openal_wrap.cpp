@@ -189,6 +189,7 @@ public:
 		add_new_sound("scratch.wav"    ); // SOUND_SCRATCH
 		add_new_sound("gunshot2.wav"   ); // SOUND_HANDGUN
 		add_new_sound("hand_dryer.wav" ); // SOUND_HAND_DRYER
+		add_new_sound("hit_tone.wav"   ); // SOUND_HIT_TONE
 		add_new_sound("white_noise"    ); // SOUND_WHITE_NOISE; no file extension
 		cout << endl;
 

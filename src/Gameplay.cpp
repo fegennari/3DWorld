@@ -692,6 +692,9 @@ bool smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 	if (burned) {sstate.freeze_time = 0;} // thaw
 	else if (type == FREEZE_BOMB) {freeze_player(sstate, energy);}
 
+	if (source == CAMERA_ID && !same_team(source, index)) { // player hit sound
+		gen_sound(SOUND_HIT_TONE, (camera_pos + CAMERA_RADIUS*cview_dir), 1.0, 1.0, 0, zero_vector, 1); // skip_if_already_playing=1
+	}
 	if (alive) {
 		if (type != FELL && type != CRUSHED && !is_area_damage(type)) {
 			if (sstate.shields < 0.01) {
