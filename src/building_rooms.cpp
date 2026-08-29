@@ -1263,8 +1263,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			else if (has_pri_hall() && !data_center && r->part_id == (has_retail() ? 1 : 0) && f == 0 && added_desk && !has_door_sign) {
 				add_office_door_sign(rgen, *r, room_center.z, room_id);
 			}
-			if (is_house && is_basement && added_tc) { // add a TV playing static on the table
-				//place_obj_on_table(rgen, room_id, tot_light_amt, objs_start, TYPE_TV);
+			if (is_house && is_basement && added_tc && rand_gen_t(rgen).rand_bool()) { // copy rgen to avoid changing the random sequence
+				place_obj_on_table(rgen, room_id, tot_light_amt, objs_start, TYPE_TV); // add a TV playing static on the table
 			}
 			// should mall bathrooms have stains? I suppose so
 			if (is_basement && !is_swim_pool_room /*&& !is_mall_bathroom*/) {add_stains_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);}

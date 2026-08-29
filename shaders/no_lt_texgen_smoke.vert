@@ -2,6 +2,8 @@ uniform float smoke_bb[6]; // x1,x2,y1,y2,z1,z2
 uniform mat4 fg_ViewMatrix;
 uniform float tex_scale_s   = 1.0;
 uniform float tex_scale_t   = 1.0;
+uniform float tex_offset_s  = 0.0;
+uniform float tex_offset_t  = 0.0;
 uniform float tc_texgen_mix = 0.0;
 uniform vec4 world_space_offset   = vec4(0.0); // {x, y, z, rot_angle}
 uniform vec4 color_modulate       = vec4(1.0);
@@ -27,7 +29,7 @@ void main() {
 	else if (use_texgen == 4) {set_bent_quad_tc0_from_vert_id();}
 	else if (use_texgen == 5) {setup_texgen_st(); tc = mix(tc, fg_TexCoord, tc_texgen_mix);}
 	else if (use_texgen == 6) {setup_texgen_st_no_xy_cancel(); tc = mix(tc, fg_TexCoord, tc_texgen_mix);}
-	else                      {tc = fg_TexCoord * vec2(tex_scale_s, tex_scale_t);}
+	else                      {tc = fg_TexCoord * vec2(tex_scale_s, tex_scale_t) + vec2(tex_offset_s, tex_offset_t);}
 
 	vec4 vertex    = vec4((vertex_offset_scale*vertex_offset), 0.0) + fg_Vertex;
 	vec3 normal_in = fg_Normal;

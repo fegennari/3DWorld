@@ -279,8 +279,8 @@ public:
 		onscreen_text = camera.tag;
 
 		if (!camera.valid || camera.tid == 0) { // camera feed invalid, or texture not yet created: draw noise
-			mat.tex.tscale_x = 6.0/monitor.get_width ();
-			mat.tex.tscale_y = 6.0/monitor.get_height();
+			mat.tex.tscale_x = 8.0/monitor.get_width ();
+			mat.tex.tscale_y = 4.0/monitor.get_height();
 			mat.tex.txoff    = rgen.rand_float(); // animate it
 			mat.tex.tyoff    = rgen.rand_float();
 			select_texture(PS_NOISE_TEX);

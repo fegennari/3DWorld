@@ -139,6 +139,12 @@ void tid_nm_pair_t::set_gl(tid_nm_pair_dstate_t &state) const {
 	}
 	else if (tid == NO_SHADOW_WHITE_TEX || tid == SHADOW_ONLY_TEX) {select_no_texture();}
 	else {select_texture(tid);}
+	
+	if (tid == PS_NOISE_TEX) {
+		static rand_gen_t static_rgen;
+		state.s.add_uniform_float("tex_offset_s", static_rgen.rand_float());
+		state.s.add_uniform_float("tex_offset_t", static_rgen.rand_float());
+	}
 	float const e_val(get_emissive_val());
 	if (e_val      > 0.0) {state.s.add_uniform_float("emissive_scale", e_val);} // enable emissive
 	if (shininess  > 0  ) {state.s.set_specular_color(spec_color.get_c3(), shininess);} // colored specular
@@ -151,6 +157,11 @@ void tid_nm_pair_t::set_gl(tid_nm_pair_dstate_t &state) const {
 void tid_nm_pair_t::unset_gl(tid_nm_pair_dstate_t &state) const {
 	if (tid == REFLECTION_TEXTURE_ID && room_mirror_ref_tid != 0) {state.s.make_current(); return;}
 	if (tid == ABST_ART_TEXTURE_ID) {state.s.make_current(); return;}
+	
+	if (tid == PS_NOISE_TEX) { // restore
+		state.s.add_uniform_float("tex_offset_s", 0.0);
+		state.s.add_uniform_float("tex_offset_t", 0.0);
+	}
 	bool const has_normal_map(get_nm_tid() != FLAT_NMAP_TEX);
 	if (has_normal_map) {bind_default_flat_normal_map();} // reset back to flat normal map
 	float const e_val(get_emissive_val());

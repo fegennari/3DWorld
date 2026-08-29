@@ -6581,6 +6581,7 @@ void building_room_geom_t::add_tv_picture(room_object_t const &c) {
 	if (!c.is_tv_monitor_on() || c.is_active()) return; // skip if turned off or active security monitor (not drawn here)
 	tid_nm_pair_t tex(get_tv_or_monitor_tid(c), 0.0); // unshadowed
 	tex.emissive = 1.0;
+	if (c.is_broken2()) {tex.tscale_x = 8.0/c.get_width(); tex.tscale_y = 4.0/c.get_height();}
 	add_tv_or_monitor_screen(c, get_material(tex));
 }
 
