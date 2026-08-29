@@ -28,12 +28,10 @@ extern map<unsigned, unsigned> sclasses_to_weapons;
 
 // ************ U_SHIP_BASE ************
 
-
 u_ship_base::u_ship_base(unsigned sclass_) : sclass(sclass_) {
 	assert(sclass < sclasses.size());
 	assert(specs().inited);
 }
-
 
 void u_ship_base::create_from(u_ship const *const ship) { // related to u_ship::create_from()
 
@@ -51,7 +49,6 @@ void u_ship_base::create_from(u_ship const *const ship) { // related to u_ship::
 	weapons    = ship->weapons;
 }
 
-
 // Note: Can't be in u_ship_base since it can be copied
 void u_ship_base::free_weapons() { // recursive
 
@@ -65,7 +62,6 @@ void u_ship_base::free_weapons() { // recursive
 	}
 	weapons.clear();
 }
-
 
 void u_ship_base::check_ref_objs(u_ship *cur_ship) {
 
@@ -95,9 +91,7 @@ void u_ship_base::check_ref_objs(u_ship *cur_ship) {
 	}
 }
 
-
 bool u_ship_base::find_weapon_atype(unsigned atype, bool fighter, unsigned &ix) const {
-
 	for (unsigned w = 0; w < weapons.size(); ++w) {
 		if (fighter && !weapons[w].get_usw().is_fighter) continue;
 		if (weapons[w].get_usw().ammo_type == atype) {ix = w; return 1;}
@@ -105,9 +99,7 @@ bool u_ship_base::find_weapon_atype(unsigned atype, bool fighter, unsigned &ix) 
 	return 0;
 }
 
-
 bool u_ship_base::find_weapon_wclass(unsigned wclass, unsigned &ix) const {
-
 	for (unsigned w = 0; w < weapons.size(); ++w) {
 		if (weapons[w].wclass == wclass) {ix = w; return 1;}
 	}
@@ -159,7 +151,6 @@ void u_ship_base::orbital_ship_regen(u_ship *ship) {
 	ship->docked = was_docked;
 }
 
-
 void u_ship_base::use_fuel(float val) {
 
 	if (val == 0.0) return;
@@ -188,7 +179,6 @@ void u_ship_base::use_fuel(float val) {
 		}
 	}
 }
-
 
 void u_ship_base::regen(float rate, u_ship_base *dock) {
 
@@ -300,12 +290,9 @@ void u_ship_base::accept_fighters_from(u_ship *ship, u_ship *cur_ship) { // recu
 	ship->fighters.clear();
 }
 
-
 void u_ship_base::copy_weapons_from_sclass() {
-
 	copy(specs().weapons.begin(), specs().weapons.end(), back_inserter(weapons));
 }
-
 
 void u_ship_base::add_fighter(u_ship *ship, u_ship *cur_ship, bool from_fighter_bay) {
 	
@@ -316,30 +303,22 @@ void u_ship_base::add_fighter(u_ship *ship, u_ship *cur_ship, bool from_fighter_
 	fighters.insert(ship);
 }
 
-
 bool u_ship_base::has_ammo_for(unsigned wclass) const {
-
 	assert(wclass < us_weapons.size());
 	assert(us_weapons[wclass].need_ammo());
 	unsigned i;
 	return (find_weapon_wclass(wclass, i) && weapons[i].ammo > 0);
 }
 
-
 bool u_ship_base::has_space_for_fighter(unsigned sclass) const {
-
 	unsigned ix;
 	if (!find_weapon_atype(sclass, 1, ix)) return 0;
 	assert(ix < weapons.size());
 	return weapons[ix].space_for_fighter();
 }
 
-
 void u_ship_base::reset_ammo() { // used for player "cheat"
-
-	for (unsigned i = 0; i < weapons.size(); ++i) {
-		weapons[i].ammo = weapons[i].init_ammo;
-	}
+	for (unsigned i = 0; i < weapons.size(); ++i) {weapons[i].ammo = weapons[i].init_ammo;}
 }
 
 
@@ -347,17 +326,13 @@ bool u_ship_base::can_attack() const {
 	return (weapons.empty() || (weapons.size() == 1 && weapons[0].wclass == UWEAP_NONE));
 }
 
-
 bool u_ship_base::can_lead_shot_with(unsigned weap) const {
-
 	assert(weap < weapons.size());
 	if (!weapons[weap].can_lead_shot()) return 0;
 	return (specs().mpredict || weap_turret(weapons[weap].wclass));
 }
 
-
 bool u_ship_base::need_ammo_for(unsigned wix) const {
-
 	assert(wix < weapons.size());
 	unsigned const weapon_id(weapons[wix].wclass);
 	assert(weapon_id < us_weapons.size());
@@ -366,11 +341,8 @@ bool u_ship_base::need_ammo_for(unsigned wix) const {
 
 
 void u_ship_base::print_ammo() const {
-
 	for (unsigned i = 0; i < weapons.size(); ++i) {
-		if (us_weapons[weapons[i].wclass].need_ammo()) {
-			cout << us_weapons[weapons[i].wclass].name << ":" << weapons[i].ammo << " ";
-		}
+		if (us_weapons[weapons[i].wclass].need_ammo()) {cout << us_weapons[weapons[i].wclass].name << ":" << weapons[i].ammo << " ";}
 	}
 }
 
@@ -397,16 +369,12 @@ bool u_ship_base::check_fire_delay(unsigned wix) const {
 	return (fire_delay >= fdelay);
 }
 
-
 bool u_ship_base::weap_turret(unsigned weapon_id) const {
-
 	assert(weapon_id < us_weapons.size());
 	return ((specs().turreted + us_weapons[weapon_id].turreted) >= 2);
 }
 
-
 bool u_ship_base::bad_angle(float const angle, float target_dist, unsigned weapon_id) const {
-
 	assert(weapon_id < us_weapons.size());
 	if (angle > PI_TWO) return 1; // > 90 degrees is always bad
 	us_weapon const &weap(us_weapons[weapon_id]);
@@ -416,7 +384,6 @@ bool u_ship_base::bad_angle(float const angle, float target_dist, unsigned weapo
 	if (weap.const_dam)  return (angle > 0.14);
 	return (angle > 0.08);
 }
-
 
 bool u_ship_base::out_of_ammo_for(unsigned wix, bool current_only) const {
 	
@@ -433,7 +400,6 @@ bool u_ship_base::out_of_ammo_for(unsigned wix, bool current_only) const {
 	return 1;
 }
 
-
 float u_ship_base::get_weap_ammo_mass(vector<ship_weapon> const &ws) const {
 
 	float wmass(0.0);
@@ -444,7 +410,6 @@ float u_ship_base::get_weap_ammo_mass(vector<ship_weapon> const &ws) const {
 	}
 	return wmass;
 }
-
 
 float u_ship_base::get_damage_after_time(float time_seconds) const {
 	
@@ -460,9 +425,7 @@ float u_ship_base::get_damage_after_time(float time_seconds) const {
 	return (1.0f - (fin_shields + fin_armor + 1.0f)/(max_shields + max_armor + 1.0f));
 }
 
-
 float u_ship_base::get_true_rel_mass_scale() const {
-
 	assert(sclass < sclasses.size());
 	assert(specs().mass > 0.0);
 	float const sclass_mass(get_weap_ammo_mass(sclasses[sclass].weapons));
@@ -473,14 +436,12 @@ float u_ship_base::get_true_rel_mass_scale() const {
 
 // ************ SHIP_WEAPON ************
 
-
 ship_weapon::ship_weapon(unsigned weapon, unsigned num, unsigned ammo0, vector<point> const &weap_pts_) : wclass(weapon), init_ammo(ammo0), wcount(num) {
 	assert(wclass < us_weapons.size());
 	if (init_ammo == 0) init_ammo = wcount*us_weapons[wclass].def_ammo; // get the default for that weapon
 	ammo     = init_ammo;
 	weap_pts = weap_pts_;
 }
-
 
 us_weapon const &ship_weapon::get_usw() const {
 	assert(wclass < us_weapons.size());
@@ -523,8 +484,6 @@ void ship_weapon::regen_ammo(float rate, u_ship_base *dock) {
 	if (!weap.do_regen) nregen = (unsigned)max(0, ((int)nregen - (int)numregen));
 }
 
-
-// Note: dock argument is unused
 void ship_weapon::dock_ship(u_ship *ship, u_ship *dock) { // can't copy fighters though (unless docked)
 
 	assert(ship != NULL);
@@ -543,7 +502,6 @@ void ship_weapon::dock_ship(u_ship *ship, u_ship *dock) { // can't copy fighters
 		ship->ncredits  = 0;
 	}
 }
-
 
 void ship_weapon::release_ship(u_ship *ship, u_ship *dock) {
 
@@ -574,12 +532,9 @@ void ship_weapon::release_ship(u_ship *ship, u_ship *dock) {
 	}
 }
 
-
 bool ship_weapon::space_for_fighter() const {
-
 	return (ammo < max(init_ammo, wcount*us_weapons[wclass].def_ammo));
 }
-
 
 float ship_weapon::min_damage() const {
 
@@ -594,12 +549,9 @@ float ship_weapon::min_damage() const {
 	return min_damage;
 }
 
-
 // ************ US_CLASS ************
 
-
 void us_class::set_mesh_params(bool deform, bool remove, bool expand, bool mu_exp, bool trans) {
-	
 	assert(inited && uses_mesh2d);
 	mesh_deform = deform;
 	mesh_remove = remove;
@@ -608,56 +560,42 @@ void us_class::set_mesh_params(bool deform, bool remove, bool expand, bool mu_ex
 	mesh_trans  = trans;
 }
 
-
 void us_class::add_bcube(float x1, float x2, float y1, float y2, float z1, float z2, float dscale) {
-
 	assert(inited);
 	assert(x1 < x2 && y1 < y2 && z1 < z2);
 	cobjs.add(new ship_cube(x1, x2, y1, y2, z1, z2, dscale));
 }
 
-
 void us_class::add_bcylinder(ship_cylinder const &c) {
-	
 	assert(inited);
 	assert(c.r1 >= 0.0 && c.r2 >= 0.0 && (c.r1 > 0.0 || c.r2 > 0.0));
 	cobjs.add(new ship_cylinder(c));
 }
 
-
 void us_class::add_bsphere(point const &center, float r, float dscale) {
-
 	assert(inited);
 	assert(r > 0.0);
 	cobjs.add(new ship_sphere(center, r, dscale));
 }
 
-
 void us_class::add_btorus(point const &center, float ri, float ro, float dscale) {
-
 	assert(inited);
 	assert(ri > 0.0 && ro > 0.0 && ri <= ro);
 	cobjs.add(new ship_torus(center, ri, ro, dscale));
 }
 
-
 void us_class::add_bcylin_cube(ship_cylinder const &c, float x1, float x2, float y1, float y2, float z1, float z2) {
-
 	assert(inited);
 	assert(c.r1 >= 0.0 && c.r2 >= 0.0 && (c.r1 > 0.0 || c.r2 > 0.0));
 	assert(x1 < x2 && y1 < y2 && z1 < z2);
 	cobjs.add(new ship_bounded_cylinder(c, ship_cube(x1, x2, y1, y2, z1, z2, c.get_dscale())));
 }
 
-
 void us_class::add_bcapsule(point const &p1, point const &p2, float r, float dscale) {
-
 	cobjs.add(new ship_capsule(p1, p2, r, dscale));
 }
 
-
 void us_class::add_triangle(triangle const &tri) {
-
 	assert(inited);
 	cobj_triangles.push_back(tri);
 }
@@ -690,7 +628,6 @@ float us_class::offense_rating() const {
 	return offense; // round to nearest int
 }
 
-
 float us_class::defense_rating() const {
 
 	if (defense >= 0.0) return defense; // cached
@@ -711,26 +648,16 @@ float us_class::defense_rating() const {
 
 
 unsigned us_class::weap_cost() const {
-
 	unsigned c(0);
-
-	for (unsigned i = 0; i < weapons.size(); ++i) {
-		c += us_weapons[weapons[i].wclass].cost*weapons[i].wcount;
-	}
+	for (unsigned i = 0; i < weapons.size(); ++i) {c += us_weapons[weapons[i].wclass].cost*weapons[i].wcount;}
 	return c;
 }
-
 
 unsigned us_class::ammo_cost() const {
-
 	unsigned c(0);
-
-	for (unsigned i = 0; i < weapons.size(); ++i) {
-		c += us_weapons[weapons[i].wclass].ammo_cost*weapons[i].init_ammo;
-	}
+	for (unsigned i = 0; i < weapons.size(); ++i) {c += us_weapons[weapons[i].wclass].ammo_cost*weapons[i].init_ammo;}
 	return c;
 }
-
 
 float us_class::used_mass() const {
 
@@ -744,7 +671,6 @@ float us_class::used_mass() const {
 	return used_w;
 }
 
-
 bool us_class::can_attack() const {
 	return (weapons.empty() || (weapons.size() == 1 && weapons[0].wclass == UWEAP_NONE));
 }
@@ -752,7 +678,6 @@ bool us_class::can_attack() const {
 unsigned us_class::req_crew() const {
 	return (unsigned)ceil(SHIP_REQ_CREW*ncrew);
 }
-
 
 float us_class::get_weap_range() const { // caches weap_range
 
@@ -774,7 +699,6 @@ float us_class::get_weap_range() const { // caches weap_range
 	return weap_range;
 }
 
-
 float us_class::get_min_weap_range() const { // does not cache weap_range
 
 	float min_weap_range(0.0);
@@ -789,7 +713,6 @@ float us_class::get_min_weap_range() const { // does not cache weap_range
 
 
 // ************ US_WEAPON ************
-
 
 float us_weapon::offense_rating() const {
 	if (is_fighter) return sclasses[ammo_type].offense_rating();
@@ -806,7 +729,6 @@ float us_weapon::defense_rating() const {
 
 
 // ************ US_FLEET ************
-
 
 us_fleet::us_fleet(string const &name_, unsigned align_, unsigned ai_, unsigned targ_, float spread_,
 				   point const &pos_, unsigned counts[], unsigned multiplier) 

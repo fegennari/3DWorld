@@ -1353,10 +1353,7 @@ void ugalaxy::process(ucell const &cell) {
 	// gen asteroid fields
 	unsigned const num_af(rand_uniform_uint2(MIN_AST_FIELD_PER_GALAXY, MAX_AST_FIELD_PER_GALAXY));
 	asteroid_fields.resize(num_af);
-
-	for (vector<uasteroid_field>::iterator i = asteroid_fields.begin(); i != asteroid_fields.end(); ++i) {
-		i->init(gen_valid_system_pos(), radius*rand_uniform2(0.005, 0.01));
-	}
+	for (uasteroid_field &af : asteroid_fields) {af.init(gen_valid_system_pos(), radius*rand_uniform2(0.005, 0.01));}
 	gen = 1;
 }
 
@@ -1415,7 +1412,6 @@ bool ugalaxy::gen_system_loc(vector<point> const &placed) {
 
 
 void ussystem::create(point const &pos_) {
-
 	current.type = UTYPE_SYSTEM;
 	gen_rseeds();
 	planets.clear();
@@ -1449,12 +1445,10 @@ void ustar::create(point const &pos_) {
 
 
 colorRGBA const &ussystem::get_galaxy_color() {
-
 	if (galaxy_color.alpha == 0.0) {calc_color();} // lazy update
 	assert(galaxy_color.alpha > 0.0);
 	return galaxy_color;
 }
-
 
 void ussystem::calc_color() { // delayed until the color is actually needed
 
@@ -1483,9 +1477,7 @@ void ussystem::calc_color() { // delayed until the color is actually needed
 	galaxy_color.set_valid_color();
 }
 
-
 uplanet *ussystem::get_planet_by_name(string const &name) {
-
 	for (unsigned i = 0; i < planets.size(); ++i) {
 		if (planets[i].getname() == name) return &planets[i];
 	}
@@ -1500,7 +1492,6 @@ umoon *ussystem::get_moon_by_name(string const &name) { // slow
 	}
 	return nullptr;
 }
-
 
 void ussystem::process() {
 
@@ -1557,11 +1548,9 @@ void ussystem::process() {
 bool urev_body::can_land() const {
 	return (!gas_giant && temp >= MIN_LAND_TEMP && temp <= MAX_LAND_TEMP);
 }
-
 bool urev_body::colonizable() const {
 	return (is_ok() && !gas_giant && temp >= MIN_COLONY_TEMP && temp <= MAX_COLONY_TEMP && colonizable_int());
 }
-
 bool urev_body::liveable() const { // only planets are liveable
 	return (is_ok() && !gas_giant && water > 0.15 && atmos > 0.25 && temp >= MIN_LIVE_TEMP && temp <= MAX_LIVE_TEMP);
 }
@@ -1633,15 +1622,12 @@ void uplanet::create(bool phase) {
 	if (current.is_destroyed()) {status = 1;}
 }
 
-
 float uplanet::get_vegetation() const {
 	return ((has_vegetation() && temp > MIN_PLANT_TEMP && temp < MAX_PLANT_TEMP) ? sqrt(atmos*water) : 0.0);
 }
-
 bool uplanet::has_ice_debris() const {
 	return (temp < 0.75*FREEZE_TEMP && water > 0.3); // only for ice planets
 }
-
 
 void uplanet::process() {
 
@@ -1700,7 +1686,6 @@ void uplanet::process() {
 	gen = 1;
 }
 
-
 point_d uplanet::do_update(point_d const &p0, bool update_rev, bool update_rot) {
 
 	bool const has_sun(system->sun.is_ok());
@@ -1729,9 +1714,8 @@ point_d uplanet::do_update(point_d const &p0, bool update_rev, bool update_rot) 
 
 
 struct upring {
-	float radius1, radius2;
+	float radius1=0.0, radius2=0.0;
 };
-
 
 void uplanet::gen_prings() {
 
@@ -1778,15 +1762,12 @@ void uplanet::gen_prings() {
 	asteroid_belt->init_rings(pos); // gen_asteroids() will be called when drawing
 }
 
-
 umoon *uplanet::get_moon_by_name(string const &name) {
-
 	for (unsigned i = 0; i < moons.size(); ++i) {
 		if (moons[i].getname() == name) return &moons[i];
 	}
 	return nullptr;
 }
-
 
 void uplanet::get_valid_orbit_r(float &orbit_r, float obj_r) const { // for satellites
 
@@ -1805,7 +1786,6 @@ void uplanet::get_valid_orbit_r(float &orbit_r, float obj_r) const { // for sate
 
 
 void umoon::get_valid_orbit_r(float &orbit_r, float obj_r) const { // for satellites
-
 	assert(is_ok());
 	if (!planet || !planet->is_ok()) return;
 	float const orad(ORBIT_SPACE_MARGIN*(obj_r + planet->radius));
@@ -1813,13 +1793,10 @@ void umoon::get_valid_orbit_r(float &orbit_r, float obj_r) const { // for satell
 	orbit_r = max(orbit_r, (radius + ORBIT_SPACE_MARGIN*obj_r)); // apply min_orbit
 }
 
-
 void umoon::calc_temperature() {
-
 	temp = planet->system->sun.get_temperature_at_pt(pos);
 	if (shadowed_by_planet()) {temp *= 0.75;} // cooler in shadow
 }
-
 
 void umoon::create(bool phase) { // no rotation due to satellites
 
@@ -1849,7 +1826,6 @@ void umoon::create(bool phase) { // no rotation due to satellites
 
 
 void rotated_obj::rgen_values() {
-
 	rot_ang  = rot_ang0 = 360.0*rand2d(); // degrees in OpenGL
 	rev_ang  = rev_ang0 = 360.0*rand2d(); // degrees in OpenGL
 	rot_axis = signed_rand_vector2_norm();
@@ -1904,7 +1880,6 @@ point_d urev_body::do_update(point_d const &p0, bool update_rev, bool update_rot
 	return new_pos;
 }
 
-
 template<typename T>
 bool urev_body::create_orbit(vector<T> const &objs, int i, point const &pos0, vector3d const &raxis, float radius0,
 							 float max_size, float min_size, float rspacing, float ispacing, float minspacing, float min_gap, vector3d const &oscale)
@@ -1937,9 +1912,7 @@ bool urev_body::create_orbit(vector<T> const &objs, int i, point const &pos0, ve
 	return 1;
 }
 
-
 void urev_body::dec_orbiting_refs(s_object const &sobj) {
-
 	assert(sobj.object == this);
 	//assert(orbiting_refs > 0); // too strong - can fail if player leaves the galaxy and planets/moons are deleted (refs are reset)
 	if (orbiting_refs >  0) {--orbiting_refs;}
@@ -1974,16 +1947,11 @@ void ustar::gen_color() {
 	if (temp < 30.0) colorA.G = colorA.B = colorB.G = colorB.B = 0.0; // make sure it's just red
 }
 
-
 colorRGBA ustar::get_ambient_color_val() const {
-
 	return (is_ok() ? colorRGBA(color.R, color.G, color.B, color.A)*sqrt(radius/STAR_MAX_SIZE) : BLACK);
 }
 
-
 colorRGBA ustar::get_light_color() const {
-
-	//return color;
 	// max the RGB for the two colors in each color channel to get a saturation effect
 	return colorRGBA(max(colorA.R, colorB.R), max(colorA.G, colorB.G), max(colorA.B, colorB.B), color.A);
 }
@@ -2019,9 +1987,7 @@ void uplanet::gen_color() {
 	color.set_valid_color();
 }
 
-
 void umoon::gen_color() {
-	
 	float const brightness(rand_uniform2(0.5, 0.75));
 	for (unsigned i = 0; i < 3; ++i) {color[i] = 0.75*brightness + 0.25*rand2d();}
 	color.alpha = 1.0;
@@ -2050,7 +2016,6 @@ void uobj_solid::gen_colorAB(float delta) {
 
 // *** TEXTURES ***
 
-
 void urev_body::check_gen_texture(unsigned size) {
 
 	if (use_procedural_shader()) return; // no texture used
@@ -2074,9 +2039,7 @@ void urev_body::check_gen_texture(unsigned size) {
 	create_rocky_texture(tsize0); // new texture
 }
 
-
 void urev_body::create_rocky_texture(unsigned size) {
-
 	tsize = size;
 	assert(tsize <= MAX_TEXTURE_SIZE);
 	vector<unsigned char> data(3*tsize*tsize);
@@ -2084,7 +2047,6 @@ void urev_body::create_rocky_texture(unsigned size) {
 	setup_texture(tid, 0, 1, 0);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, tsize, tsize, 0, GL_RGB, GL_UNSIGNED_BYTE, data.data());
 }
-
 
 void urev_body::create_gas_giant_texture() {
 
@@ -2108,11 +2070,9 @@ void urev_body::create_gas_giant_texture() {
 	if (mipmap) {gen_mipmaps(1);}
 }
 
-
 bool urev_body::use_procedural_shader() const {
 	return (!gas_giant && water < 1.0 && (display_mode & 0x20) == 0); // for planets and moons
 }
-
 
 void urev_body::upload_colors_to_shader(shader_t &s) const {
 
@@ -2128,7 +2088,6 @@ void urev_body::upload_colors_to_shader(shader_t &s) const {
 	s.add_uniform_float("terrain_scale",1.25*get_hmap_scale()); // divide terrain_scale by radius instead?
 	s.add_uniform_float("nmap_mag",     CLIP_TO_01(2.0f - 0.2f*p2p_dist(pos, get_player_pos())/radius)); // 1.0 at dist < 5R, 0.0 at dist > 10R
 }
-
 
 void urev_body::get_surface_color(unsigned char *data, float val, float phi) const { // val in [0,1]
 
@@ -2180,17 +2139,13 @@ void urev_body::get_surface_color(unsigned char *data, float val, float phi) con
 	}
 }
 
-
 void urev_body::calc_snow_thresh() {
-
 	float const snow_temp(CLIP_TO_01(2.0f*((0.5f*FREEZE_TEMP + 0.5f*BOIL_TEMP) - temp))/(BOIL_TEMP - FREEZE_TEMP));
 	float const snow_val(CLIP_TO_01(2.0f*(water - 0.05f))*snow_temp);
 	snow_thresh = max(water, (1.0f - snow_val)); // ~0.9 to 1.0, where lower is more snow
 }
 
-
 void uobj_solid::get_colors(unsigned char ca[3], unsigned char cb[3]) const {
-
 	for (unsigned d = 0; d < 3; ++d) {
 		assert(colorA[d] >= 0.0 && colorA[d] <= 1.0);
 		assert(colorB[d] >= 0.0 && colorB[d] <= 1.0);
@@ -2245,7 +2200,6 @@ void universe_t::free_context() { // should be OK even if universe isn't setup
 
 // *** MEMORY - FREE CODE ***
 
-
 void ucell::free_uobj() {
 
 	gen = 0;
@@ -2256,28 +2210,21 @@ void ucell::free_uobj() {
 	}
 }
 
-
 void ugalaxy::clear_systems() {
-
 	sols.clear();
 	clusters.clear();
 	asteroid_fields.clear();
 }
 
-
 void ugalaxy::free_uobj() {
-
 	gen = 0;
 	for (unsigned i = 0; i < sols.size(); ++i) {sols[i].free_uobj();}
 	clear_systems();
 }
 
-
 void ussystem::free_planets() {
-
 	for (unsigned i = 0; i < planets.size(); ++i) {planets[i].free_uobj();}
 }
-
 
 void ussystem::free_uobj() {
 
@@ -2293,7 +2240,6 @@ void ussystem::free_uobj() {
 	galaxy_color.alpha = 0.0; // set to an invalid state
 }
 
-
 void uplanet::free_uobj() {
 
 	for (unsigned i = 0; i < moons.size(); ++i) {moons[i].free_uobj();}
@@ -2307,9 +2253,7 @@ void uplanet::free_uobj() {
 	urev_body::free_uobj();
 }
 
-
 void urev_body::free_uobj() {
-
 	if (gen) free_texture();
 	surface.reset(); // OK if already NULL
 	//unset_owner();
@@ -2318,7 +2262,6 @@ void urev_body::free_uobj() {
 
 
 // *** DRAW CODE ***
-
 
 void rotated_obj::apply_gl_rotate() const {
 	rotate_from_v2v(rot_axis, plus_z);
@@ -2329,15 +2272,12 @@ void rotated_obj::rotate_vector(vector3d &v) const {
 	rotate_norm_vector3d_into_plus_z(rot_axis, v);
 	rotate_vector3d(plus_z, rot_ang/TO_DEG, v); // in radians
 }
-
 void rotated_obj::rotate_vector_inv(vector3d &v) const {
 	rotate_vector3d(plus_z, -rot_ang/TO_DEG, v); // in radians
 	rotate_norm_vector3d_into_plus_z(rot_axis, v, -1.0); // inverse rotate
 }
 
-
 void move_in_front_of_far_clip(point_d &pos, point const &camera, float &size, float dist, float dscale) {
-
 	if (dist > 0.75*UNIV_FAR_CLIP) { // behind far clipping plane - move closer and scale
 		float const pscale(UNIV_FAR_CLIP/(dscale*dist));
 		size *= pscale;
@@ -2550,12 +2490,10 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 
 
 vector<float> &get_empty_perturb_map(int ndiv) {
-
 	static vector<float> perturb_map;
 	perturb_map.resize(ndiv*(ndiv+1));
 	return perturb_map;
 }
-
 
 void urev_body::draw_surface(point_d const &pos_, float size, int ndiv) {
 
@@ -2604,7 +2542,6 @@ void ustar::draw_flares(int ndiv, bool texture) {
 	glDisable(GL_CULL_FACE);
 }
 
-
 void ustar::solar_flare::gen(colorRGBA const &color) {
 
 	length   = rand_uniform(0.08, 0.16);
@@ -2617,7 +2554,6 @@ void ustar::solar_flare::gen(colorRGBA const &color) {
 	color1.set_valid_color();
 	color2   = ALPHA0;
 }
-
 
 void ustar::solar_flare::update(colorRGBA const &color) {
 
@@ -2633,9 +2569,7 @@ void ustar::solar_flare::update(colorRGBA const &color) {
 	radius  = min(radius, 0.5f);
 }
 
-
 void ustar::solar_flare::draw(float size, int ndiv, bool texture) const {
-
 	if (lifetime == 0) return;
 	assert(length > 0.0 && radius > 0.0 && size > 0.0);
 	fgPushMatrix();
@@ -2646,7 +2580,6 @@ void ustar::solar_flare::draw(float size, int ndiv, bool texture) const {
 
 
 void urev_body::show_colonizable_liveable(point const &pos_, float radius0, ushader_group &usg) const {
-
 	colorRGBA color;
 	if      (liveable())    {color = GREEN;}
 	else if (colonizable()) {color = RED;}
@@ -2658,7 +2591,6 @@ void urev_body::show_colonizable_liveable(point const &pos_, float radius0, usha
 
 
 void uplanet::ensure_rings_texture() {
-
 	if (ring_data.empty() || ring_tid > 0) return; // no rings, or texture already created
 	bool const mipmap = 1; // Note: somewhat slow when the player is flying by quickly
 	setup_1d_texture(ring_tid, mipmap, 0, 0, 0);
@@ -2667,7 +2599,6 @@ void uplanet::ensure_rings_texture() {
 }
 
 void uplanet::bind_rings_texture(unsigned tu_id) const { // setup ring texture so we can create ring shadows
-
 	if (ring_data.empty() || ring_tid == 0) return;
 	bind_texture_tu(ring_tid, 2);
 }
@@ -2690,7 +2621,6 @@ void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float
 	fgPopMatrix();
 }
 
-
 void uplanet::draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, float size_, shadow_vars_t const &svars, float camera_dist_from_center) const {
 
 	float const cloud_radius(PLANET_ATM_RSCALE*radius);
@@ -2707,7 +2637,6 @@ void uplanet::draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, f
 
 // *** PROCESSING/QUERY CODE ***
 
-
 bool umoon::shadowed_by_planet() {
 
 	assert(planet != NULL && planet->system != NULL);
@@ -2720,7 +2649,6 @@ bool umoon::shadowed_by_planet() {
 	return (dx < rx);
 }
 
-
 string uplanet::get_atmos_string() const {
 
 	if (atmos == 0.0    ) {return "None";}
@@ -2729,7 +2657,6 @@ string uplanet::get_atmos_string() const {
 	if (has_vegetation()) {return "Breathable";}
 	return "Toxic";
 }
-
 
 string urev_body::get_info() const {
 
@@ -2743,9 +2670,7 @@ string urev_body::get_info() const {
 	return oss.str();
 }
 
-
 string ustar::get_info() const {
-
 	ostringstream oss;
 	oss << "Radius: " << radius << ", Temp: " << 100.0*temp << ", Planets: " << num_satellites;
 	return oss.str();
@@ -3211,15 +3136,12 @@ float get_temp_in_system(s_object const &clobj, point const &pos, point &sun_pos
 	return ((rdist_sq < sr*sr) ? 4.0f : 1.0f)*sun.get_energy()*min(1.0f/rdist_sq, 10.0f/(sr*sr)); // Note: same as sun.get_temperature_at_pt(pos), unless inside the sun
 }
 
-
 float universe_t::get_point_temperature(s_object const &clobj, point const &pos, point &sun_pos) const {
-
 	if (clobj.system >= 0) {return get_temp_in_system(clobj, pos, sun_pos);} // existing system is valid
 	s_object result; // invalid system - expand the search radius and try again
 	if (!get_closest_object(result, pos, UTYPE_SYSTEM, 0, 1, 4.0, 0, 1.0, 0.0, clobj.galaxy) || result.system < 0) return 0.0;
 	return get_temp_in_system(result, pos, sun_pos);
 }
-
 
 bool get_gravity(s_object &result, point pos, vector3d &gravity, int offset) {
 
@@ -3244,16 +3166,13 @@ bool get_gravity(s_object &result, point pos, vector3d &gravity, int offset) {
 	return 1;
 }
 
-
 inline void uobj_solid::set_grav_mass() {
-
 	gravity = radius*density;
 	mass    = MASS_SCALE*gravity*radius*radius; // used to be f(r^2) not f(r^3)
 }
 
 
 // *** PARAMS CODE ***
-
 
 void set_sun_loc_color(point const &pos, colorRGBA const &color, float radius, bool shadowed, bool no_ambient, float a_scale, float d_scale, shader_t *shader) {
 
@@ -3278,14 +3197,11 @@ void set_sun_loc_color(point const &pos, colorRGBA const &color, float radius, b
 	set_star_light_atten(light, max(0.25f, min(1.0f, STAR_MAX_SIZE/radius)), shader);
 }
 
-
 void set_light_galaxy_ambient_only(shader_t *shader) {
 	clear_colors_and_disable_light(0, shader); // need to zero it out as well, since shaders ignore light enable state
 }
 
-
 void set_universe_ambient_color(colorRGBA const &color, shader_t *shader) {
-
 	int const light(get_universe_ambient_light(1)); // always for universe mode
 	enable_light(light);
 	colorRGBA ambient(BLACK);
@@ -3294,9 +3210,7 @@ void set_universe_ambient_color(colorRGBA const &color, shader_t *shader) {
 	setup_gl_light_atten(light, 1.0, 0.0, 0.0, shader);
 }
 
-
 void set_universe_lighting_params(bool for_universe_draw) { // called for both universe and ground mode
-
 	int const a_light(get_universe_ambient_light(for_universe_draw)), s_light(0);
 	set_colors_and_enable_light(s_light, GRAY, WHITE); // single star diffuse + ambient
 	set_gl_light_pos(s_light, all_zeros, 0.0); // directional light
@@ -3306,7 +3220,6 @@ void set_universe_lighting_params(bool for_universe_draw) { // called for both u
 
 
 // ****************** CLASS HIERARCHY CODE **********************
-
 
 void uobject::explode(float damage, float bradius, int etype, vector3d const &edir, int exp_time, int wclass, int align, unsigned eflags, free_obj const *parent_) {
 
@@ -3322,14 +3235,11 @@ void uobject::explode(float damage, float bradius, int etype, vector3d const &ed
 }
 
 void uobject::def_explode(float size, int etype, vector3d const &edir, int wclass, int align, unsigned eflags, free_obj const *parent_, float dscale) {
-	
 	explode(EXPLOSION_DAMAGE*dscale*size*radius, size*radius, etype, edir, 0, wclass, align, eflags, parent_);
 	//assert(!is_ok()); // not true for comets, or anything else that respawns
 }
 
-
 void uobject::add_gravity_vector_base(vector3d &vgravity, point const &mpos, float gfactor, float gmax) const {
-
 	if (!is_ok()) return;
 	vector3d const dir(pos - mpos);
 	float const dmag(dir.mag()), dist(max(dmag, radius));
@@ -3341,7 +3251,6 @@ void uobject::add_gravity_vector_base(vector3d &vgravity, point const &mpos, flo
 float ustar::get_temperature_at_pt(point const &pt) const {return get_temperature_at_dist_sq(p2p_dist_sq(pos, pt));}
 
 vector3d ustar::get_solar_wind_accel(point const &obj_pos, float obj_mass, float obj_surf_area) const {
-
 	assert(obj_mass > 0.0 && obj_surf_area > 0.0);
 	if (!is_ok()) {return zero_vector;}
 	vector3d const dir_from_sun(obj_pos - pos);
@@ -3352,19 +3261,15 @@ vector3d ustar::get_solar_wind_accel(point const &obj_pos, float obj_mass, float
 
 
 void urev_body::free_texture() { // and also free vbos
-
 	if (surface != nullptr) {surface->free_context();}
 	::free_texture(tid);
 	tsize = 0;
 }
 
-
 void uplanet::free_texture() {
-
 	urev_body::free_texture();
 	::free_texture(ring_tid);
 }
-
 
 void urev_body::explode(float damage, float bradius, int etype, vector3d const &edir, int exp_time, int wclass,
 						int align, unsigned eflags, free_obj const *parent_)
@@ -3372,7 +3277,6 @@ void urev_body::explode(float damage, float bradius, int etype, vector3d const &
 	gen_fragments();
 	uobject::explode(damage, bradius, etype, edir, exp_time, wclass, align, eflags, parent_);
 }
-
 
 // is this really OS/machine independent (even 32-bit vs. 64-bit)?
 void uobj_rgen::gen_rseeds() {
@@ -3386,7 +3290,6 @@ void uobj_rgen::set_rseeds() const {global_rand_gen = rgen;}
 
 // s_object
 
-
 bool s_object::write(ostream &out) const {
 	if (!out.good()) return 0;
 	out << type << " " << cellxyz[0] << " " << cellxyz[1] << " " << cellxyz[2] << " "
@@ -3394,15 +3297,12 @@ bool s_object::write(ostream &out) const {
 	return out.good();
 }
 
-
 bool s_object::read(istream &in) {
 	if (!in.good()) return 0;
 	return ((in >> type >> cellxyz[0] >> cellxyz[1] >> cellxyz[2] >> galaxy >> cluster >> system >> planet >> moon >> id) && in.good());
 }
 
-
 void s_object::init() {
-
 	dist   = CELL_SIZE;
 	galaxy = cluster = system = planet = moon = asteroid_field = asteroid = -1;
 	type   = UTYPE_NONE;
@@ -3411,9 +3311,7 @@ void s_object::init() {
 	cellxyz[0] = cellxyz[1] = cellxyz[2] = 0;
 }
 
-
 void s_object::assign(int gc, int cl, int sy, float di, int ty, uobj_solid *obj) {
-
 	galaxy  = gc;
 	cluster = cl;
 	system  = sy;
@@ -3421,7 +3319,6 @@ void s_object::assign(int gc, int cl, int sy, float di, int ty, uobj_solid *obj)
 	type    = ty;
 	object  = obj;
 }
-
 
 bool s_object::operator<(const s_object &I) const {
 
@@ -3452,9 +3349,7 @@ bool s_object::operator<(const s_object &I) const {
 	return (id < I.id);
 }
 
-
 void s_object::print() const {
-
 	cout << "type: " << type << ", cell: " << cellxyz[0] << ", " << cellxyz[1] << ", " << cellxyz[2] << ", galaxy: "
 		 << galaxy << ", cluster: " << cluster << ", system: " << system << ", planet = " << planet << ", moon = "
 		 << moon << ", id = " << id << endl;

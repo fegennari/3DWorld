@@ -36,7 +36,6 @@ void init_ship_weapon_classes();
 
 // ************ setup and helper functions ************
 
-
 bool create_player_ship(unsigned sclass, unsigned align) {
 	if (player_ship_ptr != NULL) return 0;
 	player_ship_ptr = create_ship(sclass, ustart_pos, align, AI_ATT_ENEMY, TARGET_LAST, 0);
@@ -70,14 +69,12 @@ void add_ship_weapon(unsigned sclass, unsigned weapon, unsigned num, unsigned am
 
 
 bool is_valid_starting_ship_pos(point const &spos, unsigned sclass) {
-
 	float const radius(sclasses[sclass].calc_cradius());
 	unsigned const coll_ix(check_for_obj_coll(spos, radius));
 	if (coll_ix != 0) return 0; // intersection
 	// Note: the first time init ships are placed, the universe insn't created yet so this query will always return false
 	return !sphere_intersect_uobject(spos, radius, 0); // include_asteroids=0, since asteroids move and are slow to intersect with
 }
-
 
 u_ship *add_ship(unsigned sclass, unsigned align, unsigned ai, unsigned targ, point const &pos, float spread, bool rand_spawned) {
 
@@ -98,7 +95,6 @@ u_ship *add_ship(unsigned sclass, unsigned align, unsigned ai, unsigned targ, po
 
 
 // ************ color string reader ************
-
 
 struct string_to_color_map_t : public map<string, colorRGBA> {
 
@@ -138,7 +134,6 @@ struct string_to_color_map_t : public map<string, colorRGBA> {
 
 // ************ ship_defs_file_reader ************
 
-
 class ship_defs_file_reader {
 
 	enum {CMD_GLOBAL_REGEN=0, CMD_SHIP_BUILD_DELAY, CMD_RAND_SEED, CMD_SPAWN_DIST, CMD_START_POS, CMD_HYPERSPEED, CMD_SPEED_SCALE, CMD_PLAYER_TURN,
@@ -151,10 +146,10 @@ class ship_defs_file_reader {
 	ifstream cfg;
 	kw_map command_m, ship_m, weap_m, explosion_m, align_m, align_m_all, ai_m, target_m, asteroid_m;
 	string_to_color_map_t string_to_color;
-	u_ship *last_ship;
+	u_ship *last_ship=nullptr;
 	vector<point> weap_pts;
-	unsigned cur_ship_type, ship_add_mode;
-	bool is_player, player_setup, saw_end, add_ship_enabled, ship_weap_set, last_parent;
+	unsigned cur_ship_type=NUM_US_CLASS, ship_add_mode=CMD_END;
+	bool is_player=0, player_setup=0, saw_end=0, add_ship_enabled=0, ship_weap_set=0, last_parent=0;
 
 	void print_kw_map(kw_map const &strmap) const;
 	void strings_to_map(string const &str, kw_map &strmap) const;
@@ -164,10 +159,7 @@ class ship_defs_file_reader {
 	bool parse_command(unsigned cmd);
 	bool read_pt(point &pt) {return bool(cfg >> pt.x >> pt.y >> pt.z);}
 	void setup_keywords();
-
 public:
-	ship_defs_file_reader() : last_ship(NULL), cur_ship_type(NUM_US_CLASS), ship_add_mode(CMD_END),
-		is_player(0), player_setup(0), saw_end(0), add_ship_enabled(0), ship_weap_set(0), last_parent(0) {}
 	static bool read_string(ifstream &in, string &str);
 	bool setup_and_read_file(const char *fn);
 	bool read_file(const char *fn);
@@ -175,12 +167,10 @@ public:
 
 
 void ship_defs_file_reader::print_kw_map(kw_map const &strmap) const {
-
 	cout << "stringmap:" << endl;
 	for (kw_map::const_iterator i = strmap.begin(); i != strmap.end(); ++i) {cout << i->first << ":" << i->second << " ";}
 	cout << endl;
 }
-
 
 void ship_defs_file_reader::strings_to_map(string const &str, kw_map &strmap) const {
 
@@ -196,7 +186,6 @@ void ship_defs_file_reader::strings_to_map(string const &str, kw_map &strmap) co
 	}
 	//print_kw_map(strmap);
 }
-
 
 bool ship_defs_file_reader::read_enum(kw_map &strmap, unsigned &val, string const &type) {
 
@@ -218,22 +207,16 @@ bool ship_defs_file_reader::read_enum(kw_map &strmap, unsigned &val, string cons
 	return 1;
 }
 
-
 bool ship_defs_file_reader::read_ship_type(unsigned &type) {
-
 	if (!read_enum(ship_m, type, "ship")) return 0;
 	assert(type < sclasses.size());
 	return 1;
 }
-
-
 bool ship_defs_file_reader::read_weap_type(unsigned &type) {
-
 	if (!read_enum(weap_m, type, "weapon")) return 0;
 	assert(type < us_weapons.size());
 	return 1;
 }
-
 
 bool ship_defs_file_reader::parse_command(unsigned cmd) {
 
@@ -769,7 +752,6 @@ bool ship_defs_file_reader::read_string(ifstream &in, string &str) { // can be c
 	return 1;
 }
 
-
 bool ship_defs_file_reader::setup_and_read_file(const char *fn) {
 
 	sclasses.resize(NUM_US_CLASS);
@@ -785,7 +767,6 @@ bool ship_defs_file_reader::setup_and_read_file(const char *fn) {
 	for (unsigned i = 0; i < NUM_UWEAP   ; ++i) {us_weapons[i].setup(i);}
 	return 1;
 }
-
 
 bool ship_defs_file_reader::read_file(const char *fn) {
 
@@ -852,7 +833,6 @@ bool ship_defs_file_reader::read_file(const char *fn) {
 
 // ************ us_class ************
 
-
 bool us_class::read_from_ifstream(ifstream &in, string_to_color_map_t const &string_to_color) {
 
 	if (!ship_defs_file_reader::read_string(in, name)) return 0;
@@ -887,7 +867,6 @@ bool us_class::read_from_ifstream(ifstream &in, string_to_color_map_t const &str
 	inited      = 1;
 	return 1;
 }
-
 
 void us_class::setup(unsigned sclass_) {
 
@@ -930,24 +909,19 @@ void us_class::setup(unsigned sclass_) {
 	}
 }
 
-
 void us_class::add_weapon(ship_weapon const &w) {
-
 	assert(inited);
 	merge_weapons(weapons, w);
 	has_pt_def |= w.get_usw().point_def;
 }
 
-
 void us_class::clear_cobjs() {
-
 	cobjs.clear();
 	cobj_triangles.clear();
 }
 
 
 // ************ us_weapon ************
-
 
 bool us_weapon::read_from_ifstream(ifstream &in) {
 
@@ -974,13 +948,10 @@ bool us_weapon::read_from_ifstream(ifstream &in) {
 	return 1;
 }
 
-
 bool us_weapon::read_beam_params_from_ifstream(ifstream &in, string_to_color_map_t const &string_to_color) {
-
 	assert(inited);
 	return bwp.read(in, string_to_color);
 }
-
 
 bool beam_weap_params::read(ifstream &in, string_to_color_map_t const &string_to_color) {
 
@@ -992,7 +963,6 @@ bool beam_weap_params::read(ifstream &in, string_to_color_map_t const &string_to
 	}
 	return bool(in >> bw_escale >> energy_drain >> temp_src >> paralyze >> mind_control >> multi_segment);
 }
-
 
 void us_weapon::setup(unsigned wclass_) {
 
@@ -1021,7 +991,6 @@ void us_weapon::setup(unsigned wclass_) {
 	}
 	calc_preference();
 }
-
 
 void us_weapon::calc_preference() {
 
@@ -1053,7 +1022,6 @@ void us_weapon::calc_preference() {
 
 // ************ other stuff ************
 
-
 void print_ship_ratings() {
 
 	assert(sclasses.size() == NUM_US_CLASS);
@@ -1078,7 +1046,6 @@ void print_ship_ratings() {
 	}
 }
 
-
 void init_ship_weapon_classes() {
 
 	ship_defs_file_reader reader;
@@ -1092,7 +1059,6 @@ void init_ship_weapon_classes() {
 	player_init_weapons = player_ship().weapons;
 	if (SHOW_SHIP_RATINGS) print_ship_ratings(); // print out offense/defense ratings
 }
-
 
 void choose_n_random_sclasses(vector<unsigned> &sclasses, int align, unsigned num, bool initial, bool rand_spawned) {
 
@@ -1121,7 +1087,6 @@ void choose_n_random_sclasses(vector<unsigned> &sclasses, int align, unsigned nu
 	}
 }
 
-
 void add_other_ships(int align, unsigned num, bool initial, bool rand_spawned) {
 
 	assert(!initial || !rand_spawned);
@@ -1142,7 +1107,6 @@ void add_other_ships(int align, unsigned num, bool initial, bool rand_spawned) {
 		if (!ship_names.empty()) {ship->rename(ship_names[rand()%ship_names.size()]);}
 	}
 }
-
 
 void merge_weapons(vector<ship_weapon> &weapons, ship_weapon const &w) {
 	

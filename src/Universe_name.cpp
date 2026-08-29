@@ -118,5 +118,3 @@ void named_obj::gen_name(s_object const &sobj) {
 }
 
 
-
-

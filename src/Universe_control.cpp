@@ -69,7 +69,6 @@ int omp_get_thread_num_3dw() {return 0;}
 #endif
 
 void init_universe_display() {
-
 	setup_ships();
 	set_perspective(PERSP_ANGLE, UNIV_NCLIP_SCALE); // that's all
 	check_shift_universe();
@@ -80,9 +79,7 @@ void set_univ_pdu() {
 	player_pdu = pos_dir_up(player.get_pos(), player.get_dir(), player.get_up(), 0.0, 0.0, U_VIEW_DIST);
 }
 
-
 void check_asserts() {
-
 	assert(CELL_SIZE                  > 2*(GALAXY_MAX_SIZE + MAX_SYSTEM_EXTENT));
 	assert(SYSTEM_MIN_SPACING         > 2*MAX_SYSTEM_EXTENT); // galaxies/systems don't overlap
 	assert(INTER_PLANET_MIN_SPACING   > PLANET_MAX_SIZE/*2*MAX_PLANET_EXTENT*/); // planets don't overlap
@@ -94,9 +91,7 @@ void check_asserts() {
 	assert(PLANET_TO_SUN_MIN_SPACING  > STAR_MAX_SIZE + PLANET_MAX_SIZE);
 }
 
-
 void do_univ_init() {
-
 	static bool univ_inited(0);
 	if (univ_inited) return;
 	setup_ships(); // just in case
@@ -106,7 +101,6 @@ void do_univ_init() {
 	check_asserts();
 	import_default_modmap();
 }
-
 
 bool player_near_system() {return (clobj0.system >= 0);}
 
@@ -224,13 +218,11 @@ void setup_current_system(float sun_intensity) { // called in ground mode
 
 
 void proc_uobjs_first_frame() {
-
 	for (unsigned i = 0; i < uobjs.size(); ++i) {
 		assert(uobjs[i]);
 		uobjs[i]->first_frame_hook();
 	}
 }
-
 
 void process_ships(int timer1) {
 
@@ -264,7 +256,6 @@ void process_ships(int timer1) {
 
 
 void draw_universe_all(bool static_only, bool skip_closest, bool no_move, int no_distant, bool gen_only, bool no_asteroid_dust) {
-
 	set_universe_lighting_params(1); // for universe drawing
 	universe.get_object_closest_to_pos(clobj0, get_player_pos2(), 0, 4.0);
 	if (!static_only) {setup_universe_fog(clobj0);}
@@ -272,7 +263,6 @@ void draw_universe_all(bool static_only, bool skip_closest, bool no_move, int no
 	universe.draw_all_cells(clobj0, skip_closest, no_move, no_distant, gen_only, no_asteroid_dust);
 	check_gl_error(121);
 }
-
 
 void draw_universe(bool static_only, bool skip_closest, bool no_move, int no_distant, bool gen_only, bool no_asteroid_dust) { // should be process_universe()
 
@@ -326,14 +316,12 @@ void draw_universe(bool static_only, bool skip_closest, bool no_move, int no_dis
 
 
 void proc_collision(free_obj *const uobj, upos_point_type const &cpos, point const &coll_pos, float radius, vector3d const &velocity, float mass, float elastic, int coll_tid) {
-
 	assert(mass > 0.0);
 	uobj->set_sobj_coll_tid(coll_tid);
 	uobj->move_to(cpos); // setup correct position for explode?
 	uobj->collision(coll_pos, velocity, S_BODY_DENSITY*mass, radius, NULL, elastic); // large mass
 	uobj->move_to(cpos); // more accurate since this takes into account the terrain
 }
-
 
 void process_univ_objects() {
 
@@ -506,7 +494,6 @@ void process_univ_objects() {
 
 
 void reset_player_universe() {
-
 	change_speed_mode(do_run);
 	update_cpos();
 	reset_player_ship();
@@ -515,7 +502,6 @@ void reset_player_universe() {
 	shift_univ_objs(get_scaled_upt(), 0);
 	universe.init();
 }
-
 
 void check_shift_universe() {
 
@@ -589,12 +575,10 @@ void fire_planet_killer(u_ship const *const ship, point const &ship_pos, vector3
 
 // test for intersections with solid stellar objects
 bool universe_intersection_test(line_query_state &lqs, point const &pos, vector3d const &dir, float range, bool include_asteroids) {
-
 	point coll; // unused
 	s_object target;
 	return (universe.get_trajectory_collisions(lqs, target, coll, dir, pos, range, 0.0, include_asteroids) && target.is_solid());
 }
-
 
 bool universe_ray_intersect(point const &start, point const &end, int obj_types, uobject const *cur=NULL, free_obj const *ignore=NULL) {
 
@@ -657,17 +641,13 @@ void send_warning_message(string const &msg, bool no_duplicate) {
 	}
 }
 
-
 void disable_player_ship() {
-
 	if (player_ship().is_resetting()) return; // already destroyed
 	print_text_onscreen("Ship Disabled", RED, 1.2, 2*TICKS_PER_SECOND, 2);
 	add_camera_filter(colorRGBA(1.0, 0.5, 0.0, 0.1), 8, -1, CAM_FILT_DAMAGE);
 }
 
-
 void destroy_player_ship(bool captured) {
-
 	if (player_ship().is_resetting()) return; // already destroyed
 	do_run = 0;
 	string msg(captured ? "Ship Captured" : "Ship Destroyed");
@@ -678,9 +658,7 @@ void destroy_player_ship(bool captured) {
 	player_ship().reset_after(TICKS_PER_SECOND);
 }
 
-
 point get_universe_display_camera_pos() {
-
 	point const camera(get_player_pos2()), camera_scaled(camera/CELL_SIZE);
 	return point(uxyz[0]+camera_scaled.x, uxyz[1]+camera_scaled.y, uxyz[2]+camera_scaled.z);
 }
@@ -726,7 +704,6 @@ void draw_universe_stats() {
 	if (!user_text.empty()) {draw_text(WHITE, -0.010*aspect_ratio, 0.010, -0.02, user_text);} // x and z are scaled
 }
 
-
 void exec_universe_text(string const &text) {
 
 	if (text.empty())   return;
@@ -737,9 +714,8 @@ void exec_universe_text(string const &text) {
 		destroy_player_ship(0);
 		return;
 	}
-	// *** WRITE ***
+	// more...
 }
-
 
 bool rename_obj(uobject *obj, unsigned alignment) { // a little difficult to use, have to enter the text first then click on an object
 
@@ -756,9 +732,7 @@ bool rename_obj(uobject *obj, unsigned alignment) { // a little difficult to use
 	return 0;
 }
 
-
 bool sphere_intersect_uobject(point const &pos, float radius, bool include_asteroids) {
-
 	s_object result;
 	if (!universe.get_closest_object(result, pos, UTYPE_MOON, include_asteroids, 1, 1.0, 0, 1.0, radius)) return 0;
 	if (!result.object || !result.object->is_ok()) return 0; // can this happen?
@@ -766,9 +740,7 @@ bool sphere_intersect_uobject(point const &pos, float radius, bool include_aster
 	return 1;
 }
 
-
 bool get_closest_object(point const &pos, s_object &result, int obj_type, bool include_asteroids, bool get_destroyed=0) {
-
 	if (!universe.get_closest_object(result, pos, obj_type, include_asteroids, 1, 4.0, get_destroyed)) return 0;
 	if (result.type != obj_type)  return 0; // incorrect type
 	if (obj_type <= UTYPE_SYSTEM) return 1; // no object to check
@@ -776,7 +748,6 @@ bool get_closest_object(point const &pos, s_object &result, int obj_type, bool i
 }
 
 uobject const *get_closest_world_ptr(point const &pos, int type) {
-
 	s_object result;
 	return (get_closest_object(pos, result, type, 0) ? result.object : NULL);
 }
@@ -816,7 +787,6 @@ bool line_intersect_sun(point const &p1, point const &p2, ussystem const &system
 	// avoid choosing a destination that requires flying through a star
 	return (system.sun.is_ok() && line_sphere_intersect(p1, p2, (point)system.sun.pos, halo*system.sun.radius));
 }
-
 
 uobject const *choose_dest_world(point const &pos, int exclude_id, unsigned align, float tmax) {
 
@@ -869,11 +839,9 @@ uobject const *choose_dest_world(point const &pos, int exclude_id, unsigned alig
 
 
 inline string get_owner_name(unsigned owner) {
-
 	assert(owner < NUM_ALIGNMENT);
 	return align_names[owner];
 }
-
 
 bool check_dest_ownership(int uobj_id, point const &pos, free_obj *own, bool check_for_land, bool homeworld) {
 	
@@ -930,7 +898,6 @@ bool check_dest_ownership(int uobj_id, point const &pos, free_obj *own, bool che
 
 // ************ UOBJ_SOLID/UREV_BODY ************
 
-
 bool uobj_solid::collision(upos_point_type const &p, float rad, vector3d const &v, upos_point_type &cpos, float &coll_r, bool simple) const { // maybe should be in universe.cpp
 
 	coll_r = radius;
@@ -960,12 +927,10 @@ void urev_body::get_owner_info(ostringstream &oss, bool show_uninhabited) const 
 	else if (show_uninhabited) {oss << endl << "Uninhabited";}
 }
 
-
 void urev_body::set_owner(s_object const &sobj, int owner_) {
 	set_owner_int(owner_);
 	sobj.set_owner(owner_);
 }
-
 
 void urev_body::set_owner_int(int owner_) {
 
@@ -981,7 +946,6 @@ void urev_body::set_owner_int(int owner_) {
 	owner = owner_; // may overwrite an old value
 }
 
-
 void urev_body::unset_owner() {
 
 	if (is_owned()) {
@@ -996,9 +960,7 @@ void urev_body::unset_owner() {
 	}
 }
 
-
 void urev_body::check_owner(s_object const &sobj) {
-
 	// Note: nothing done here
 	// if the orbiting object(s) have been destroyed since the planet was deleted, it is no longer owned
 	// if the orbiting object(s) still exist, they will set ownership back in their update functions
@@ -1007,9 +969,7 @@ void urev_body::check_owner(s_object const &sobj) {
 	//set_owner_int(new_owner);
 }
 
-
 colorRGBA urev_body::get_owner_color() const {
-
 	if (!is_owned()) return BLACK;
 	assert(unsigned(owner) < NUM_ALIGNMENT);
 	return alignment_colors[owner];
@@ -1018,9 +978,7 @@ colorRGBA urev_body::get_owner_color() const {
 
 // ************ U_SHIP ************
 
-
 bool have_resources_to_colonize(unsigned alignment) {
-
 	unsigned s_types[2] = {USC_DEFSAT, USC_ANTI_MISS};
 
 	for (unsigned i = 0; i < sizeof(s_types)/sizeof(unsigned); ++i) {
@@ -1028,7 +986,6 @@ bool have_resources_to_colonize(unsigned alignment) {
 	}
 	return 0;
 }
-
 
 void u_ship::near_sobj(s_object &clobj, int coll) {
 
@@ -1065,7 +1022,6 @@ void u_ship::near_sobj(s_object &clobj, int coll) {
 
 // ************ ORBITING_SHIP ************
 
-
 orbiting_ship *add_orbiting_ship(unsigned sclass, bool guardian, bool on_surface, bool pos_from_parent, free_obj const *parent, s_object const &world_path) {
 
 	assert(parent);
@@ -1092,7 +1048,6 @@ orbiting_ship *add_orbiting_ship(unsigned sclass, bool guardian, bool on_surface
 	add_uobj_ship(ship);
 	return ship;
 }
-
 
 // geostationary orbit (GEO) and geosynchronous orbit (GSO)
 orbiting_ship::orbiting_ship(unsigned sclass_, unsigned align, bool guardian, s_object const &world_path,
@@ -1133,7 +1088,6 @@ orbiting_ship::orbiting_ship(unsigned sclass_, unsigned align, bool guardian, s_
 	sun_pos     = sun.pos;
 	sun_energy  = sun.get_energy();
 }
-
 
 void orbiting_ship::update_state() {
 
@@ -1180,7 +1134,6 @@ void orbiting_ship::update_state() {
 	if (world->temp > get_temp()) {set_temp(FOBJ_TEMP_SCALE*world->temp, world->get_pos(), NULL);}
 }
 
-
 void orbiting_ship::set_pos_from_sobj(urev_body const *const sobj) {
 
 	vector3d delta(1.0, 0.0, 0.0); // should delta start out in x or y?
@@ -1205,12 +1158,10 @@ void orbiting_ship::set_pos_from_sobj(urev_body const *const sobj) {
 	invalidate_rotv();
 }
 
-
 void orbiting_ship::apply_physics() {
 	update_state();
 	u_ship::apply_physics();
 }
-
 
 bool orbiting_ship::regen_enabled() const { // if has_sobj, shouldn't have to check homeworld
 	return (ORBITAL_REGEN && has_sobj && has_homeworld());
@@ -1219,7 +1170,6 @@ bool orbiting_ship::regen_enabled() const { // if has_sobj, shouldn't have to ch
 
 cobj_vector_t const &uobject::get_cobjs() const {return empty_cobjs;}
 bool uobject::sphere_intersection(point const &c, float r) const {return dist_less_than(c, pos, (r + radius));}
-
 
 void uobject::gen_fragments(upos_point_type const &pos_offset, float rscale) const {
 
@@ -1232,7 +1182,6 @@ void uobject::gen_fragments(upos_point_type const &pos_offset, float rscale) con
 	}
 	gen_moving_fragments((pos_offset + pos), (40 + (rand()%20)), tex_id, rscale);
 }
-
 
 void uobject::gen_moving_fragments(point const &hit_pos, unsigned num, int tid, float rscale, float vscale, vector3d const &vadd, colorRGBA const &pcolor) const {
 
@@ -1253,7 +1202,6 @@ void uobject::gen_moving_fragments(point const &hit_pos, unsigned num, int tid, 
 	}
 }
 
-
 float const *uobject::get_sphere_shadow_pmap(point const &sun_pos, point const &obj_pos, int ndiv) const {
 
 	if (!has_custom_shadow_profile()) return NULL;
@@ -1270,9 +1218,7 @@ float const *uobject::get_sphere_shadow_pmap(point const &sun_pos, point const &
 }
 
 
-void ustar::explode(float damage, float bradius, int etype, vector3d const &edir, int exp_time, int wclass,
-					int align, unsigned eflags, free_obj const *parent_)
-{
+void ustar::explode(float damage, float bradius, int etype, vector3d const &edir, int exp_time, int wclass, int align, unsigned eflags, free_obj const *parent_) {
 	unsigned const num_parts(80 + rand()%40); // make size-dependent?
 	colorRGBA color_a0(color, 0.0);
 
@@ -1291,9 +1237,8 @@ void ustar::explode(float damage, float bradius, int etype, vector3d const &edir
 
 
 struct owner_stats_t {
-	unsigned np, nm;
-	float res, pop;
-	owner_stats_t() : np(0), nm(0), res(0.0), pop(0.0) {}
+	unsigned np=0, nm=0;
+	float res=0.0, pop=0.0;
 };
 
 void print_univ_owner_stats() {

@@ -31,7 +31,6 @@ extern shader_t emissive_shader;
 
 // ******************* engine_trail_drawer_t *******************
 
-
 class engine_trail_drawer_t {
 
 	struct trail_pt {
@@ -44,9 +43,8 @@ class engine_trail_drawer_t {
 	};
 
 	struct trail_t : public deque<trail_pt> {
-		bool extended;
-		unsigned merge_count;
-		trail_t() : extended(0), merge_count(0) {}
+		bool extended=0;
+		unsigned merge_count=0;
 
 		bool update() {
 			// attenuate color alpha based on elapsed time since last frame using exponential decay (pos and radius are unchanged)
@@ -70,7 +68,6 @@ class engine_trail_drawer_t {
 			} // for i
 		}
 	};
-
 	std::unordered_map<unsigned, trail_t> trail_map;
 	
 public:
@@ -120,7 +117,6 @@ void draw_and_update_engine_trails(line_tquad_draw_t &drawer) {
 
 // ******************* USW_RAY, and SHIP_COLL_OBJ classes *******************
 
-
 void usw_ray::draw(line_tquad_draw_t &drawer, point const *prev, point const *next, bool noise_mode) const {
 	// use single sided cylinder with 1D blur rotated towards camera
 	drawer.add_line_as_tris(p1, p2, w1, w2, color1, color2, prev, next, 1, (0 && noise_mode)); // Note: should be visible to the player
@@ -159,7 +155,6 @@ void ship_cube::draw(unsigned ndiv) const { // ndiv is unused
 }
 
 void ship_sphere::draw(unsigned ndiv) const {
-
 	glEnable(GL_CULL_FACE);
 	draw_sphere_vbo(pos, radius, ndiv, 0);
 	glDisable(GL_CULL_FACE);
@@ -175,7 +170,6 @@ void ship_bounded_cylinder::draw(unsigned ndiv) const {
 }
 
 void ship_capsule::draw(unsigned ndiv) const {
-		
 	draw_cylin(ndiv, 0, 1.0); // no draw ends?
 	glEnable(GL_CULL_FACE);
 	draw_sphere_vbo(p1, r1, ndiv, 0); // draw only half?
@@ -185,7 +179,6 @@ void ship_capsule::draw(unsigned ndiv) const {
 
 
 void ship_triangle_list::finalize() {
-
 	verts.reserve(3*triangles.size());
 
 	for (vector<triangle>::const_iterator i = triangles.begin(); i != triangles.end(); ++i) {
@@ -195,14 +188,12 @@ void ship_triangle_list::finalize() {
 }
 
 void ship_triangle_list::draw(unsigned ndiv) const { // used for fighters
-
 	assert(!verts.empty()); // must be finalized
 	draw_verts(verts, GL_TRIANGLES); // ndiv is unused
 }
 
 
 // ******************* GENERAL DRAWING CODE *******************
-
 
 inline int get_ndiv(int num) {
 	int ndiv(max(3, num));
@@ -213,7 +204,6 @@ inline int get_ndiv(int num) {
 void set_ship_texture(int tid) {select_texture(tid);}
 void end_ship_texture()        {end_texture();}
 
-
 void set_emissive_color(colorRGBA const &color, shader_t *shader) {
 	assert(shader);
 	shader->set_black_diffuse_emissive_color(color);
@@ -221,7 +211,6 @@ void set_emissive_color(colorRGBA const &color, shader_t *shader) {
 
 
 void uobj_draw_data::draw_ship_flares(colorRGBA const &color, int tid) const {
-
 	if (qbd.empty()) return;
 	// disabling of the depth mask is not quite right - prevents flares from interfering with each other but causes later shapes to be drawn on top of the flares
 	set_emissive_color(color, shader);
@@ -232,16 +221,13 @@ void uobj_draw_data::draw_ship_flares(colorRGBA const &color, int tid) const {
 	set_std_blend_mode();
 }
 
-
 void uobj_draw_data::setup_colors_draw_flare(point const &pos, point const &xlate, float xsize, float ysize, colorRGBA const &color, int flare_tex, bool invert) const {
-
 	qbd.add_xlated_billboard(pos, xlate, get_camera_pos(), (invert ? -1.0 : 1.0)*up_vector, colorRGBA(0,0,0, color.alpha), xsize, ysize, tex_range_t(), 1);
 	draw_ship_flares(color, flare_tex);
 }
 
 
 void draw_cobjs(cobj_vector_t const &cobjs, unsigned ndiv) {
-
 	for (unsigned i = 0; i < cobjs.size(); ++i) {
 		assert(cobjs[i]);
 		cobjs[i]->draw(ndiv);
@@ -249,7 +235,6 @@ void draw_cobjs(cobj_vector_t const &cobjs, unsigned ndiv) {
 }
 
 void us_class::draw_bounding_volume(unsigned ndiv) const {
-
 	if (cobjs.empty()) {
 		bnd_sphere.draw(ndiv); // no special objects (incorrect for dynamic/growing objects)
 	}
@@ -265,9 +250,7 @@ void multipart_ship::draw_bounding_volume(unsigned ndiv) const {
 
 // ********** uobj_draw_data **********
 
-
 colorRGBA uobj_draw_data::apply_cloak(colorRGBA const &color) const {
-
 	if (cloakval == 0.0) return color;
 	float const cv(CLIP_TO_01(cloakval));
 	colorRGBA color2(color);
@@ -276,20 +259,16 @@ colorRGBA uobj_draw_data::apply_cloak(colorRGBA const &color) const {
 	return color2;
 }
 
-
 void uobj_draw_data::set_color(colorRGBA const &color) const {
 	shader->set_cur_color(color);
 }
 
-
 void uobj_draw_data::draw_bounding_sphere(colorRGBA const &color) const { // unused (for debugging)
-
 	glEnable(GL_CULL_FACE);
 	set_color(colorRGBA(color, 0.25)); // alpha=0.25
 	draw_sphere_vbo(all_zeros, crs, ndiv, 0);
 	glDisable(GL_CULL_FACE);
 }
-
 
 void uobj_draw_data::setup_exp_scale() const {
 	if (t_exp > 0.0) {uniform_scale(1.0 + 0.25*(1.0 - t_exp));} // t_exp drops from 1.0 to 0.0
@@ -321,7 +300,6 @@ void uobj_draw_data::set_uobj_specular(float spec, float shine) const {
 
 
 quad_batch_draw uobj_draw_data::qbd;
-
 
 void uobj_draw_data::draw_engine(int eix, colorRGBA const &trail_color, point const &draw_pos,
 	float escale, float ar, vector3d const &stretch_dir) const
@@ -362,7 +340,6 @@ void uobj_draw_data::draw_engine(int eix, colorRGBA const &trail_color, point co
 	}
 }
 
-
 void uobj_draw_data::draw_engine_trail(int eix, point const &offset, float width, float w2s, float len, colorRGBA const &color) const {
 
 	if (!animate2) return;
@@ -382,7 +359,6 @@ void uobj_draw_data::draw_engine_trail(int eix, point const &offset, float width
 		if (end_pos != pos2) {trail_rays.push_back(usw_ray(beamwidth, w2s*beamwidth, pos2, end_pos, color, ALPHA0));}
 	}
 }
-
 
 void uobj_draw_data::draw_ehousing_pairs(float length, float r1, float r2, float lcone, float dx, float dy, bool texture,
 	point const &offset, point const &per_pair_off, unsigned num_pairs) const
@@ -404,7 +380,6 @@ void uobj_draw_data::draw_ehousing_pairs(float length, float r1, float r2, float
 	flush_cylin_vertex_buffer();
 }
 
-
 void uobj_draw_data::draw_engine_pairs(colorRGBA const &color, unsigned eflags_ix, float escale, float dx, float dy, float dz,
 		point const &per_pair_off, unsigned num_pairs, float ar, vector3d const &stretch_dir) const
 {
@@ -422,12 +397,9 @@ void uobj_draw_data::draw_engine_pairs(colorRGBA const &color, unsigned eflags_i
 	draw_ship_flares(color); // draw engine glow
 }
 
-
 bool uobj_draw_data::can_have_engine_lights() const {
-
 	return (ADD_ENGINE_LIGHTS && first_pass && ndiv > 4 && is_moving());
 }
-
 
 void uobj_draw_data::light_engine_pair(colorRGBA const &color, unsigned eflags_off, float escale,
 									   float dx, float dy, float dz) const
@@ -443,19 +415,14 @@ void uobj_draw_data::light_engine_pair(colorRGBA const &color, unsigned eflags_o
 	}
 }
 
-
 void uobj_draw_data::unlight_engine_pair() const {
-
 	if (!can_have_engine_lights()) return;
 	for (unsigned i = 0; i < 2; ++i) {clear_colors_and_disable_light((ENGINE_START_LIGHT + i), shader);}
 }
 
-
 void uobj_draw_data::add_light_source(point const &lpos, float lradius, colorRGBA const &color) const {
-
 	if (animate2 && first_pass) {add_blastr(lpos, dir, lradius, 0.0, 0, -1, color, color, ETYPE_NONE, obj);}
 }
-
 
 void uobj_draw_data::draw_colored_flash(colorRGBA const &color, bool symmetric) const {
 
@@ -475,17 +442,13 @@ void uobj_draw_data::draw_colored_flash(colorRGBA const &color, bool symmetric) 
 	if (ADD_CFLASH_LIGHTS) {add_light_source(pos, 4.0*radius, color);}
 }
 
-
 void uobj_draw_data::invert_z() const {
-
 	//fgScale(1.0, 1.0, -1.0); // invert z - causes problems with the normals
 	fgRotate(180.0, 0.0, 1.0, 0.0); // rotating about y inverts x and z, which isn't quite right, but it doesn't mess up the normals
 }
 
-
 // z is backward, y is up - this is because the default camera in OpenGL looks in -z and the ships use the same coordinate system
 void uobj_draw_data::setup_draw_ship() const {
-
 	set_color(color_a);
 	fgPushMatrix();
 	invert_z();
@@ -494,16 +457,13 @@ void uobj_draw_data::setup_draw_ship() const {
 
 // ******************* PROJECTILES *******************
 
-
 void uobj_draw_data::draw_one_triangle(vector3d const &rot_axis, float rot_deg) const {
-
 	vector3d coord_frame[3] = {plus_x, plus_y, -plus_z};
 	rotate_vector3d_multi(rot_axis, -rot_deg/TO_DEG, coord_frame, 3); // rotate_about(rot_deg, rot_axis);
 	vector3d const &n(coord_frame[2]); // using two-sided lighting
 	vert_norm const verts[3] = {vert_norm(1.4*coord_frame[1], n), vert_norm(coord_frame[0], n), vert_norm(-coord_frame[0], n)};
 	draw_verts(verts, 3, GL_TRIANGLES);
 }
-
 
 void uobj_draw_data::draw_rocket_base(colorRGBA const &cb, colorRGBA const &cn, colorRGBA const &ce,
 									  float length, float width, float esize, float tailw) const
@@ -525,25 +485,16 @@ void uobj_draw_data::draw_rocket_base(colorRGBA const &cb, colorRGBA const &cn, 
 	draw_engine_trail(0, engine_pos, tailw, 0.8, 1.5, ce);
 }
 
-
 void uobj_draw_data::draw_usw_rocket() const {
-
 	draw_rocket_base(LT_GRAY, RED, ORANGE, 2.0, 0.5, 2.0, 0.7);
 }
-
-
 void uobj_draw_data::draw_usw_nukedev() const {
-
 	draw_rocket_base(GRAY, BROWN, BLUE, 1.7, 0.55, 1.8, 0.9);
 }
-
-
 void uobj_draw_data::draw_usw_torpedo() const {
-
 	draw_colored_flash(GREEN, 1);
 	draw_engine_trail(0, all_zeros, 1.0, 1.0, 1.5, GREEN);
 }
-
 
 void uobj_draw_data::draw_spherical_shot(colorRGBA const &color, bool glow) const {
 
@@ -572,20 +523,14 @@ void uobj_draw_data::draw_spherical_shot(colorRGBA const &color, bool glow) cons
 	shader->clear_color_e();
 }
 
-
 void uobj_draw_data::draw_usw_energy() const {
-
 	draw_spherical_shot(CYAN);
 }
-
-
 void uobj_draw_data::draw_usw_atomic() const {
-
 	colorRGBA color1(0.5, 0.0, 0.8, 1.0), color2(1.0, 0.4, 0.0, 1.0);
 	blend_color(color1, color1, color2, (((float)time)/((float)lifetime)), 0);
 	draw_spherical_shot(color1);
 }
-
 
 void uobj_draw_data::draw_usw_emp() const {
 
@@ -631,37 +576,24 @@ void add_lightning_wray(float width, point const &p1, point const &p2) {
 	}
 }
 
-
 void uobj_draw_data::draw_usw_dflare() const {
-	
 	draw_colored_flash(LT_BLUE, 1);
 }
-
-
 void uobj_draw_data::draw_usw_chaff() const {
-
 	set_color(LT_GRAY);
 	draw_one_triangle(vector3d(1.0, 1.0, 1.0), PI*time);
 }
-
-
 void uobj_draw_data::draw_usw_rfire() const {
-
 	if (animate2 && first_pass && (time & 1)) {
 		add_blastr(pos, dir, 1.5*radius, 0.0, int(0.6*TICKS_PER_SECOND), -1, YELLOW, ORANGE, ETYPE_ANIM_FIRE, obj);
 	}
 }
-
-
 void uobj_draw_data::draw_usw_shieldd() const {
-
 	draw_spherical_shot(BLUE);
 	draw_engine_trail(0, all_zeros, 1.5, 1.0, 1.65, BLUE);
 }
 
-
 void uobj_draw_data::draw_usw_thunder() const {
-
 	static float lint(0.5);
 	if (animate2) {lint += rand_uniform(-0.05, 0.05);}
 	lint = CLIP_TO_01(lint);
@@ -671,7 +603,6 @@ void uobj_draw_data::draw_usw_thunder() const {
 	setup_colors_draw_flare(pos, all_zeros, 10.0*val, 10.0*val, color);
 	if (ADD_CFLASH_LIGHTS) {add_light_source(pos, 4.0*radius, color);}
 }
-
 
 void uobj_draw_data::draw_usw_star_int(unsigned ndiv_, point const &lpos, point const &lpos0, float size,
 									   float rad, float instability, bool lit) const
@@ -697,13 +628,10 @@ void uobj_draw_data::draw_usw_star_int(unsigned ndiv_, point const &lpos, point 
 	}
 }
 
-
 void uobj_draw_data::draw_usw_star() const {
-
 	fgPushMatrix();
 	draw_usw_star_int(ndiv, pos, all_zeros, 1.0, 0.4, 0.5*(float(time+1)/float(lifetime+1)), 1);
 }
-
 
 void uobj_draw_data::draw_usw_seige() const {
 
@@ -723,7 +651,6 @@ void uobj_draw_data::draw_usw_seige() const {
 
 
 // ******************* SHIPS *******************
-
 
 void uobj_draw_data::draw_base_fighter(vector3d const &scale) const {
 	
@@ -1836,7 +1763,6 @@ void uobj_draw_data::draw_wraith_tail(float r, int ndiv2, float rscale) const {
 	}
 }
 
-
 void uobj_draw_data::draw_wraith() const { // use time and vel_orient, fix bounding volume
 
 	unsigned const ndiv_head(get_ndiv(3*ndiv/4)), ndiv_tail(get_ndiv(ndiv/3));
@@ -1955,7 +1881,6 @@ void uobj_draw_data::draw_reaper() const {
 		//if (powered && animate2 && final_pass && phase1) {add_colored_lights(pos, radius, color_a, 0.25, 4, obj);}
 	}
 }
-
 
 void uobj_draw_data::draw_death_orb() const {
 
@@ -2401,7 +2326,6 @@ void uobj_draw_data::draw_colony(bool armed, bool hw, bool starport) const {
 
 
 void uobj_draw_data::draw_default_ship() const {
-
 	setup_draw_ship();
 	draw_sphere_vbo(all_zeros, 1.0, 2*ndiv, 0);
 	fgPopMatrix(); // undo transformations
@@ -2410,15 +2334,12 @@ void uobj_draw_data::draw_default_ship() const {
 
 // ******************* STELLAR OBJECTS *******************
 
-
 void uobj_draw_data::draw_asteroid(int tex_id) const {
-
 	set_color(color_a);
 	select_texture(tex_id);
 	draw_sphere_vbo(all_zeros, 1.0, 3*ndiv/2, 1);
 	end_ship_texture();
 }
-
 
 void uobj_draw_data::draw_black_hole() const { // should be non-rotated
 

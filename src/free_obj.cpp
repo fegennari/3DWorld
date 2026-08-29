@@ -50,9 +50,7 @@ extern point_sprite_drawer_sized glow_psd, smoke_psd;
 
 // ************ FREE_OBJ ************
 
-
 unsigned free_obj::next_obj_id = 0;
-
 
 void free_obj::init() {
 
@@ -95,7 +93,6 @@ free_obj const *free_obj::get_root_parent() const {
 	return p1;
 }
 
-
 void free_obj::check_ref_objs() {
 	
 	if (status != 0) return;
@@ -122,23 +119,19 @@ void free_obj::check_ref_objs() {
 
 
 void free_obj::fix_upv() {
-
 	vector3d const cp(cross_product(upv, dir));
 	upv = dir;
 	rotate_vector3d_norm(cp, PI_TWO, upv); // force upv to be orthogonal to dir
 	invalidate_rotv();
 }
 
-
 void free_obj::accelerate(float speed, float accel) {
-
 	if (speed == 0.0 || accel == 0.0) return;
 	float const vmag0(velocity.mag());
 	velocity += dir*(accel*speed); // small change in velocity
 	velocity.set_max_mag(max(vmag0, float(fabs(speed)))); // normalize to speed = max speed
 	assert(!is_nan(velocity));
 }
-	
 
 void free_obj::decelerate(float speed, float decel) {
 
@@ -156,24 +149,19 @@ void free_obj::decelerate(float speed, float decel) {
 
 
 void free_obj::arb_rotate_about(float rangle, vector3d const &raxis) {
-
 	rotate_vector3d_x2(raxis, rangle, upv, dir);
 	upv.normalize();
 	dir.normalize();
 	invalidate_rotv();
 }
 
-
 void free_obj::do_rotate(float pitch, float yaw) { // upv rotates as you move the mouse in xy circles
-
 	vector3d const vy(cross_product(dir, upv));
 	rotate_vector3d(upv, yaw, dir); // x-rotation
 	arb_rotate_about(pitch, vy); // y-rotation, rotate up vector
 }
 
-
 void free_obj::tilt(float val) {
-	
 	rotate_vector3d_norm(dir, val, upv);
 	invalidate_rotv();
 }
@@ -193,7 +181,6 @@ void free_obj::add_gravity_swp(vector3d const &gravity, vector3d const &swp, flo
 		damage(1000.0, DAMAGE_COLL, pos, this, WCLASS_COLLISION);
 	}
 }
-
 
 void free_obj::apply_torque_force(point const &fpos, vector3d const &fdir, float fmag, float mass) {
 
@@ -219,7 +206,6 @@ void free_obj::apply_torque_force(point const &fpos, vector3d const &fdir, float
 		rot_rate  = min(MAX_ROT_RATE, rot_rate);
 	}
 }
-
 
 // could be in math3d.cpp, but modifies pos and indirectly velocity and requires a ton of parameters
 float free_obj::coll_physics(point const &copos, vector3d const &vcoll, float obj_mass, float obj_radius,
@@ -302,11 +288,9 @@ float free_obj::coll_physics(point const &copos, vector3d const &vcoll, float ob
 	return COLLISION_ENERGY*get_coll_energy(velocity, (velocity + deltav), mass0); // too bad we don't know the other half of the energy
 }
 
-
 void free_obj::check_distant() {
 	set_bit_flag_to(flags, OBJ_FLAGS_DIST, is_distant(pos, get_draw_radius()));
 }
-
 
 void free_obj::apply_physics() {
 
@@ -327,7 +311,6 @@ void free_obj::apply_physics() {
 	time += iticks;
 	check_distant();
 }
-
 
 void free_obj::advance_time(float timestep) {
 
@@ -365,7 +348,6 @@ void free_obj::set_max_speed(float max_speed) { // Note: if max speed is 0 then 
 	}
 }
 
-
 void free_obj::set_temp(float temp, point const &tcenter, free_obj const *source) {
 	
 	temperature = temp;
@@ -380,7 +362,6 @@ void free_obj::set_temp(float temp, point const &tcenter, free_obj const *source
 		}
 	}
 }
-
 
 void free_obj::add_light(unsigned index) {
 
@@ -419,7 +400,6 @@ vector3d free_obj::get_orient() const {
 	return zero_vector; // shouldn't get here
 }
 
-
 void free_obj::calc_rotation_vectors() const {
 
 	if (rv1 != zero_vector) return; // already cached
@@ -431,7 +411,6 @@ void free_obj::calc_rotation_vectors() const {
 	}
 	force_calc_rotation_vectors();
 }
-
 
 void free_obj::force_calc_rotation_vectors() const {
 
@@ -450,41 +429,31 @@ void free_obj::force_calc_rotation_vectors() const {
 	if (dot_product(upvr, upv0) > 0.0) ra2 = -ra2;
 }
 
-
 template<typename T> void free_obj::rotate_point(pointT<T> &pt) const { // rotate from global coordinate system into object coordinate system
-
 	calc_rotation_vectors();
 	rotate_vector3d(pointT<T>(rv1), ra1, pt); // inverse rotate in direction <dir>
 	rotate_vector3d(pointT<T>(rv2), ra2, pt); // inverse rotate up to <upv>
 }
 
-
 template<typename T> void free_obj::xform_point(pointT<T> &pt) const { // transform from global coordinate system into object coordinate system
-
 	pt -= pos; // translate to (0,0,0)
 	rotate_point(pt);
 	pt /= radius; // scale by inverse of radius
 }
 
-
 template<typename T> void free_obj::rotate_point_inv(pointT<T> &pt) const { // rotate from object coordinate system into global coordinate system
-
 	calc_rotation_vectors();
 	rotate_vector3d(pointT<T>(rv2), -ra2, pt); // rotate up to <upv>
 	rotate_vector3d(pointT<T>(rv1), -ra1, pt); // rotate in direction <dir>
 }
 
-
 template<typename T> void free_obj::xform_point_inv(pointT<T> &pt) const { // transform from object coordinate system into global coordinate system
-
 	rotate_point_inv(pt);
 	pt *= T(radius); // scale by radius
 	pt += pos; // translate to pos
 }
 
-
 void free_obj::xform_point_x2(point &p1, point &p2) const { // transform from global coordinate system into object coordinate system
-
 	p1 -= pos; // translate to (0,0,0)
 	p2 -= pos; // translate to (0,0,0)
 	calc_rotation_vectors();
@@ -494,9 +463,7 @@ void free_obj::xform_point_x2(point &p1, point &p2) const { // transform from gl
 	p2 /= radius; // scale by inverse of radius
 }
 
-
 void free_obj::xform_point_inv_multi(upos_point_type *pts, unsigned npts) const {
-
 	calc_rotation_vectors();
 	rotate_vector3d_multi(upos_point_type(rv2), -ra2, pts, npts); // rotate up to <upv>
 	rotate_vector3d_multi(upos_point_type(rv1), -ra1, pts, npts); // rotate in direction <dir>
@@ -518,22 +485,17 @@ template void free_obj::xform_point_inv (point_d &pt) const;
 
 
 vector3d free_obj::calc_angular_vel(point const &cpos, vector3d const &axis, float rate) const {
-
 	if (rate == 0.0) return zero_vector;
 	float const dist_sq(p2p_dist_sq(cpos, pos));
 	if (dist_sq > c_radius*c_radius) {rate *= c_radius/sqrt(dist_sq);} // normalize to max dist
 	return cross_product((cpos - pos), axis)*TWO_PI*rate;
 }
 
-
 vector3d free_obj::get_tot_vel_at(point const &cpos) const {
-	
 	return (velocity + calc_angular_vel(cpos, rot_axis, rot_rate));
 }
 
-
 float free_obj::damage(float val, int type, point const &hit_pos, free_obj const *source, int wc) {
-	
 	if (val <= 0.0) return 0.0; // no damage
 	def_explode((10.0 + 0.1*min(100.0f, val)), ETYPE_ANIM_FIRE, dir, WCLASS_EXPLODE, alignment, 0, parent); // no shields or armor
 	return 0.0;
@@ -557,18 +519,13 @@ void free_obj::large_obj_visibility_test(point const &lpos, float exp_radius, ve
 
 
 void free_obj::rotate() const {
-
 	rotate_about(TO_DEG*ra1, rv1); // rotate in direction <dir>
 	rotate_about(TO_DEG*ra2, rv2); // rotate up to <upv>
 }
-
-
 void free_obj::inverse_rotate() const {
-
 	rotate_about(-TO_DEG*ra2, rv2);
 	rotate_about(-TO_DEG*ra1, rv1);
 }
-
 
 void free_obj::transform_and_draw_obj(uobj_draw_data &udd, bool specular, bool first_pass, bool final_pass) const {
 
@@ -595,7 +552,6 @@ void free_obj::transform_and_draw_obj(uobj_draw_data &udd, bool specular, bool f
 	if (!is_particle()) {fgPopMatrix();}
 	fgPopMatrix();
 }
-
 
 void free_obj::draw(shader_t &shader, vpc_shader_t &upc_shader) const { // view culling has already been performed
 
@@ -716,7 +672,6 @@ void free_obj::draw(shader_t &shader, vpc_shader_t &upc_shader) const { // view 
 
 // ************ STATIONARY_OBJ ************
 
-
 stationary_obj::stationary_obj(unsigned type_, point const &pos_, float radius_, unsigned lt) : type(type_), lifetime(lt) {
 
 	assert(type < NUM_SO_TYPES);
@@ -737,22 +692,18 @@ stationary_obj::stationary_obj(unsigned type_, point const &pos_, float radius_,
 	}
 }
 
-
 float stationary_obj::damage(float val, int type, point const &hit_pos, free_obj const *source, int wc) {
 	if (type == DAMAGE_DESTROY) {def_explode(2.5, ETYPE_ANIM_FIRE, dir, WCLASS_EXPLODE, alignment, 0, NULL);} // can't be damaged by anything else
 	return 0.0;
 }
-
 
 void stationary_obj::apply_physics() {
 	time += iticks;
 	if (lifetime > 0 && time > lifetime) status = 1; // lifetime expired, destroy it
 }
 
-
 // similar to uobj_solid::add_gravity_vector()
 int stationary_obj::get_gravity(vector3d &vgravity, point const &mpos) const {
-
 	switch (type) {
 		case SO_BLACK_HOLE:
 			add_gravity_vector_base(vgravity, mpos, 0.1*BLACK_HOLE_GRAV*radius, BLACK_HOLE_GRAV);
@@ -765,9 +716,7 @@ int stationary_obj::get_gravity(vector3d &vgravity, point const &mpos) const {
 	return 0;
 }
 
-
 void stationary_obj::draw_obj(uobj_draw_data &ddata) const {
-
 	switch (type) {
 		case SO_BLACK_HOLE:
 			ddata.draw_black_hole();
@@ -781,7 +730,6 @@ void stationary_obj::draw_obj(uobj_draw_data &ddata) const {
 
 
 // ************ UPARTICLE ************
-
 
 void uparticle::set_params(unsigned ptype_, point const &pos_, vector3d const &vel, vector3d const &d, float radius_,
 						   colorRGBA const &c1, colorRGBA const &c2, unsigned lt, float damage_, unsigned align, bool coll_, int tid) {
@@ -812,28 +760,21 @@ void uparticle::set_params(unsigned ptype_, point const &pos_, vector3d const &v
 	invalidate_rotv();
 }
 
-
 bool uparticle::dec_ref() {
-	
 	if (alloc_block == NULL) return 0;
 	alloc_block->free_object();
 	return 1;
 }
 
-
 vector3d uparticle::get_tot_vel_at(point const &cpos) const {
-
 	return free_obj::get_tot_vel_at(cpos) + calc_angular_vel(cpos, axis, 0.1*rrate);
 }
 
-
 void uparticle::apply_physics() {
-
 	if (time > lifetime) {status = 1; return;}
 	free_obj::apply_physics();
 	angle += rrate*fticks; // increase rotation
 }
-
 
 bool uparticle::collision(point const &copos, vector3d const &vcoll, float obj_mass, float obj_radius, free_obj *source, float elastic) {
 
@@ -850,14 +791,11 @@ bool uparticle::collision(point const &copos, vector3d const &vcoll, float obj_m
 	return 1;
 }
 
-
 float uparticle::damage(float val, int type, point const &hit_pos, free_obj const *source, int wc) {
-	
 	if (val <= 0.0) return 0.0; // no damage
 	if (time > PART_DELAY && (ptype != PTYPE_GLOW || val > 1000.0)) status = 1; // destroy if damaged, no explosion, it just goes away
 	return 0.0;
 }
-
 
 void uparticle::draw_obj(uobj_draw_data &ddata) const {
 
@@ -911,7 +849,6 @@ void uparticle::draw_obj(uobj_draw_data &ddata) const {
 
 // ************ UPARTICLE_CLOUD ************
 
-
 void add_uparticle_cloud(point const &pos, float rmin, float rmax, colorRGBA const &ci1, colorRGBA const &co1,
 	colorRGBA const &ci2, colorRGBA const &co2, unsigned lt, float damage, float expand_exp, float noise_scale)
 {
@@ -919,7 +856,6 @@ void add_uparticle_cloud(point const &pos, float rmin, float rmax, colorRGBA con
 	bool const coll(add_uobj(upc, 0));
 	assert(!coll);
 }
-
 
 uparticle_cloud::uparticle_cloud(point const &pos_, float rmin_, float rmax_, colorRGBA const &ci1, colorRGBA const &co1,
 	colorRGBA const &ci2, colorRGBA const &co2, unsigned lt, float damage_, float expand_exp_, float noise_scale_)
@@ -939,14 +875,11 @@ uparticle_cloud::uparticle_cloud(point const &pos_, float rmin_, float rmax_, co
 	gen_pts(1.0); // generate the points using a radius of 1.0 and scale them to the current radius during rendering
 }
 
-
 void uparticle_cloud::apply_physics() {
-
 	if (time > lifetime) {status = 1; return;}
 	free_obj::apply_physics();
 	radius = c_radius = rmin + (rmax - rmin)*pow(get_lt_scale(), expand_exp);
 }
-
 
 void uparticle_cloud::draw_obj(uobj_draw_data &ddata) const { // Note: assumes GL_BLEND is already enabled
 
@@ -970,12 +903,10 @@ void uparticle_cloud::draw_obj(uobj_draw_data &ddata) const { // Note: assumes G
 
 // ************ US_PROJECTILE ************
 
-
 us_projectile::us_projectile(unsigned type) {
 	flags = (OBJ_FLAGS_TARG | OBJ_FLAGS_PROJ);
 	set_type(type);
 }
-
 
 void us_projectile::set_type(unsigned type) {
 
@@ -992,27 +923,20 @@ void us_projectile::set_type(unsigned type) {
 	set_bit_flag_to(flags, OBJ_FLAGS_NOC2,  us_weapons[type].c2_flag);
 }
 
-
 bool us_projectile::dec_ref() {
-	
 	if (alloc_block == NULL) return 0;
 	alloc_block->free_object();
 	return 1;
 }
 
-
 us_weapon const &us_projectile::specs() const {
-
 	assert(wclass < NUM_UWEAP);
 	return us_weapons[wclass];
 }
 
-
 inline unsigned us_projectile::get_eflags() const {
-	
 	return (specs().no_ffire ? EXP_FLAGS_NO_FFIRE : 0);
 }
-
 
 void us_projectile::ai_action() {
 
@@ -1068,7 +992,6 @@ void us_projectile::ai_action() {
 	}
 }
 
-
 void us_projectile::apply_physics() {
 
 	if (!is_ok()) return;
@@ -1099,9 +1022,7 @@ void us_projectile::apply_physics() {
 	}
 }
 
-
 void us_projectile::add_gravity_swp(vector3d const &gravity, vector3d const &swp, float gscale, bool near_bh) {
-
 	// seeking projectiles can counteract the effect of moderate gravity; avoids long range rockets fired at orbiting ships from hitting planets
 	if (!near_bh && specs().seeking) {
 		float const avoid(2000.0*specs().seek_dist), val(avoid*avoid/gravity.mag_sq());
@@ -1109,7 +1030,6 @@ void us_projectile::add_gravity_swp(vector3d const &gravity, vector3d const &swp
 	}
 	free_obj::add_gravity_swp(gravity, swp, gscale, near_bh);
 }
-
 
 bool us_projectile::collision(point const &copos, vector3d const &vcoll, float obj_mass, float obj_radius, free_obj *source, float elastic) {
 	
@@ -1126,7 +1046,6 @@ bool us_projectile::collision(point const &copos, vector3d const &vcoll, float o
 	damage(energy, DAMAGE_COLL, copos, source, SWCLASS_UNDEF); // explode on contact, no bounce (in most cases)
 	return 1;
 }
-
 
 float us_projectile::damage(float val, int type, point const &hit_pos, free_obj const *source, int wc) {
 
@@ -1155,7 +1074,6 @@ float us_projectile::damage(float val, int type, point const &hit_pos, free_obj 
 	status = 1;
 	return armor;
 }
-
 
 void us_projectile::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 
@@ -1198,6 +1116,5 @@ void us_projectile::draw_flares_only() const {
 	}
 	glow_psd.add_pt(sized_vert_t<vert_color>(vert_color(make_pt_global(pos), color), 3.0*radius));
 }
-
 
 

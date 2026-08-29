@@ -76,19 +76,15 @@ void print_univ_owner_stats();
 
 // ************ STATISTICS GATHERING ************
 
-
 void print_n_spaces(int n) { // there must be a better way to do this
-
 	for (int j = 0; j < n; ++j) cout << " ";
 }
 
 
 void register_attack_from(free_obj const *attacker, unsigned target_align) {
-
 	assert(attacker != NULL && target_align < a_targets.size());
 	if (a_targets[target_align] == NULL) a_targets[target_align] = attacker; // team takes offense
 }
-
 
 void register_damage(int s_sclass, int t_sclass, int wclass, float damage, unsigned s_align, unsigned t_align, bool is_kill, bool is_self) {
 
@@ -272,15 +268,13 @@ void show_stats() {
 
 class team_status_tracker_t {
 	struct team_entry_t {
-		bool enabled, started, end_game, lost;
-		team_entry_t() : enabled(0), started(0), end_game(0), lost(0) {}
+		bool enabled=0, started=0, end_game=0, lost=0;
 		void init(bool enabled_) {enabled = enabled_; started = end_game = lost = 0;}
 	};
 	team_entry_t team_entries[NUM_ALIGNMENT];
-	bool inited, game_over;
+	bool inited=0, game_over=0;
 
 public:
-	team_status_tracker_t() : inited(0), game_over(0) {}
 	void init() { // auto inited on first status check, but can be manually inited for multiple games
 		bool const teams_valid[NUM_ALIGNMENT] = {0, 1, 0, 0, 1, 1, 1, 1};
 		for (unsigned i = 0; i < NUM_ALIGNMENT; ++i) {team_entries[i].init(teams_valid[i] && team_credits[i] > 0);}
@@ -343,7 +337,6 @@ team_status_tracker_t team_status_tracker;
 
 // ************ PLAYER INTERFACE, ETC. ************
 
-
 upos_point_type const &get_player_pos()   {return player_ship().get_pos();}
 vector3d const &get_player_dir()          {return player_ship().get_dir();}
 vector3d const &get_player_up()           {return player_ship().get_up();}
@@ -358,7 +351,6 @@ void set_player_target(free_obj const *target) {player_ship().set_target(target)
 
 
 void change_speed_mode(int val) {
-
 	if (world_mode != WMODE_UNIVERSE) return;
 	if (!player_ship().specs().has_fast_speed)        val = 0;
 	if (!player_ship().specs().has_hyper && val == 2) val = 3;
@@ -390,7 +382,6 @@ void toggle_dock_fighters() {
 	hold_fighters = 0;
 	print_text_onscreen((dock_fighters ? "Dock Fighters: On" : "Dock Fighters: Off"), PURPLE, 0.8, TICKS_PER_SECOND);
 }
-
 void toggle_hold_fighters() {
 	hold_fighters = !hold_fighters;
 	dock_fighters = 0;
@@ -423,7 +414,6 @@ void auto_target_player_closest_enemy() {
 
 // ************ OBJECT PROCESSING ************
 
-
 // coll_test: 0 = none, 1 = test only but still add, 2 = test and add only if no coll
 bool add_uobj(free_obj *obj, int coll_test) {
 
@@ -438,9 +428,7 @@ bool add_uobj(free_obj *obj, int coll_test) {
 	return coll;
 }
 
-
 void add_uobj_ship(u_ship *ship) {
-
 	assert(ship);
 	++alloced_fobjs[0];
 	bool const coll(add_uobj(ship, 0));
@@ -604,7 +592,6 @@ void sort_uobjects() { // originally part of apply_univ_physics()
 	// update uobjs to have the same sort order
 	for (unsigned i = 0; i < ncuo; ++i) {uobjs[i] = c_uobjs[i].obj;} // what about objects with time == 0? exclude them?
 }
-
 
 bool proc_coll(free_obj *o1, free_obj *o2) {
 
@@ -771,16 +758,13 @@ us_projectile *create_projectile(unsigned type, free_obj const *const parent, un
 
 // ************************** SHIFT AND DRAW ****************************
 
-
 void add_colored_lights(point const &pos, float radius, colorRGBA const &color, float time, unsigned num, free_obj const *const obj) {
-
 	for (unsigned i = 0; i < num; ++i) {
 		vector3d const dir(signed_rand_vector());
 		point const pos2(pos + dir*(2.0*radius));
 		add_blastr(pos2, dir, 0.25*radius, 0.0, unsigned(time*TICKS_PER_SECOND), ALIGN_NEUTRAL, color, color, ETYPE_NONE, obj);
 	}
 }
-
 
 void shift_univ_objs(point const &pos, bool shift_player_ship) {
 
@@ -797,9 +781,7 @@ void shift_univ_objs(point const &pos, bool shift_player_ship) {
 	universe_origin  += pos;
 }
 
-
 void clear_univ_obj_contexts() {
-
 	for (unsigned i = 0; i < uobjs.size(); ++i) {
 		if (uobjs[i]) {uobjs[i]->clear_context();}
 	}
@@ -807,7 +789,6 @@ void clear_univ_obj_contexts() {
 
 
 class motion_particles_t {
-
 	rand_gen_t rgen;
 	vector<point> pts;
 
@@ -852,7 +833,6 @@ void maybe_draw_motion_dust() { // if moving, even if unpowered
 	motion_particles.update_and_draw(pship.get_pos(), pvel/pvmag, length, 0.00002);
 }
 
-
 void draw_ship_crosshair(pt_line_drawer &pld, point const &pos, colorRGBA const &color, float radius=0.0) { // for onscreen targeting
 
 	double const dist_extend(0.1);
@@ -891,9 +871,7 @@ void draw_ship_crosshair(pt_line_drawer &pld, point const &pos, colorRGBA const 
 	}
 }
 
-
 void draw_all_crosshairs(pt_line_drawer &pld) {
-
 	if (pld.empty()) return;
 	glDisable(GL_DEPTH_TEST); // always draw on top
 	glEnable(GL_LINE_SMOOTH);
@@ -906,7 +884,6 @@ void draw_all_crosshairs(pt_line_drawer &pld) {
 
 
 void set_sane_light_atten(shader_t *shader=nullptr) {
-
 	// force all lights to be enabled temporarily so that we can set them to constant atten to avoid div-by-zero if we don't set them later
 	for (unsigned i = 0; i < MAX_SHADER_LIGHTS; ++i) {
 		bool const enabled(is_light_enabled(i));
@@ -982,23 +959,19 @@ void setup_ship_draw_shader(shader_t &s) {
 
 
 void disable_exp_lights(shader_t *s) {
-
 	for (unsigned i = 0; i < NUM_EXP_LIGHTS; ++i) {
 		enable_light(EXPLOSION_LIGHT + i); // enable it first to force updating of shader uniforms if it was left disabled but not black
 		clear_colors_and_disable_light((EXPLOSION_LIGHT + i), s);
 	}
 }
 
-
 void add_player_ship_engine_light() {
-
 	if (!animate2) return;
 	u_ship const &ps(player_ship());
 	if (!ps.powered()) return; // check if player is providing thrust?
 	colorRGBA const &color(ps.specs().engine_color);
 	add_blastr(ps.pos, ps.get_dir(), 2.0*ps.get_radius(), 0.0, 0, -1, color, color, ETYPE_NONE, &ps);
 }
-
 
 void setup_shield_shader(shader_t &shader, int noise_tu_id) {
 	shader.set_vert_shader("no_lighting_pos_tc");

@@ -72,7 +72,6 @@ extern shader_t emissive_shader;
 
 // ************ U_SHIP ************
 
-
 u_ship::u_ship(unsigned sclass_, point const &pos0, unsigned align, unsigned ai_type_, unsigned target_mode_, bool rand_orient)
 			   : free_obj(pos0), u_ship_base(sclass_), ai_type(ai_type_), target_mode(target_mode_)
 {
@@ -85,14 +84,11 @@ u_ship::u_ship(unsigned sclass_, point const &pos0, unsigned align, unsigned ai_
 	if (rand_orient) do_rotate(TWO_PI*rand_float(), TWO_PI*rand_float());
 }
 
-
 u_ship::~u_ship() {
-	
 	status = 1;
 	free_weapons();
 	surface_mesh.clear();
 }
-
 
 void u_ship::init() {
 
@@ -156,7 +152,6 @@ void u_ship::init() {
 	calc_wpt_center();
 }
 
-
 void u_ship::create_from(u_ship_base const &base) { // related to u_ship_base::create_from()
 
 	ncrew      = base.ncrew;
@@ -176,34 +171,27 @@ void u_ship::create_from(u_ship_base const &base) { // related to u_ship_base::c
 
 
 bool u_ship::regen_enabled() const {
-	
 	if (is_fighter()) return 0;
 	if (respawn_req_hw && !homeworld.is_valid()) return 0;
 	unsigned const reserve_credits(sclasses[USC_ARMED_COL].cost + max(sclasses[USC_DEFSAT].cost, sclasses[USC_ANTI_MISS].cost));
 	return (!regen_uses_credits || alloc_resources_for(sclass, alignment, reserve_credits, 0.5)); // half price
 }
 
-
 bool u_ship::has_seeking_weapons() const {
-
 	for (unsigned i = 0; i < weapons.size(); ++i) {
 		if (us_weapons[weapons[i].wclass].seeking) return 1;
 	}
 	return 0;
 }
 
-
 bool u_ship::player_controlled() const {
 	return (is_player_ship() && !player_autopilot);
 }
 
-
 string u_ship::get_name() const {
-	
 	string const desc("[" + align_names[get_align()] + " " + specs().name + "]");
 	return (name.empty() ? desc : (name + " " + desc));
 }
-
 
 string u_ship::get_info() const { // destination, homeworld?
 	
@@ -225,35 +213,27 @@ string u_ship::get_info() const { // destination, homeworld?
 
 
 void u_ship::move_by(point const &pos_) {
-	
 	tcent += pos_;
 	dest_mgr.move_by(pos_);
 	homeworld.move_by(pos_);
 	free_obj::move_by(pos_);
 }
 
-
 inline void u_ship::no_ai_wait() {
-
 	time = SHIP_AI_DELAY;
 }
 
-
 void u_ship::check_size_scale() {
-	
 	assert(size_scale > 0.0);
 	radius   = size_scale*specs().radius;
 	c_radius = specs().cr_scale*radius; // collision radius
 }
 
-
 void u_ship::check_ref_objs() {
-
 	if (status != 0) return;
 	u_ship_base::check_ref_objs(this);
 	free_obj::check_ref_objs();
 }
-
 
  // engine status (power) is equal to the number of functioning engines divided by the number of total engines
 float u_ship::get_engine_status() const {
@@ -267,7 +247,6 @@ float u_ship::get_engine_status() const {
 	}
 	return (estatus/num_engines);
 }
-
 
 float u_ship::get_real_speed_val() const {
 
@@ -352,7 +331,6 @@ void u_ship::thrust(int tdir, float speed, bool hyperspeed) {
 	}
 }
 
-
 void u_ship::turn(vector3d delta) {
 
 	if (invalid_or_disabled()) return;
@@ -369,7 +347,6 @@ void u_ship::turn(vector3d delta) {
 	yaw_r   = delta.x; // delta.z is unused
 	do_rotate(pitch_r, yaw_r);
 }
-
 
 int u_ship::get_move_dir() {
 
@@ -388,9 +365,7 @@ int u_ship::get_move_dir() {
 	return 0;
 }
 
-
 vector3d u_ship::get_tot_vel_at(point const &cpos) const { // velocity may be too high in some cases
-
 	vector3d vtot(free_obj::get_tot_vel_at(cpos));
 	vtot += calc_angular_vel(cpos, cross_product(dir, upv), pitch_r);
 	vtot += calc_angular_vel(cpos, upv, yaw_r);
@@ -406,7 +381,6 @@ bool u_ship::do_multi_target() const { // add time delay/rand-mod?
 	if ((ai_type & AI_BASE_TYPE) == AI_ATT_WAIT) return 0;
 	return 1;
 }
-
 
 free_obj const *u_ship::find_closest_target(point const &pos0, float min_dist, float max_dist, bool req_shields) const {
 
@@ -444,7 +418,6 @@ free_obj const *u_ship::find_closest_target(point const &pos0, float min_dist, f
 	}
 	return NULL;
 }
-
 
 void u_ship::acquire_target(float min_dist) {
 
@@ -564,21 +537,15 @@ uobject const *u_ship::setup_int_query(vector3d const &qdir, float qdist, free_o
 	return obj;
 }
 
-
 void u_ship::calc_wpt_center() {
-
 	wpt_center = all_zeros;
 
 	for (unsigned i = 0; i < weapons.size(); ++i) {
-		for (unsigned j = 0; j < weapons[i].weap_pts.size(); ++j) {
-			wpt_center += weapons[i].weap_pts[j];
-		}
+		for (unsigned j = 0; j < weapons[i].weap_pts.size(); ++j) {wpt_center += weapons[i].weap_pts[j];}
 	}
 }
 
-
 uobject const *u_ship::get_obstacle(float oa_time, float max_dist, free_obj *&fobj, float &tdist, bool sobjs_only) const {
-
 	if (oa_time == 0.0) return NULL;
 	float const vmag(velocity.mag());
 	if (vmag < max(TOLERANCE, 0.1f*get_max_speed())) return NULL;
@@ -586,7 +553,6 @@ uobject const *u_ship::get_obstacle(float oa_time, float max_dist, free_obj *&fo
 	if (max_dist > c_radius) {ldist = min(ldist, max_dist);}
 	return setup_int_query(velocity/vmag, (ldist + c_radius), fobj, tdist, sobjs_only, c_radius);
 }
-
 
 // this is really slow
 bool u_ship::obstacle_avoid(vector3d &orient, float target_dist, bool sobjs_only) { // find an obstacle other than target_obj
@@ -627,11 +593,9 @@ bool u_ship::obstacle_avoid(vector3d &orient, float target_dist, bool sobjs_only
 
 
 ship_explosion u_ship::get_explosion() const {
-
 	float const size(get_def_explode_damage());
 	return ship_explosion(size*radius, EXPLOSION_DAMAGE*size*radius, pos);
 }
-
 
 bool u_ship::avoid_explosions(vector3d &orient) const {
 
@@ -673,7 +637,6 @@ void u_ship::do_turn(vector3d const &orient) {
 	}
 }
 
-
 bool u_ship::can_return_to_parent() const {
 	
 	if (parent == NULL || parent->invalid() || parent->disabled()) return 0; // no parent to return to or parent is disabled
@@ -687,7 +650,6 @@ bool u_ship::can_return_to_parent() const {
 	if (!parent->get_ship_base()->has_space_for_fighter(sclass)) return 0; // check if parent has space in its fighter bay
 	return 1;
 }
-
 
 bool u_ship::check_return_to_parent() const {
 
@@ -731,9 +693,7 @@ bool sobj_manager::claim_object(free_obj *parent, bool homeworld) {
 	return check_dest_ownership(uobj_id, pos, parent, 0, homeworld);
 }
 
-
 void sobj_manager::set_object(uobject const *obj) {
-
 	assert(obj != NULL);
 	pos     = obj->get_pos();
 	radius  = obj->get_bounding_radius();
@@ -743,9 +703,7 @@ void sobj_manager::set_object(uobject const *obj) {
 	name    = obj->get_name();
 }
 
-
 void sobj_manager::choose_dest(point const &p, unsigned align, float tmax) {
-
 	uobject const *dest(choose_dest_world(p, old_uobj_id, align, tmax));
 
 	if (dest != NULL) {
@@ -754,9 +712,7 @@ void sobj_manager::choose_dest(point const &p, unsigned align, float tmax) {
 	}
 }
 
-
 bool sobj_manager::update_pos_if_close(uobject const *obj) {
-
 	if (obj == NULL || obj->get_id() != uobj_id) return 0;
 	point const new_pos(obj->get_pos());
 	if (!dist_less_than(pos, new_pos, 0.1*CELL_SIZE)) return 0; // don't update if in a different cell, let shift handle it
@@ -765,9 +721,7 @@ bool sobj_manager::update_pos_if_close(uobject const *obj) {
 	return 1;
 }
 
-
 bool sobj_manager::update_pos() {
-
 	return (is_valid() && update_pos_if_close(get_closest_world_ptr(pos, otype)));
 }
 
@@ -803,7 +757,6 @@ bool u_ship::choose_destination() {
 	}
 	return 1;
 }
-
 
 bool u_ship::can_colonize() const {
 	if (init_credits[alignment] == 0 && (alignment == ALIGN_GOV || alignment == ALIGN_NEUTRAL)) return 0; // gov and neutral don't claim free planets
@@ -848,7 +801,6 @@ u_ship const *u_ship::try_fighter_pickup() const {
 	}
 	return cur_targ;
 }
-
 
 free_obj const *u_ship::try_orbital_regen(free_obj const *cur_targ, bool last_od, bool &targ_friend, bool &o_dock_close) {
 
@@ -912,7 +864,6 @@ bool u_ship::roll_to_face_target(float &roll_amt) const {
 	return 1;
 }
 
-
 float u_ship::get_fast_target_dist(free_obj const *const target) const {
 
 	float ftd(FAST_TARG_DIST);
@@ -925,9 +876,7 @@ float u_ship::get_fast_target_dist(free_obj const *const target) const {
 	return ftd;
 }
 
-
 bool u_ship::has_slow_fighters() const {
-
 	for (auto i = fighters.begin(); i != fighters.end(); ++i) {
 		if (!(*i)->invalid() && (*i)->get_parent() == this && !(*i)->specs().has_fast_speed) return 1;
 	}
@@ -936,7 +885,6 @@ bool u_ship::has_slow_fighters() const {
 
 
 void u_ship::fire_at_target(free_obj const *const targ_obj, float min_dist) {
-
 	if (!target_valid(targ_obj)) return;
 	free_obj const *const orig_tobj(target_obj);
 	target_obj = targ_obj;
@@ -945,7 +893,6 @@ void u_ship::fire_at_target(free_obj const *const targ_obj, float min_dist) {
 	ai_fire(target_dir, p2p_dist(tpos, pos), min_dist, 0);
 	target_obj = orig_tobj; // restore original value
 }
-
 
 bool is_valid_fire_dir(vector3d const &target_dir, vector3d const &fire_dir, bool is_close=0) {
 	return (fire_dir != zero_vector && (is_close || get_angle(target_dir, fire_dir) < MAX_LEAD_SHOT_DOTP)); // check dir if not close
@@ -1263,16 +1210,13 @@ void u_ship::fire_point_defenses() { // point defense weapon - fires at incoming
 	curr_weapon = curr;
 }
 
-
 bool u_ship::find_coll_enemy_proj(float dmax, point &p_int) const {
-
 	free_obj const *const inc_proj(check_for_incoming_proj(pos, alignment, dmax));
 	if (!inc_proj) return 0;
 	vector3d const rvel((inc_proj->get_velocity() - velocity).get_norm());
 	point const ppos(inc_proj->get_pos()), ppos2(ppos + rvel*(2.0*dmax));
 	return (line_sphere_int(rvel, ppos, pos, c_radius, p_int, 1) && line_int_obj(ppos, ppos2));
 }
-
 
 bool u_ship::has_clear_line_of_fire(us_weapon const &weap, vector3d const &fire_dir, float target_dist) const {
 
@@ -1452,7 +1396,6 @@ bool u_ship::test_self_intersect(point const &fpos, point const &tpos, vector3d 
 	}
 	return 0;
 }
-
 
 bool u_ship::fire_weapon(vector3d const &fire_dir, float target_dist) {
 
@@ -1717,7 +1660,6 @@ bool u_ship::fire_weapon(vector3d const &fire_dir, float target_dist) {
 	return 1;
 }
 
-
 void u_ship::fire_beam(point const &fpos, vector3d const &fdir, unsigned weapon_id, unsigned num_shots, int intersect_type) {
 
 	assert(num_shots > 0);
@@ -1839,7 +1781,6 @@ void u_ship::fire_beam(point const &fpos, vector3d const &fdir, unsigned weapon_
 	}
 }
 
-
 void u_ship::fire_projectile(point const &fpos, vector3d const &fire_dir) {
 
 	us_weapon const &weap(us_weapons[get_weapon_id()]);
@@ -1853,7 +1794,6 @@ void u_ship::fire_projectile(point const &fpos, vector3d const &fire_dir) {
 		coll_physics(ppos, pvel*-weap.f_inv, weap.f_inv*weap.mass, weap.radius, NULL, 1.0);
 	}
 }
-
 
 void u_ship::spawn_fighter(point const &fpos, vector3d const &fire_dir) {
 
@@ -1873,7 +1813,6 @@ void u_ship::spawn_fighter(point const &fpos, vector3d const &fire_dir) {
 	weapons[curr_weapon].release_ship(ship, this);
 	add_fighter(ship, this, 1);
 }
-
 
 bool u_ship::try_fire_weapon() { // player fire
 
@@ -1921,7 +1860,6 @@ bool u_ship::try_fire_weapon() { // player fire
 	return fired;
 }
 
-
 // UWEAP_NONE => calculate ship dir, not weapon dir
 vector3d u_ship::predict_target_dir(point const &fpos, free_obj const *targ, unsigned wclass) const {
 
@@ -1937,15 +1875,12 @@ vector3d u_ship::predict_target_dir(point const &fpos, free_obj const *targ, uns
 	return lead_target(fpos, pt, velocity, targ->get_velocity(), vweap);
 }
 
-
 inline float u_ship::get_min_att_dist() const {
-	
 	float const mad(radius*specs().min_att_dist);
 	if (specs().for_boarding) return mad;
 	us_weapon const &usw(us_weapons[get_weapon_id()]);
 	return max(mad, (1.5f*c_radius + usw.bradius + usw.radius));
 }
-
 
 bool u_ship::check_fire_speed() const {
 
@@ -1966,23 +1901,18 @@ bool u_ship::check_fire_speed() const {
 
 
 void u_ship::switch_weapon(bool prev) {
-
 	if (prev) curr_weapon += ((unsigned)weapons.size()-1); else ++curr_weapon;
 	curr_weapon = curr_weapon % weapons.size();
 	show_weapon_name();
 }
 
-
 void u_ship::show_weapon_name() const {
-
 	unsigned const weapon_id(get_weapon_id());
 	assert(us_weapons.size() == NUM_UWEAP && weapon_id < us_weapons.size());
 	print_text_onscreen(us_weapons[weapon_id].name.c_str(), WHITE, 1.0, TICKS_PER_SECOND, 10); // higher priority to override enemy ship detected
 }
 
-
 inline void u_ship::dec_ammo(unsigned num) {
-
 	if (need_ammo()) {
 		assert(num > 0 && get_weapon().ammo >= num);
 		weapons[curr_weapon].ammo -= num;
@@ -2000,7 +1930,6 @@ void u_ship::reset_target() {
 	target_set = 0;
 	free_obj::reset_target();
 }
-
 
 bool u_ship::dock_fighter(u_ship *ship) {
 
@@ -2030,7 +1959,6 @@ bool u_ship::dock_fighter(u_ship *ship) {
 	return 0; // else can't dock this type of fighter, no bay that holds its type
 }
 
-
 bool u_ship::orbital_dock(u_ship *ship) { // ship docks with orbital station
 
 	assert(ship != this);
@@ -2059,17 +1987,13 @@ float u_ship::get_crew_strength() const {
 	return val;
 }
 
-
 float u_ship::get_child_stray_dist() const {
-	
 	if (child_stray_dist > 0.0)              return child_stray_dist;
 	if (can_move() && !specs().for_boarding) return specs().sensor_dist;
 	return 0.0;
 }
 
-
 float u_ship::min_time_to_target(point const &targ_pos) const { // in seconds
-
 	float const max_speed(specs().max_speed);
 	if (max_speed == 0.0) return 0.0; // what to do - can't move?
 	float const dist(p2p_dist(targ_pos, pos)), fast_tdist(specs().has_fast_speed ? get_fast_target_dist() : dist);
@@ -2097,7 +2021,6 @@ bool u_ship::board_ship(u_ship *ship) { // returns whether or not boarding was a
 	ncrew = max(1U, ncrew/2); // lose half the crew, both sides take casualties?
 	return 1;
 }
-
 
 bool u_ship::capture_ship(u_ship *ship, bool add_as_fighter) { // this captures ship - not entirely tested and has problems
 
@@ -2175,7 +2098,6 @@ bool u_ship::try_paralyze(u_ship const *source, float intensity, point const &pp
 	return 1;
 }
 
-
 bool u_ship::try_mind_control(u_ship *source, unsigned num_tries) { // source mind controls this
 
 	assert(source);
@@ -2214,7 +2136,6 @@ bool u_ship::hostile_explode() const { // called on a ship or a parent
 	return 0;
 }
 
-
 inline bool u_ship::is_enemy(free_obj const *obj) const {
 	
 	assert(obj != NULL);
@@ -2227,7 +2148,6 @@ inline bool u_ship::is_enemy(free_obj const *obj) const {
 bool u_ship::is_hostile_to(free_obj const *obj) const {
 	return (free_obj::is_hostile_to(obj) || is_enemy(obj));
 }
-
 
 void u_ship::get_fighter_target(u_ship const *ship) { // recursive
 
@@ -2245,11 +2165,9 @@ void u_ship::get_fighter_target(u_ship const *ship) { // recursive
 
 
 void u_ship::set_temp(float temp, point const &tcenter, free_obj const *source) {
-	
 	tcent = tcenter;
 	free_obj::set_temp(temp, tcenter, source);
 }
-
 
 void u_ship::apply_physics() {
 
@@ -2336,21 +2254,16 @@ void u_ship::apply_physics() {
 	if ((time & 15) == 0) homeworld.update_pos();
 }
 
-
 void u_ship::next_frame() {
-	
 	captured = 0;
 	pitch_r  = yaw_r = roll_r = 0.0;
 }
 
-
 void u_ship::set_ship_max_speed(float ms_scale) {
-
 	float max_speed(ms_scale*get_max_speed()); // *fticks
 	if (lhyper) {max_speed *= hyperspeed_mult;}
 	set_max_speed(max_speed);
 }
-
 
 bool u_ship::collision(point const &copos, vector3d const &vcoll, float obj_mass, float obj_radius, free_obj *source, float elastic) {
 
@@ -2471,7 +2384,6 @@ float u_ship::damage(float val, int type, point const &hit_pos, free_obj const *
 	return damage_amt;
 }
 
-
 void u_ship::destroy_ship(float val) {
 
 	if (specs().regen_delay > 0 && regen_enabled() && !is_player_ship()) {
@@ -2485,7 +2397,6 @@ void u_ship::destroy_ship(float val) {
 		if (specs().mesh_deform) surface_mesh.add_random(0.05, -0.5, 0.2); // surface_mesh.reset_data()?
 	}
 }
-
 
 bool u_ship::register_attacker(free_obj const *source) {
 
@@ -2525,7 +2436,6 @@ bool u_ship::register_attacker(free_obj const *source) {
 	return attack;
 }
 
-
 void u_ship::register_destruction(free_obj const *source) {
 
 	if (source == NULL) return;
@@ -2539,7 +2449,6 @@ void u_ship::register_destruction(free_obj const *source) {
 		}
 	}
 }
-
 
 void u_ship::do_structure_damage(float val) {
 
@@ -2574,7 +2483,6 @@ float u_ship::get_def_explode_damage() const {
 	return ((specs().exp_type == ETYPE_NONE) ? 0.0f : specs().exp_scale*(0.9f + max(min(0.5f, 0.01f*exp_val), 0.1f)));
 }
 
-
 void u_ship::do_explode() {
 
 	vector3d edir(dir + gen_rand_vector_uniform(0.25));
@@ -2593,9 +2501,7 @@ void u_ship::do_explode() {
 	}
 }
 
-
 void u_ship::explode(float damage, float bradius, int etype, vector3d const &edir, int exp_time, int wclass, int align, unsigned eflags, free_obj const *parent_) {
-
 	assert(parent == NULL || parent_ == NULL || parent == parent_ || (specs().kamikaze && parent_ == this));
 	// Note: death may be delayed; if parent_ is not set, use self
 	uobject::explode(SHIP_EXP_DAM_SCALE*damage, bradius, etype, edir, exp_time, wclass, align, (eflags | EXP_FLAGS_SHIP), (parent_ ? parent_ : this));
@@ -2603,7 +2509,6 @@ void u_ship::explode(float damage, float bradius, int etype, vector3d const &edi
 	surface_mesh.clear();
 	detonate_weapons();
 }
-
 
 void u_ship::detonate_weapons() {
 
@@ -2627,7 +2532,6 @@ void u_ship::detonate_weapons() {
 		weapons[i].ammo = 0;
 	}
 }
-
 
 void u_ship::fragment(vector3d const &edir, float num, bool outside_cr) const { // send off ship parts
 
@@ -2672,7 +2576,6 @@ void u_ship::fragment(vector3d const &edir, float num, bool outside_cr) const { 
 
 
 //#define TIME_SHIP_DRAW
-
 
 void u_ship::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 
@@ -2838,7 +2741,6 @@ void u_ship::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 
 // ************ MULTIPART_SHIP ************
 
-
 multipart_ship::multipart_ship(unsigned sclass_, point const &pos0, unsigned align, unsigned ai_type_, unsigned target_mode_, bool rand_orient)
 	: u_ship(sclass_, pos0, align, ai_type_, target_mode_, rand_orient), state_val(0.0)
 {
@@ -2851,7 +2753,6 @@ multipart_ship::multipart_ship(unsigned sclass_, point const &pos0, unsigned ali
 		assert(cobjs[i]);
 	}
 }
-
 
 void multipart_ship::apply_physics() {
 
@@ -2938,7 +2839,6 @@ void multipart_ship::apply_physics() {
 	u_ship::apply_physics();
 }
 
-
 void multipart_ship::ai_action() {
 
 	switch (sclass) { // have to special case this
@@ -2955,9 +2855,7 @@ void multipart_ship::ai_action() {
 	u_ship::ai_action();
 }
 
-
 void multipart_ship::check_size_scale() { // could update c_radius here instead of in apply_physics()
-
 	assert(size_scale > 0.0);
 	radius = size_scale*specs().radius;
 }
@@ -3028,7 +2926,6 @@ bool orbiting_ship::maybe_has_line_of_sight(upos_point_type const &to_pos) const
 
 // ************ RAND_SPAWN_SHIP ************
 
-
 // created at a random location, away from the player but not too far, out of sight
 // when out of sight and far away, destroy (but not explode)
 // if destroyed, respawn
@@ -3081,6 +2978,5 @@ void rand_spawn_ship::explode(float damage, float bradius, int etype, vector3d c
 	u_ship::explode(damage, bradius, etype, edir, exp_time, wclass, align, eflags, parent);
 	if (status == 1) {destroy_or_respawn();} // actually destroyed
 }
-
 
 

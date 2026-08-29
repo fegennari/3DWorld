@@ -85,7 +85,6 @@ inline float calc_damage_scale(float dist, float radius, float bradius) {
   return ((dist < radius) ? 1.0 : min(1.0, max(0.1, (1.0 - (dist - radius)/(bradius + TOLERANCE)))));
 }
 
-
 void register_explosion(point const &pos, float radius, float damage, unsigned eflags, int wclass, uobject *src, free_obj const *parent);
 void add_blastr(point const &pos, vector3d const &dir, float size, float damage, int time, int src, colorRGBA const &color1,
 	colorRGBA const &color2, int type=ETYPE_FIRE, free_obj const *const parent=NULL, bool emits_light=0, float exp_sphere_scale=0.0);

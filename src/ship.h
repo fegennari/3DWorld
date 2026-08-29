@@ -136,7 +136,7 @@ class urev_body;
 class free_obj;
 class u_ship_base;
 class u_ship;
-class ship_weapon;
+struct ship_weapon;
 
 
 extern bool player_enemy, begin_motion; // required for efficiency
@@ -1048,8 +1048,7 @@ protected:
 };
 
 
-class ship_weapon {
-public:
+struct ship_weapon {
 	unsigned wclass=0, init_ammo=0, ammo=0, wcount=0, rtime=0, nregen=0, ndamaged=0, cur_wpt=0;
 	int last_fframe=0;
 	std::shared_ptr<deque<u_ship_base> > docked;

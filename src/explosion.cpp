@@ -55,20 +55,16 @@ void explosion::check_pointers() {
 	if (parent != NULL && !parent->is_ok()) {parent = NULL;} // invalid parent
 }
 
-
 void blastr::check_pointers() {
 	if (parent != NULL && !parent->is_ok()) {parent = NULL;} // invalid parent
 }
-
 
 void register_explosion(point const &pos, float radius, float damage, unsigned eflags, int wclass, uobject *src, free_obj const *parent) {
 	assert(damage >= 0.0);
 	explosions.push_back(explosion(pos, radius, damage, eflags, wclass, src, parent));
 }
 
-
 void apply_explosions() {
-
 	vector<explosion> exps(explosions); // copy so that newly generated explosions are delayed until next frame
 	explosions.clear();
 
@@ -77,12 +73,10 @@ void apply_explosions() {
 	}
 }
 
-
 void check_explosion_refs() {
 	for (unsigned i = 0; i < explosions.size(); ++i) {explosions[i].check_pointers();}
 	for (unsigned i = 0; i < blastrs.size(); ++i) {blastrs[i].check_pointers();}
 }
-
 
 void add_blastr(point const &pos, vector3d const &dir, float size, float damage, int time, int src, colorRGBA const &color1,
 	colorRGBA const &color2, int type, free_obj const *const parent, bool emits_light, float exp_sphere_scale)
@@ -108,14 +102,12 @@ void add_blastr(point const &pos, vector3d const &dir, float size, float damage,
 
 
 void blastr::setup() {
-
 	if (type == ETYPE_ANIM_FIRE ) {up_vector = signed_rand_vector_norm();}
 	if (type == ETYPE_PART_CLOUD || type == ETYPE_PC_ICE) {cloud_exp.setup(size);}
 	update(); // initial update
 }
 
 void blastr::update() {
-
 	assert(time > 0 && st_time > 0);
 	float const cscale(float(time)/float(st_time));
 	if (type != ETYPE_ANIM_FIRE) {cur_size = size*(0.3 + 0.5/float(time) + 0.2*(1.0 - cscale));} // size doesn't increase for anim_fire
@@ -126,7 +118,6 @@ void blastr::update() {
 void blastr::add_as_dynamic_light() const {
 	add_dynamic_light(min(3.5, 4.0*size), pos, cur_color); // Note: 3.5 meant for ground mode, but also acceptable for universe mode (lights are never this large)
 }
-
 
 void blastr::process() const { // land mode
 
@@ -165,7 +156,6 @@ void blastr::process() const { // land mode
 	//if (time == st_time) // only update grass on the first blast?
 	modify_grass_at(pos, 0.5*cur_size, 1, 1); // crush and burn grass Note: calling this every time looks better, but is slower
 }
-
 
 bool blastr::next_frame(unsigned i) {
 
@@ -208,8 +198,8 @@ void update_blasts() {
 
 
 struct ix_type_pair {
-	unsigned ix, type;
-	ix_type_pair() : ix(0), type(0) {}
+	unsigned ix=0, type=0;
+	ix_type_pair() {}
 	ix_type_pair(unsigned ix_, unsigned type_) : ix(ix_), type(type_) {}
 	bool operator<(ix_type_pair const &p) const {return ((type == p.type) ? (ix < p.ix) : (type < p.type));}
 };
@@ -239,7 +229,6 @@ void cloud_explosion::draw(vpc_shader_t &s, point const &pos, float radius, int 
 
 
 bool have_explosions() {
-
 	for (unsigned i = 0; i < blastrs.size(); ++i) {
 		blastr const &br(blastrs[i]);
 		if (br.time > 0 && br.cur_color.alpha > 0.0 && br.type != ETYPE_NONE) return 1;
@@ -425,7 +414,6 @@ void draw_universe_blasts() {
 
 
 void setup_point_light(point const &pos, colorRGBA const &color, float radius, unsigned gl_light, shader_t *shader) {
-
 	if (color.alpha == 0.0 || color == BLACK) return; // shouldn't get here
 	colorRGBA const uambient(color*0.2);
 	set_colors_and_enable_light(gl_light, uambient, color, shader);
@@ -435,9 +423,7 @@ void setup_point_light(point const &pos, colorRGBA const &color, float radius, u
 	set_gl_light_pos(gl_light, pos, 1.0, shader); // point light source position
 }
 
-
 bool setup_br_light(unsigned index, point const &pos, unsigned gl_light, shader_t *shader) {
-
 	assert(index < blastrs.size());
 	blastr const &br(blastrs[index]);
 	if (br.time == 0) return 0;
@@ -445,9 +431,7 @@ bool setup_br_light(unsigned index, point const &pos, unsigned gl_light, shader_
 	return 1;
 }
 
-
 bool higher_priority(unsigned first, unsigned second) { // is the priority of <first> greather than <second>?
-
 	assert(first < blastrs.size() && second < blastrs.size());
 	return (blastrs[first].priority() > blastrs[second].priority());
 }

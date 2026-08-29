@@ -24,7 +24,6 @@ bool import_default_modmap() {
 	return 1;
 }
 
-
 bool import_modmap(string const &filename) {
 
 	unsigned num;
@@ -59,7 +58,6 @@ bool import_modmap(string const &filename) {
 	return (in.good() && (in >> str) && str == end_tag);
 }
 
-
 bool export_modmap(string const &filename) {
 
 	ofstream out(filename.c_str());
@@ -77,27 +75,18 @@ bool export_modmap(string const &filename) {
 
 
 bool s_object::is_destroyed() const {
-
 	return (modmaps[MOD_DESTROYED].find(*this) != modmaps[MOD_DESTROYED].end());
 }
-
-
 void s_object::register_destroyed_sobj() const {
-
 	if (type != UTYPE_NONE) modmaps[MOD_DESTROYED][get_shifted_sobj(*this)] = "1";
 }
 
-
 int s_object::get_owner() const {
-
 	modmap::const_iterator it(modmaps[MOD_OWNER].find(*this));
 	if (it == modmaps[MOD_OWNER].end() || it->second.empty()) return NO_OWNER;
 	return int(it->second[0] - '0');
 }
-
-
 void s_object::set_owner(int owner) const {
-
 	if (owner == NO_OWNER) {
 		modmaps[MOD_OWNER].erase(get_shifted_sobj(*this)); // should be OK even if doesn't exist (but should exist)
 		return;
@@ -107,24 +96,17 @@ void s_object::set_owner(int owner) const {
 	str.push_back(char(owner) + '0'); // add new owner
 }
 
-
 bool named_obj::rename(s_object const &sobj, string const &name_) {
-
 	name = name_;
 	modmaps[MOD_NAME][sobj] = name;
 	return 1;
 }
-
-
 bool named_obj::lookup_given_name(s_object const &sobj) {
-
 	modmap::const_iterator it(modmaps[MOD_NAME].find(sobj));
 	if (it == modmaps[MOD_NAME].end()) return 0;
 	name = it->second;
 	return 1;
 }
-
-
 
 
 

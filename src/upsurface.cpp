@@ -37,7 +37,6 @@ void noise_gen_3d::gen_sines(float mag, float freq) {
 	num_sines = TOT_NUM_SINES; // initial value; may decrease later
 }
 
-
 void noise_gen_3d::gen_xyz_vals(point const &start, vector3d const &step, unsigned const xyz_num[3], vector<float> xyz_vals[3]) {
 
 	for (unsigned d = 0; d < 3; ++d) {
@@ -56,7 +55,6 @@ void noise_gen_3d::gen_xyz_vals(point const &start, vector3d const &step, unsign
 	}
 }
 
-
 float noise_gen_3d::get_val(unsigned x, unsigned y, unsigned z, vector<float> const xyz_vals[3]) const {
 
 	float val(0.0);
@@ -68,7 +66,6 @@ float noise_gen_3d::get_val(unsigned x, unsigned y, unsigned z, vector<float> co
 	for (unsigned k = 0; k < num_sines; ++k) {val += xv[k]*yv[k]*zv[k];} // performance critical
 	return val;
 }
-
 
 float noise_gen_3d::get_val(point const &pt) const {
 
@@ -121,7 +118,6 @@ void upsurface::gen(float mag, float freq, unsigned ntests, float mm_scale) {
 	val_cache.clear();
 }
 
-
 void upsurface::setup(unsigned size, float mcut, bool alloc_hmap) {
 
 	ssize      = size;
@@ -136,7 +132,6 @@ void upsurface::setup(unsigned size, float mcut, bool alloc_hmap) {
 	max_freq  = max(1u, min(MAX_FREQ_BINS, max_freq));
 	num_sines = max_freq*SINES_PER_FREQ;
 }
-
 
 float upsurface::get_height_at(point const &pt, bool use_cache) const {
 
@@ -160,30 +155,24 @@ float upsurface::get_height_at(point const &pt, bool use_cache) const {
 	return val;
 }
 
-
 void upsurface::setup_draw_sphere(point const &pos, float radius, float dp, int ndiv, float const *const pmap) {
-
 	sd.set_data(pos, radius, ndiv, pmap, dp, (pmap ? NULL : this));
 	sd.gen_points_norms(spn);
 }
 
-
 upsurface::~upsurface() {
-
 	spn.free_data();
 	free_context();
 }
 
 
 void urev_body::gen_surface() {
-
 	set_rseeds();
 	surface.reset(new upsurface(type)); // may delete a previous surface
 	float mag(SURFACE_HEIGHT*radius), freq(((type == UTYPE_MOON) ? 1.5 : 1.0)*INITIAL_FREQ*TWO_PI);
 	surface->rgen = rgen; // just copy it?
 	surface->gen(mag, freq);
 }
-
 
 // Note: many planet/sphere renderers use a texture with width = 2*height, which yields square regions at the equator
 // here we use a square texture for simplicity, so that this code can be shared with (and be similar to)
@@ -254,9 +243,7 @@ void urev_body::gen_texture_data_and_heightmap(unsigned char *data, unsigned siz
 	} // for i
 }
 
-
 bool urev_body::surface_test(float rad, point const &p, float &coll_r, bool simple) const {
-
 	// not quite right - should take into consideration peaks in surrounding geometry that also intersect the sphere
 	if (has_heightmap()) {
 		if (!dist_less_than(p, pos, (radius*(1.0 + 0.5*get_hmap_scale()) + rad))) return 0; // test rmax
@@ -265,14 +252,11 @@ bool urev_body::surface_test(float rad, point const &p, float &coll_r, bool simp
 	return 1;
 }
 
-
 float urev_body::get_radius_at(point const &p, bool exact) const {
-
 	if (surface == NULL) return radius;
 	double const val(get_dheight_at(p, exact)), cutoff(surface->min_cutoff);
 	return radius*(1.0 + get_hmap_scale()*((max(cutoff, val) - cutoff)*surface->get_one_minus_cutoff() - 0.5));
 }
-
 
 float urev_body::get_dheight_at(point const &p, bool exact) const {
 
@@ -289,9 +273,7 @@ float urev_body::get_dheight_at(point const &p, bool exact) const {
 	return surface->heightmap[(tsize-tx-1) + tsize*(tsize-ty-1)];
 }
 
-
 bool urev_body::pt_over_land(point const &p) const {
-
 	if (water < 0.1 || !has_heightmap()) return 1;
 	return (get_dheight_at(p, 1) > surface->min_cutoff);
 }

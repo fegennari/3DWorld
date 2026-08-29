@@ -64,14 +64,10 @@ public:
 	virtual void draw_obj(uobj_draw_data &ddata) const {ddata.draw_asteroid(tex_id);}
 };
 
-
 class uobj_asteroid_rock3d : public uobj_asteroid {
 	rock_shape3d model3d;
-
 public:
-	uobj_asteroid_rock3d(point const &pos_, float radius_, unsigned rseed_ix, int tid, unsigned lt, int type)
-		: uobj_asteroid(pos_, radius_, tid, lt)
-	{
+	uobj_asteroid_rock3d(point const &pos_, float radius_, unsigned rseed_ix, int tid, unsigned lt, int type) : uobj_asteroid(pos_, radius_, tid, lt) {
 		model3d.gen_rock(24, 1.0, rseed_ix, type); // pos starts at and stays at all_zeros
 		model3d.set_texture(tex_id, 0.2);
 	}
@@ -86,14 +82,10 @@ public:
 	}
 };
 
-
 class uobj_asteroid_shader : public uobj_asteroid { // unused, but selectable from config file
 	int rseed_ix;
-
 public:
-	uobj_asteroid_shader(point const &pos_, float radius_, int rseed_ix_, int tid, unsigned lt)
-		: uobj_asteroid(pos_, radius_, tid, lt), rseed_ix(rseed_ix_)
-	{
+	uobj_asteroid_shader(point const &pos_, float radius_, int rseed_ix_, int tid, unsigned lt) : uobj_asteroid(pos_, radius_, tid, lt), rseed_ix(rseed_ix_) {
 		c_radius = (1.0 + AST_PROC_HEIGHT)*radius;
 	}
 	virtual void draw_obj(uobj_draw_data &ddata) const {
@@ -123,7 +115,6 @@ public:
 		if (ddata.shader->is_setup()) {ddata.shader->make_current();}
 	}
 };
-
 
 class uobj_asteroid_destroyable : public uobj_asteroid {
 public:
@@ -173,20 +164,15 @@ public:
 	}
 };
 
-
 class uobj_asteroid_hmap : public uobj_asteroid_destroyable {
-
 	class ast_instance_render_t : public instance_render_t { // so we can add max_ndiv without needing to make it mutable as well
 	public:
-		unsigned max_ndiv;
-		ast_instance_render_t() : max_ndiv(0) {}
+		unsigned max_ndiv=0;
 	};
-
 	float scale_val;
 	vector3d xyz_scale;
 	mutable upsurface surface; // mutable so that the contained sd_sphere_vbo_d can modify its vbo indexes
 	ast_instance_render_t inst_render; // could be per-LOD level (4)
-
 public:
 	uobj_asteroid_hmap(point const &pos_, float radius_, unsigned rseed_ix, int tid, unsigned lt, bool is_ice=0)
 		: uobj_asteroid_destroyable(pos_, radius_, tid, lt), xyz_scale(1.0, 1.0, 1.0)
@@ -308,7 +294,6 @@ void enable_bump_map_post(shader_t &shader, unsigned tu_id, float tscale) {
 class uobj_asteroid_voxel : public uobj_asteroid_destroyable {
 	mutable voxel_model_space model; // const problems with draw()
 	static noise_texture_manager_t global_asteroid_ntg;
-
 public:
 	uobj_asteroid_voxel(point const &pos_, float radius_, unsigned rseed_ix, int tid, unsigned lt)
 		: uobj_asteroid_destroyable(pos_, radius_, tid, lt), model(&global_asteroid_ntg, NUM_VOX_AST_LODS)
@@ -497,13 +482,11 @@ void uobj_asteroid::explode(float damage, float bradius, int etype, vector3d con
 {
 	gen_fragments();
 	uobject::explode(damage, bradius, etype, edir, exp_time, wclass, align, eflags, parent_);
-	//assert(omp_get_thread_num_3dw() == 0);
 	clear_context();
 }
 
 
 // *** asteroid instance management ***
-
 
 unsigned const AST_FIELD_MODEL   = AS_MODEL_HMAP;
 unsigned const NUM_AST_MODELS    = 40;
@@ -522,7 +505,6 @@ float get_eq_vol_scale(vector3d const &scale) {return pow(scale.x*scale.y*scale.
 
 
 class asteroid_model_gen_t {
-
 	typedef unique_ptr<uobj_asteroid> p_uobj_asteroid;
 	vector<p_uobj_asteroid> asteroids;
 	vector<asteroid_belt_cloud> cloud_models;
@@ -631,9 +613,7 @@ void ensure_asteroid_models() {
 
 // *** asteroid belt particles ***
 
-
 float rand_gaussian_limited(rand_gen_t &rgen, float mean, float std_dev, float max_val) {
-
 	while (1) {
 		float const v(rgen.rand_gaussian(mean, std_dev));
 		if (fabs(v - mean) < max_val) return v;
@@ -643,7 +623,6 @@ float rand_gaussian_limited(rand_gen_t &rgen, float mean, float std_dev, float m
 
 
 class ast_belt_part_manager_t : public vbo_wrap_t {
-
 	vector<point> pts;
 	sphere_t bsphere;
 
@@ -724,9 +703,7 @@ unsigned const MAX_SHADOW_CASTERS = 8;
 
 // *** asteroid fields and belts ***
 
-
 void set_shader_prefix_for_shadow_casters(shader_t &shader, unsigned num_shadow_casters) {
-
 	if (num_shadow_casters > 0) {
 		assert(num_shadow_casters <= MAX_SHADOW_CASTERS);
 		for (unsigned d = 0; d < 2; ++d) {shader.set_prefix("#define ENABLE_SHADOWS", d);} // VS/FS
@@ -735,7 +712,6 @@ void set_shader_prefix_for_shadow_casters(shader_t &shader, unsigned num_shadow_
 
 
 bool set_af_color_from_system(point_d const &afpos, float radius, shader_t *shader, point *sun_pos=nullptr, colorRGBA *sun_color=nullptr) {
-
 	// set_af_color_from_system=1 - entire asteroid belt can't be shadowed (required for planets)
 	uobject const *sobj(NULL); // unused
 	int const ret(set_uobj_color(afpos, radius, 0, 1, sun_pos, sun_color, sobj, AST_AMBIENT_S, AST_AMBIENT_NO_S, shader, 1));
@@ -794,7 +770,6 @@ void asteroid_belt_cloud::draw(vpc_shader_t &s, point_d const &pos_, float def_c
 void uasteroid_belt::gen_asteroids() {
 
 	uasteroid_cont::gen_asteroids();
-
 	// create clouds
 	asteroid_model_gen.gen_cloud_models();
 	cloud_insts.resize(size());
@@ -889,14 +864,12 @@ void uasteroid_belt::draw_detail(point_d const &pos_, point const &camera, bool 
 
 
 void uasteroid_cont::init(point const &pos_, float radius_) {
-
 	pos    = pos_;
 	radius = radius_;
 	rseed  = rand2();
 }
 
 void uasteroid_cont::gen_asteroids() {
-
 	global_rand_gen.set_state(rseed, 123);
 	ensure_asteroid_models();
 	clear();
@@ -927,7 +900,6 @@ float calc_sphere_shadow_atten(point const &pos, point const &lpos, float lradiu
 }
 
 float uasteroid_cont::calc_shadow_atten(point const &cpos) const {
-
 	float atten(1.0);
 
 	for (auto sc = shadow_casters.begin(); sc != shadow_casters.end(); ++sc) {
@@ -938,7 +910,6 @@ float uasteroid_cont::calc_shadow_atten(point const &cpos) const {
 
 
 void uasteroid_field::gen_asteroid_placements() {
-
 	resize((rand2() % AST_FLD_MAX_NUM) + 1);
 	for (iterator i = begin(); i != end(); ++i) {i->gen_spherical(pos, radius, AST_RADIUS_SCALE*radius);}
 }
@@ -976,7 +947,6 @@ void uasteroid_belt_system::gen_asteroid_placements() { // radius is the asteroi
 
 
 void uasteroid_belt_planet::gen_asteroid_placements() { // radius is the asteroid belt distance from the planet
-
 	assert(planet);
 	pos = planet->get_pos(); // update to current planet pos (necessary if physics is paused)
 	temperature = planet->temp;
@@ -984,9 +954,7 @@ void uasteroid_belt_planet::gen_asteroid_placements() { // radius is the asteroi
 	gen_belt_placements(AST_BELT_MAX_NP, bwidth, belt_thickness, 0.005*radius); // elliptical orbit, static
 }
 
-
 void uasteroid_belt_planet::init_rings(point const &pos) {
-	
 	assert(planet);
 	//float const rscale(planet->rscale.xy_mag()/SQRT2), ri(planet->ring_ri*rscale), ro(planet->ring_ro*rscale);
 	float const ri(planet->ring_ri), ro(planet->ring_ro);
@@ -1000,7 +968,6 @@ void uasteroid_belt::xform_to_local_torus_coord_space(point &pt) const {
 	rotate_norm_vector3d_into_plus_z(orbital_plane_normal, pt);
 	UNROLL_3X(pt[i_] /= orbit_scale[i_];) // account for squished/elliptical torus in orbital plane
 }
-
 
 bool uasteroid_belt::line_might_intersect(point const &p1, point const &p2, float line_radius, point *p_int) const {
 
@@ -1022,7 +989,6 @@ bool uasteroid_belt::line_might_intersect(point const &p1, point const &p2, floa
 }
 
 bool uasteroid_belt::sphere_might_intersect(point const &sc, float sr) const {
-
 	if (empty()) return 0;
 	if (!dist_less_than(sc, pos, (radius + sr))) return 0; // outside the torus
 	float const dmin(outer_radius - inner_radius - sr);
@@ -1037,7 +1003,6 @@ float uasteroid_belt::get_line_sphere_int_radius_scale() const {
 }
 
 float uasteroid_belt::get_dist_to_boundary(point const &pt) const {
-
 	//if (sphere_might_intersect(pt, 0.0)) return 0.0;
 	float const dp(dot_product((pt - pos), orbital_plane_normal));
 	point const vproj(pt - dp*orbital_plane_normal);
@@ -1137,7 +1102,6 @@ void uasteroid_belt_planet::apply_physics(upos_point_type const &pos_, point con
 }
 
 
-
 void uasteroid_belt_system::add_potential_collider(point const &cpos, float cradius) {
 
 	if (!dist_less_than(cpos, get_camera_pos(), 250*max_asteroid_radius)) return; // too far away to notice
@@ -1160,7 +1124,6 @@ void uasteroid_belt_system::calc_colliders() {
 	}
 	//add_potential_collider(player_ship().pos, player_ship().get_c_radius());
 }
-
 
 bool uasteroid_belt_system::might_cast_shadow(uobject const &uobj) const {
 
@@ -1235,9 +1198,7 @@ void uasteroid_cont::begin_render(shader_t &shader, unsigned num_shadow_casters,
 	}
 }
 
-
 void uasteroid_cont::end_render(shader_t &shader) {
-
 	shader.disable();
 	end_texture();
 	glDisable(GL_CULL_FACE);
@@ -1300,9 +1261,7 @@ void uasteroid_cont::draw(point_d const &pos_, point const &camera, shader_t &s,
 	}
 }
 
-
 void uasteroid_cont::remove_asteroid(unsigned ix) {
-
 	assert(ix < size());
 	//std::swap(at(ix), back()); pop_back();
 	erase(begin()+ix); // probably okay if empty after this call
@@ -1337,9 +1296,7 @@ void uasteroid_cont::detach_asteroid(unsigned ix) {
 	remove_asteroid(ix);
 }
 
-
 void uasteroid_cont::destroy_asteroid(unsigned ix) {
-
 	assert(ix < size());
 	operator[](ix).destroy();
 	remove_asteroid(ix);
@@ -1347,7 +1304,6 @@ void uasteroid_cont::destroy_asteroid(unsigned ix) {
 
 
 void uasteroid::gen_base(float max_radius) {
-
 	assert(max_radius > 0.0);
 	rgen_values(); // sets rot_axis and rot_ang
 	UNROLL_3X(scale[i_] = rand_uniform2(0.5, 1.0);)
@@ -1356,15 +1312,12 @@ void uasteroid::gen_base(float max_radius) {
 	rot_ang0 = 0.5*fabs(rand_gaussian2(0.0, 1.0)); // rotation rate
 }
 
-
 void uasteroid::gen_spherical(upos_point_type const &pos_offset, float max_dist, float max_radius) {
-
 	assert(max_radius < max_dist);
 	gen_base(max_radius);
 	pos = pos_offset + signed_rand_vector2_spherical(max_dist - radius);
 	UNROLL_3X(velocity[i_] = AST_VEL_SCALE*rand_gaussian2(0.0, 1.0);)
 }
-
 
 void uasteroid::gen_belt(upos_point_type const &pos_offset, vector3d const &orbital_plane_normal, vector3d const vxy[2],
 	float belt_radius, float belt_width, float belt_thickness, float max_radius, float &ri_max, float &plane_dmax)
@@ -1387,7 +1340,6 @@ void uasteroid::gen_belt(upos_point_type const &pos_offset, vector3d const &orbi
 	plane_dmax   = max(plane_dmax, (radius + dplane)); // approximate
 }
 
-
 void uasteroid::apply_field_physics(point const &af_pos, float af_radius) {
 
 	last_coll_id = -1;
@@ -1400,7 +1352,6 @@ void uasteroid::apply_field_physics(point const &af_pos, float af_radius) {
 		calc_reflection_angle(velocity, velocity, (af_pos - pos).get_norm()); // reflect
 	}
 }
-
 
 void uasteroid::apply_belt_physics(upos_point_type const &af_pos, upos_point_type const &op_normal, vector3d const &orbit_scale, vector<sphere_t> const &colliders) {
 
@@ -1422,18 +1373,14 @@ void uasteroid::apply_belt_physics(upos_point_type const &af_pos, upos_point_typ
 	}
 }
 
-
 void uasteroid::draw(point_d const &pos_, point const &camera, shader_t &s, pt_line_drawer &pld) const {
-
 	point_d const apos(pos_ + pos);
 	if (!univ_sphere_vis_no_inside_test(apos, radius)) return;
 	if (sphere_size_less_than(apos, camera, radius, 1.0)) return; // too small/far away
 	asteroid_model_gen.draw(inst_id, apos, radius*scale, camera, rot_axis, rot_ang, s, pld);
 }
 
-
 void uasteroid::destroy() {
-
 	int const tid(get_spherical_texture(get_fragment_tid(all_zeros)));
 	float const color_scale(has_sun_lighting(pos) ? 1.0 : 2.5); // scale up the color to increase ambient
 	def_explode(u_exp_size[UTYPE_ASTEROID], ETYPE_ANIM_FIRE, signed_rand_vector());
@@ -1441,11 +1388,9 @@ void uasteroid::destroy() {
 	//asteroid_model_gen.destroy_inst(inst_id, pos, radius*scale); // fragments don't have correct velocity and are very dark (no added ambient)
 }
 
-
 int uasteroid::get_fragment_tid(point const &hit_pos) const {
 	return asteroid_model_gen.get_fragment_tid(inst_id, pos+hit_pos); // Note: asteroid_field pos is not added to hit_pos here
 }
-
 
 bool uasteroid::line_intersection(point const &p1, vector3d const &v12, float line_length, float line_radius, float &ldist) const {
 
@@ -1463,9 +1408,7 @@ bool uasteroid::line_intersection(point const &p1, vector3d const &v12, float li
 	return (t > 0.0 && ldist <= line_length);
 }
 
-
 bool uasteroid::sphere_intersection(point const &c, float r) const { // Note: may be untested
-
 	if (!uobject::sphere_intersection(c, r)) return 0; // test bounding sphere
 	vector3d dir((c - pos).get_norm());
 	UNROLL_3X(dir[i_] = fabs(dir[i_]);)
@@ -1475,7 +1418,6 @@ bool uasteroid::sphere_intersection(point const &c, float r) const { // Note: ma
 
 
 // *** rand_spawn_mixin / uobject_rand_spawn_t / ucomet ***
-
 
 void rand_spawn_mixin::gen_rand_pos() {
 
@@ -1488,23 +1430,18 @@ void rand_spawn_mixin::gen_rand_pos() {
 	pos_valid = 1;
 }
 
-
 bool rand_spawn_mixin::okay_to_respawn() const {
-
 	if (!player_near_system()) return 0; // player not near a system, so don't respawn
 	if (player_ship().get_velocity().mag() > 0.2) return 0; // player ship moving too quickly, don't respawn
 	return 1;
 }
 
-
 bool rand_spawn_mixin::needs_respawned() const {
-
 	return !dist_less_than(obj_pos, get_player_pos(), (univ_sphere_vis(obj_pos, obj_radius) ? 2.0 : 1.1)*max_cdist); // further if visible
 }
 
 
 uobject_rand_spawn_t *uobject_rand_spawn_t::create(unsigned type, float radius_, float dmax, float vmag) {
-	
 	switch (type) {
 	case SPO_COMET: {return new ucomet(radius_, dmax, vmag);}
 	default: assert(0);
@@ -1512,34 +1449,26 @@ uobject_rand_spawn_t *uobject_rand_spawn_t::create(unsigned type, float radius_,
 	return NULL;
 }
 
-
 uobject_rand_spawn_t::uobject_rand_spawn_t(float radius_, float dmax, float vmag) : rand_spawn_mixin(pos, radius_, dmax) {
-
 	assert(radius_ > 0.0 && dmax > 0.0 && vmag >= 0.0); // sanity checks
 	radius   = c_radius = radius_;
 	velocity = ((vmag == 0.0) ? zero_vector : signed_rand_vector_norm(vmag));
 	pos      = all_zeros; // temporary
 }
 
-
 void uobject_rand_spawn_t::mark_pos_invalid() {
-
 	pos_valid = 0; // respawn
 	flags    |= OBJ_FLAGS_NCOL; // disable collisions until respawned
 }
 
-
 void uobject_rand_spawn_t::gen_pos() {
-
 	if (!okay_to_respawn()) return;
 	gen_rand_pos();
 	if (dot_product(velocity, dir) > 0.0) {velocity *= -1.0;} // make it approach the camera
 	flags &= ~OBJ_FLAGS_NCOL; // clear the flag
 }
 
-
 void uobject_rand_spawn_t::explode(float damage, float bradius, int etype, vector3d const &edir, int exp_time, int wclass, int align, unsigned eflags, free_obj const *parent_) {
-
 	free_obj::explode(0.2*damage, 0.2*bradius, etype, edir, exp_time, wclass, align, eflags, parent_);
 
 	if (status == 1) { // actually exploded and was destroyed
@@ -1548,9 +1477,7 @@ void uobject_rand_spawn_t::explode(float damage, float bradius, int etype, vecto
 	}
 }
 
-
 void uobject_rand_spawn_t::advance_time(float timestep) {
-
 	if (!pos_valid) {gen_pos();}
 	free_obj::advance_time(timestep);
 	if (needs_respawned()) {mark_pos_invalid();} // if too far from the player, respawn at a different location
@@ -1558,19 +1485,15 @@ void uobject_rand_spawn_t::advance_time(float timestep) {
 
 
 ucomet::ucomet(float radius_, float dmax, float vmag) : uobject_rand_spawn_t(radius_, dmax, vmag) {
-
 	draw_rscale = 10.0; // increase draw radius so that tails are visible even when the comet body is not
 	dir = signed_rand_vector_norm();
 	gen_inst_ids();
 }
 
-
 void ucomet::gen_pos() {
-
 	gen_inst_ids();
 	uobject_rand_spawn_t::gen_pos();
 }
-
 
 void ucomet::gen_inst_ids() {
 
@@ -1582,13 +1505,10 @@ void ucomet::gen_inst_ids() {
 	}
 }
 
-
 void ucomet::set_temp(float temp, point const &tcenter, free_obj const *source) {
-
 	sun_pos = tcenter;
 	free_obj::set_temp(temp, tcenter, source);
 }
-
 
 float ucomet::damage(float val, int type, point const &hit_pos, free_obj const *source, int wc) {
 
@@ -1599,7 +1519,6 @@ float ucomet::damage(float val, int type, point const &hit_pos, free_obj const *
 	}
 	return free_obj::damage(val, type, hit_pos, source, wc); // will be destroyed
 }
-
 
 void ucomet::draw_obj(uobj_draw_data &ddata) const {
 

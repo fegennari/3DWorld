@@ -92,7 +92,6 @@ void line_intersect_fo_vector(line_int_data &li_data, vector<cached_obj> const &
 	}
 }
 
-
 free_obj *line_intersect_free_objects(line_int_data &li_data, int obj_types, unsigned align, bool align_only) {
 
 	float const dmag(li_data.dir.mag());
@@ -113,7 +112,6 @@ free_obj *line_intersect_free_objects(line_int_data &li_data, int obj_types, uns
 	if (fobj != NULL) li_data.dist = sqrt(li_data.dist);
 	return fobj;
 }
-
 
 uobject *line_intersect_objects(line_int_data &li_data, free_obj *&fobj, int obj_types) {
 
@@ -143,7 +141,6 @@ uobject *line_intersect_objects(line_int_data &li_data, free_obj *&fobj, int obj
 
 
 // *********************** QUERY EXECUTORS *******************************
-
 
 
 void apply_one_exp(query_data &qdata, unsigned ix) {
@@ -181,7 +178,6 @@ void apply_one_exp(query_data &qdata, unsigned ix) {
 	obj->damage(damage, DAMAGE_EXP, qdata.pos, qdata.parent, qdata.wclass);
 }
 
-
 void apply_one_light(query_data &qdata, unsigned ix) {
 
 	cached_obj const &cobj((*qdata.objs)[ix]);
@@ -204,9 +200,7 @@ void apply_one_light(query_data &qdata, unsigned ix) {
 	cobj.obj->add_light(qdata.index);
 }
 
-
 void gen_lightning_wrays(query_data &qdata, unsigned ix) {
-
 	cached_obj const &cobj((*qdata.objs)[ix]);
 	float const width(0.02*qdata.radius);
 	assert(width > 0.0 && qdata.radius > 0.0 && cobj.radius > 0.0);
@@ -216,7 +210,6 @@ void gen_lightning_wrays(query_data &qdata, unsigned ix) {
 	vadd_rand(p2, 0.5*cobj.radius);
 	if (!qdata.parent->is_related(cobj.obj)) add_lightning_wray(width, p1, p2);
 }
-
 
 void check_for_inc_proj(query_data &qdata, unsigned ix) {
 
@@ -296,7 +289,6 @@ bool update_min_d(closeness_data &qdata, unsigned ix) { // ships and decoys
 
 
 bool get_all_close(all_query_data &qdata, unsigned ix) {
-
 	cached_obj const &cobj((*qdata.objs)[ix]);
 	if (fabs(qdata.pos.x - cobj.pos.x) > qdata.max_search_dist) return 0;
 
@@ -306,9 +298,7 @@ bool get_all_close(all_query_data &qdata, unsigned ix) {
 	return 1;
 }
 
-
 void test_coll_query(query_data &qdata, unsigned ix) {
-
 	qdata.index      = ix + 1;
 	qdata.exit_query = 1;
 }
@@ -316,13 +306,11 @@ void test_coll_query(query_data &qdata, unsigned ix) {
 
 // **************************** QUERY ITERATORS **************************
 
-
 typedef void (*obj_query)     (query_data     &, unsigned);
 typedef bool (*closest_query) (closeness_data &, unsigned);
 typedef bool (*all_query)     (all_query_data &, unsigned);
 
 unsigned const BAD_QUERY_FLAGS = (OBJ_FLAGS_BAD_ | OBJ_FLAGS_NEW_);
-
 
 bool query_func_wrap(query_data &qdata, obj_query query_func, unsigned bad_flags, unsigned ix) {
 
@@ -336,17 +324,12 @@ bool query_func_wrap(query_data &qdata, obj_query query_func, unsigned bad_flags
 	return 1;
 }
 
-
 inline bool query_func_wrap(closeness_data &qdata, closest_query query_func, unsigned bad_flags, unsigned ix) {
-
 	return query_func(qdata, ix); // not all params used
 }
-
 inline bool query_func_wrap(all_query_data &qdata, all_query query_func, unsigned bad_flags, unsigned ix) {
-
 	return query_func(qdata, ix); // not all params used
 }
-
 
 template<typename data_t, typename query> void find_close_objects(data_t &qdata, query query_func, unsigned bad_flags=0) {
 
@@ -367,9 +350,7 @@ template<typename data_t, typename query> void find_close_objects(data_t &qdata,
 
 // ************************** QUERY DRIVERS ****************************
 
-
 void apply_explosion(point const &pos, float radius, float damage, unsigned eflags, int wclass, uobject *ptr, free_obj const *parent) {
-
 	assert(radius != 0.0 && damage >= 0.0);
 	if (damage == 0.0) return;
 	query_data qdata(&c_uobjs, pos, radius, uobj_rmax);
@@ -380,7 +361,6 @@ void apply_explosion(point const &pos, float radius, float damage, unsigned efla
 	qdata.parent = parent;
 	find_close_objects(qdata, apply_one_exp, (OBJ_FLAGS_NCOL | OBJ_FLAGS_NEXD | OBJ_FLAGS_NEW_));
 }
-
 
 void calc_lit_uobjects() {
 
@@ -395,9 +375,7 @@ void calc_lit_uobjects() {
 	}
 }
 
-
 void add_br_light(unsigned index, point const &pos, float radius, free_obj const *const parent) {
-
 	if (!EXPLODE_LIGHTING)   return;
 	if (NUM_EXP_LIGHTS == 0) return;
 	query_data qdata(&c_uobjs_lit, pos, radius, uobjs_lit_rmax);
@@ -406,9 +384,7 @@ void add_br_light(unsigned index, point const &pos, float radius, free_obj const
 	find_close_objects(qdata, apply_one_light, OBJ_FLAGS_NOLT);
 }
 
-
 void gen_lightning_from(point const &pos, float radius, float dist, free_obj const *src) {
-
 	query_data qdata(&all_ships, pos, radius, urm_ship);
 	qdata.parent = src;
 	qdata.dist   = dist;
@@ -417,14 +393,12 @@ void gen_lightning_from(point const &pos, float radius, float dist, free_obj con
 
 
 free_obj const *check_for_incoming_proj(point const &pos, int align, float dist) {
-
 	if (urm_proj == 0.0) return NULL; // no projectiles
 	query_data qdata(&coll_proj, pos, dist, urm_proj);
 	qdata.align = align;
 	find_close_objects(qdata, check_for_inc_proj, OBJ_FLAGS_NCOL);
 	return ((qdata.radius < dist) ? qdata.fobj : NULL);
 }
-
 
 free_obj *free_obj::get_closest_ship(point const &pos, float min_dist, float max_dist, bool enemy, bool attack_all,
 									 bool req_shields, bool decoy_tricked, bool dir_pref) const
@@ -479,9 +453,7 @@ free_obj *free_obj::get_closest_ship(point const &pos, float min_dist, float max
 	return cdata.closest;
 }
 
-
 free_obj *u_ship::get_closest_dock(float max_dist) const {
-
 	closeness_data cdata(&ships[alignment], pos, max_dist, radius*radius, this, 0, 1, 1);
 	find_close_objects(cdata, update_min_d);
 	return cdata.closest;
@@ -489,19 +461,15 @@ free_obj *u_ship::get_closest_dock(float max_dist) const {
 
 
 unsigned check_for_obj_coll(point const &pos, float radius) { // test sobjs?
-
 	query_data qdata(&c_uobjs, pos, radius, uobj_rmax);
 	qdata.index = 0;
 	find_close_objects(qdata, test_coll_query);
 	return qdata.index;
 }
 
-
 void get_all_close_objects(all_query_data &qdata) {
-
 	qdata.results.resize(0);
 	find_close_objects(qdata, get_all_close);
 }
-
 
 
