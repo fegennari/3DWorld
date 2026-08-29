@@ -431,7 +431,7 @@ void get_occluders() {
 		coll_obj &cobj(coll_objects.get_cobj(*i));
 		if (cobj.group_id >= 0 || cobj.no_draw()) continue;
 		//if (!cobj.is_cobj_visible()) continue; // VFC + occlusion culling (previous frame) - faster for slow moving camera, but misses occlusions for fast moving camera
-		cobj.occluders.resize(0);
+		cobj.occluders.clear();
 		get_coll_line_cobjs_tree(camera, cobj.get_cube_center(), *i, &cobj.occluders, NULL, 0, 1, 1); // expanded
 	}
 	if (skipval == 0) {PRINT_TIME("Occlusion Preprocessing");}

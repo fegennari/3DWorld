@@ -195,7 +195,7 @@ void split_polygon_to_cobjs(coll_obj const &cobj, coll_obj_group &split_polygons
 	}
 	static polygon_t poly;
 	static vector<coll_tquad> ppts;
-	ppts.resize(0);
+	ppts.clear();
 	poly.from_points(poly_pts);
 	split_polygon(poly, ppts, 0.0, 1); // allow_quads=1
 

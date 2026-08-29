@@ -836,7 +836,7 @@ void coll_obj_group::merge_cubes() { // only merge compatible cubes
 		if ((*this)[i].type != COLL_CUBE) continue;
 		csg_cube cube((*this)[i]);
 		if (cube.is_zero_area()) continue;
-		cids.resize(0);
+		cids.clear();
 		cube_tree.get_intersecting_cobjs(cube, cids, i, tolerance, 0, -1);
 		unsigned mi(0);
 
@@ -888,10 +888,10 @@ void coll_obj_group::remove_overlapping_cubes(int min_split_destroy_thresh) { //
 		csg_cube const cube((*this)[i]); // remove all other cobjs from cobjs[i] with lower id
 		if (cube.is_zero_area()) continue;
 		bool const neg((*this)[i].status == COLL_NEGATIVE);
-		cids.resize(0);
+		cids.clear();
 		cube_tree.get_intersecting_cobjs(cube, cids, i, tolerance, 0, -1);
 		if (cids.empty()) continue;
-		cur_cobjs.resize(0);
+		cur_cobjs.clear();
 		cur_cobjs.push_back((*this)[i]); // start with the current cobj
 		bool was_removed(0);
 

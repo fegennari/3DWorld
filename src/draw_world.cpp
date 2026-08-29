@@ -896,7 +896,7 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 		if (in_portal) {portal::post_draw(portal_verts);}
 		end_group(last_group_id);
 		cdb.flush();
-		draw_last.resize(0);
+		draw_last.clear();
 	} // end draw_trans
 	shader.clear_specular(); // may be unnecessary
 	if (reuse_shaders) {shader.disable();} else {shader.end_shader();}
@@ -1314,7 +1314,7 @@ void particle_cloud::draw(quad_batch_draw &qbd) const {
 		if (status && sphere_in_camera_view(pos, radius, 0)) {draw_part(pos, radius, color, qbd);}
 	}
 	else {
-		order.resize(0);
+		order.clear();
 		render_parts.resize(parts.size());
 
 		for (unsigned i = 0; i < parts.size(); ++i) {
@@ -1539,7 +1539,7 @@ void create_and_draw_cracks(quad_batch_draw &qbd) { // adds to beams
 		unsigned const s(i);
 		for (++i; i < cpts.size() && cpts[i].cid == cpts[s].cid && cpts[i].face == cpts[s].face; ++i) {}
 		// all cpts in [s,i) have the same {cid, face}
-		crack_lines.resize(0);
+		crack_lines.clear();
 		coll_obj const &cobj(coll_objects[cpts[s].cid]);
 		cube_t const &cube(cobj);
 		float const diameter(cube.get_bsphere_radius());

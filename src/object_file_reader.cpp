@@ -161,7 +161,7 @@ public:
 				xf.xform_pos(v.back());
 			}
 			else if (strcmp(s, "f") == 0) { // face
-				poly.resize(0);
+				poly.clear();
 				int ix(0);
 
 				while (read_int(ix)) { // read vertex index

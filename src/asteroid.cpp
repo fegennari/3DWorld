@@ -1028,9 +1028,7 @@ void uasteroid_field::apply_physics(point_d const &pos_, point const &camera) { 
 
 	for (unsigned z = 0; z < AF_GRID_SZ; ++z) {
 		for (unsigned y = 0; y < AF_GRID_SZ; ++y) {
-			for (unsigned x = 0; x < AF_GRID_SZ; ++x) {
-				grid[z][y][x].resize(0);
-			}
+			for (unsigned x = 0; x < AF_GRID_SZ; ++x) {grid[z][y][x].clear();}
 		}
 	}
 	for (iterator i = begin(); i != end(); ++i) {

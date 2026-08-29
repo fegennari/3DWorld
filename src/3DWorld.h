@@ -930,7 +930,7 @@ template <typename T> void draw_verts(vector<T> const &verts, int gl_type, unsig
 
 template <typename T> void draw_and_clear_verts(vector<T> &verts, int gl_type) {
 	draw_verts(verts, gl_type);
-	verts.resize(0); // clear()?
+	verts.clear();
 }
 
 void draw_quads_as_tris(unsigned num_quad_verts, unsigned start_quad_vert=0, unsigned num_instances=1);

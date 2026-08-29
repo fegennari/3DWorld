@@ -1528,7 +1528,7 @@ unsigned model3d::add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_m
 		vmap[d].check_for_clear(mat_id);
 		vmap_tan[d].check_for_clear(mat_id);
 	}
-	split_polygons_buffer.resize(0);
+	split_polygons_buffer.clear();
 	split_polygon(poly, split_polygons_buffer, 0.0, allow_model3d_quads);
 
 	for (polygon_t &p : split_polygons_buffer) {

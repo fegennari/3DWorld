@@ -111,7 +111,7 @@ public:
 		push_back(strip_entry(p));
 	}
 	void reset() {
-		resize(0);
+		clear();
 		z_valid = 0;
 	}
 };
@@ -552,7 +552,7 @@ void create_snow_strips(voxel_map &vmap) {
 		}
 		vmap.erase(vmap.begin());
 		cur_x_map[v1] = zv;
-		vs.resize(0);
+		vs.clear();
 		--v1.p[1];
 		vs.push_back(voxel_z_pair(v1)); // zero start
 		++v1.p[1];

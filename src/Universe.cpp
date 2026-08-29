@@ -919,8 +919,8 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 						if (!sel_g) sol.free_planets(); // optional
 						if (!update_pass) continue;
 					}
-					usg.atmos_to_draw.resize(0);
-					usg.rings_to_draw.resize(0);
+					usg.atmos_to_draw.clear();
+					usg.rings_to_draw.clear();
 					vector<std::shared_ptr<uasteroid_belt_planet>> planet_asteroid_belts;
 
 					for (unsigned k = 0; k < sol.planets.size(); ++k) {
@@ -2927,9 +2927,9 @@ bool universe_t::get_trajectory_collisions(line_query_state &lqs, s_object &resu
 	}
 	coll_test ctest;
 	vector<coll_test> &gv(lqs.gv), &sv(lqs.sv), &pv(lqs.pv), &av(lqs.av);
-	gv.resize(0);
-	sv.resize(0);
-	pv.resize(0);
+	gv.clear();
+	sv.clear();
+	pv.clear();
 
 	// main loop
 	while (T <= 1.0) {
@@ -2996,7 +2996,7 @@ bool universe_t::get_trajectory_collisions(line_query_state &lqs, s_object &resu
 						}
 					} // for i
 				} // for ac
-				av.resize(0);
+				av.clear();
 			}
 			float asteroid_dist(ctest.dist);
 
@@ -3112,12 +3112,12 @@ bool universe_t::get_trajectory_collisions(line_query_state &lqs, s_object &resu
 					coll = result.object->pos; // center, not collision point, fix?
 					return 1;
 				} // pc
-				pv.resize(0);
+				pv.clear();
 			} // sc
-			sv.resize(0);
+			sv.clear();
 			if (result.type == UTYPE_ASTEROID) {return 1;} // asteroid intersection
 		} // gc
-		gv.resize(0);
+		gv.clear();
 	} // while t
 	return 0;
 }

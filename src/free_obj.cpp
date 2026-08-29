@@ -565,7 +565,7 @@ void free_obj::draw(shader_t &shader, vpc_shader_t &upc_shader) const { // view 
 	bool const stencil_shadows(STENCIL_SHADOWS && univ_stencil_shadows && lg_obj_type), no_lighting(no_light());
 	uobject const *sobj(NULL);
 	static vector<uobject const *> sobjs;
-	sobjs.resize(0);
+	sobjs.clear();
 	point sun_pos; // should be the same as lpos?
 	int shadowed(0);
 	bool partial_shadow(0);

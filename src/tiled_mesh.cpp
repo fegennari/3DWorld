@@ -3178,7 +3178,7 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 	}
 	bool const enable_billboards(USE_TREE_BILLBOARDS && !shadow_pass);
 	bool const enable_shadow_maps(!shadow_pass && shadow_map_enabled()); // && !reflection_pass?
-	lod_renderer.resize_zero();
+	lod_renderer.clear();
 	lod_renderer.set_enabled(enable_billboards); // need full detail rendering in shadow pass, since billboards project poor shadows
 	colorRGBA const leaf_color_scale(get_color_scale(0.8, 0.5));
 

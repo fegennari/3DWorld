@@ -663,7 +663,7 @@ void ushadow_triangle_mesh::draw(upos_point_type const &pos) const {
 	assert(!invalid);
 	if (tris.empty()) return;
 	static vector<vert_wrap_t> verts;
-	verts.resize(0);
+	verts.clear();
 
 	for (tri_vect_t::const_iterator t = tris.begin(); t != tris.end(); ++t) {
 		for (unsigned i = 0; i < 2; ++i) { // ends (cull faces?)

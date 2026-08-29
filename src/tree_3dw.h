@@ -41,8 +41,7 @@ public:
 	bool has_leaves()   const {return !leaf_vect.empty();}
 	bool has_branches() const {return !branch_vect.empty();}
 	bool empty()        const {return (!has_leaves() && !has_branches());}
-	void clear()       {leaf_vect.clear(); branch_vect.clear();}
-	void resize_zero() {leaf_vect.resize(0); branch_vect.resize(0);}
+	void clear() {leaf_vect.clear(); branch_vect.clear();}
 
 	void add_leaves(tree_data_t const *td, point const &pos, float opacity) {
 		leaf_vect.emplace_back(td, pos, colorRGBA(1, 1, 1, opacity));
@@ -84,7 +83,7 @@ struct tree_cylin : public draw_cylin { // size = 55 (56)
 	}
 };
 
-struct tree_branch { // size = 12
+struct tree_branch { // size = 16
 	tree_cylin *cylin=nullptr;
 	float total_length=0.0;
 	short num_cylins=0, num_branches=0;

@@ -443,7 +443,7 @@ void add_shadow_cobj(int cid) {
 
 void add_coll_shadow_objs() {
 	
-	shadow_objs.resize(0);
+	shadow_objs.clear();
 	if (!shadow_map_enabled()) return;
 	point const camera(get_camera_pos());
 

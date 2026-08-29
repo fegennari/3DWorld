@@ -1268,7 +1268,7 @@ void u_ship::ai_fire(vector3d const &targ_dir, float target_dist, float min_dist
 	unsigned const target_crew(target_obj->get_ncrew());
 	unsigned default_next_weap(curr_weapon);
 	static vector<unsigned> good_weapons;
-	good_weapons.resize(0);
+	good_weapons.clear();
 	
 	// multiple weapons fire in the same frame - player's ship works differently (primary/secondary fire) ?
 	for (unsigned i = 0; i < nweap; ++i) { // eventually move the code below into here
@@ -1319,7 +1319,7 @@ void u_ship::ai_fire(vector3d const &targ_dir, float target_dist, float min_dist
 	float const rsum(c_radius + target_obj->get_c_radius()); // can target_obj be NULL?
 	float min_value(-2000.0); // set to 0 or positive to conserve ammo, etc.
 	static vector<pair<float, unsigned> > wchoices;
-	wchoices.resize(0);
+	wchoices.clear();
 
 	for (unsigned i = 0; i < good_weapons.size(); ++i) { // choose a weapon
 		ship_weapon const &sw(weapons[good_weapons[i]]);
@@ -1418,7 +1418,7 @@ bool u_ship::fire_weapon(vector3d const &fire_dir, float target_dist) {
 	unsigned num_shots(1), shots_per_round(1), remainder(0), used_ammo(0);
 	free_obj *fobj;
 	static vector<point> offsets;
-	offsets.resize(0);
+	offsets.clear();
 	point const target_pos(pos + fire_dir*target_dist); // recompute target pos since it may account for motion prediction
 	unsigned const nwpts((unsigned)sw.weap_pts.size()), wspread(specs().weap_spread);
 
@@ -2827,7 +2827,7 @@ void multipart_ship::apply_physics() {
 			}
 			coll_spheres  [0] = ship_sphere(all_zeros, 1.0, 1.0); // main sphere
 			coll_cylinders[0] = ship_cylinder(p_int*0.9, p_int*0.7, 0.0, 0.45, 1, 0.0); // takes no damage
-			//weapons[1].weap_pts.resize(0);
+			//weapons[1].weap_pts.clear();
 			//weapons[1].weap_pts.push_back(p_int*0.9); // lightning
 		}
 		break;

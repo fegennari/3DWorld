@@ -992,8 +992,8 @@ void draw_univ_objects() {
 	unsigned const nobjs((unsigned)c_uobjs.size());
 	static vector<pair<float, free_obj *> > sorted;
 	static vector<free_obj *> unsorted;
-	sorted.resize(0);
-	unsorted.resize(0);
+	sorted  .clear();
+	unsorted.clear();
 	point const &camera(get_player_pos2());
 	float const ch_dist(player_ship().specs().sensor_dist*player_sensor_dist_mult);
 	free_obj const *player_target(get_player_target());
@@ -1107,7 +1107,7 @@ void purge_old_objs() {
 	}
 	if (nbad == 0) return; // no bad objects
 	static vector<free_obj *> uobjs2;
-	uobjs2.resize(0);
+	uobjs2.clear();
 	uobjs2.reserve(nobjs - nbad);
 
 	for (unsigned i = 0; i < nobjs; ++i) { // rebuild uobjs vector

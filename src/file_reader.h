@@ -68,7 +68,7 @@ protected:
 		assert(0); // never gets here
 	}
 	template<typename T> void read_str_to_newline(T &stream, string &str) {
-		str.resize(0);
+		str.clear();
 
 		while (1) {
 			char const c(get_char(stream));

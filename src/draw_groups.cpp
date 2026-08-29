@@ -447,7 +447,7 @@ void draw_group(obj_group &objg, shader_t &s, lt_atten_manager_t &lt_atten_manag
 
 	if (type == LEAF) { // leaves
 		static vector<pair<unsigned, unsigned> > ordering;
-		ordering.resize(0);
+		ordering.clear();
 		ordering.reserve(objg.end_id);
 
 		for (unsigned j = 0; j < objg.end_id; ++j) {

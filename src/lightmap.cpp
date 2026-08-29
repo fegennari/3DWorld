@@ -58,7 +58,7 @@ void r_profile::reset_bbox(float const bb_[2][2]) {
 }
 
 void r_profile::clear() {
-	rects.resize(0);
+	rects.clear();
 	filled    = 0;
 	avg_alpha = 1.0;
 }
@@ -81,7 +81,7 @@ bool r_profile::add_rect(float const d[3][2], unsigned d0, unsigned d1, float al
 	if (r.equal(bb.d)) { // full containment
 		if (alpha < 1.0) {} // not implemented
 		else {avg_alpha = 1.0;}
-		rects.resize(0);
+		rects.clear();
 		add_rect_int(r);
 		filled = 1;
 		return 1;
@@ -153,7 +153,7 @@ void r_profile::clear_within(float const c[2]) {
 		--i; // wraparound OK
 	}
 	copy(pend.begin(), pend.end(), back_inserter(rects));
-	pend.resize(0);
+	pend.clear();
 	if (removed) filled = 0;
 	//avg_alpha = 1.0; // recalculate?
 }

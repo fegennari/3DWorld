@@ -208,7 +208,7 @@ void check_cobjs_anchored(vector<unsigned> to_check, set<unsigned> anchored[2]) 
 			open.pop_back();
 			closed.push_back(cur);
 			//assert(anchored[0].find(cur) == anchored[0].end()); // requires that intersects_cobj() be symmetric
-			out.resize(0);
+			out.clear();
 			get_all_connected(cur, out);
 
 			for (vector<unsigned>::const_iterator i = out.begin(); i != out.end(); ++i) {
@@ -415,7 +415,7 @@ void check_falling_cobjs() {
 	vector<unsigned> last_falling(falling_cobjs);
 	sort(last_falling.begin(), last_falling.end());
 	check_cobjs_anchored(falling_cobjs, anchored);
-	falling_cobjs.resize(0);
+	falling_cobjs.clear();
 	add_to_falling_cobjs(anchored[0]);
 	
 	if (falling_cobjs != last_falling) {

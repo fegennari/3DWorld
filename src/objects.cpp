@@ -1220,7 +1220,7 @@ void obj_draw_group::end_render() {
 	else {
 		draw_verts(verts, GL_TRIANGLES);
 	}
-	verts.resize(0);
+	verts.clear();
 }
 
 void obj_draw_group::add_draw_polygon(point const *const points, vector3d const &normal, unsigned npoints, unsigned cix) {

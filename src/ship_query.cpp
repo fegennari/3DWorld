@@ -364,7 +364,7 @@ void apply_explosion(point const &pos, float radius, float damage, unsigned efla
 
 void calc_lit_uobjects() {
 
-	c_uobjs_lit.resize(0);
+	c_uobjs_lit.clear();
 	uobjs_lit_rmax = 0.0;
 
 	for (vector<cached_obj>::const_iterator i = c_uobjs.begin(); i != c_uobjs.end(); ++i) {
@@ -468,7 +468,7 @@ unsigned check_for_obj_coll(point const &pos, float radius) { // test sobjs?
 }
 
 void get_all_close_objects(all_query_data &qdata) {
-	qdata.results.resize(0);
+	qdata.results.clear();
 	find_close_objects(qdata, get_all_close);
 }
 

@@ -2236,7 +2236,7 @@ void regen_trees(bool keep_old) {
 		}
 		int const border(1), ext_x1(border), ext_x2(MESH_X_SIZE-border), ext_y1(border), ext_y2(MESH_Y_SIZE-border);
 		if (scrolling && t_trees.scroll_trees(ext_x1, ext_x2, ext_y1, ext_y2)) {t_trees.post_scroll_remove();}
-		else {t_trees.resize(0);}
+		else {t_trees.clear();}
 		t_trees.gen_deterministic(ext_x1, ext_y1, ext_x2, ext_y2, vegetation, /*(zmax - zmin)*/-1.0); // don't use mesh_dz (may cause problems with scrolling)
 		if (!scrolling) {cout << "Num trees = " << t_trees.size() << endl;}
 		last_rgi   = rand_gen_index;

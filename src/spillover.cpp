@@ -86,13 +86,13 @@ void spillover::get_fanout(unsigned index1, vector<unsigned> &fanout, vector<uns
 
 void spillover::get_connected_components(unsigned index1, vector<unsigned> &cc, vector<unsigned char> *used) {
 
-	cc.resize(0);
+	cc.clear();
 	assert(index1 < data.size());
 	if (data[index1].empty()) return;
 	++cur_seen_ix;   // invalidate seen values
 	++cur_connected; // invalidate connected/unconnected
 	data[index1].seen = cur_seen_ix;
-	fanout.resize(0);
+	fanout.clear();
 	get_fanout(index1, fanout, used); // excludes index1
 
 	for (auto i = fanout.begin(); i != fanout.end(); ++i) {
