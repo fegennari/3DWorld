@@ -2645,8 +2645,9 @@ void building_t::assign_correct_room_to_object(room_object_t &obj) const {
 	int const room_id(get_room_containing_pt(center));
 
 	if (room_id >= 0 && room_id != obj.room_id) { // room should be valid, but okay if not; don't update lighting if it's the same room
+		room_t const &room(get_room(room_id));
 		obj.room_id   = room_id;
-		obj.light_amt = 0.5f + 0.5f*get_window_vspace()*interior->rooms[room_id].get_light_amt(); // blend 50% max light to avoid harsh changes when moving between rooms
+		obj.light_amt = 0.5f + 0.5f*(get_room_light_amt(room) + room.light_intensity); // blend 50% max light to avoid harsh changes when moving between rooms
 	}
 }
 
@@ -2856,8 +2857,13 @@ void building_t::player_fire_handgun(point const &player_pos, float player_radiu
 	vect_room_object_t &objs(interior->room_geom->objs);
 	// add shell casing
 	int const room_id(get_room_containing_camera(player_pos)); // not rotated?
-	float const light_amt = 1.0; // ???
 	float const sz_scale(2.0*get_one_inch()), casing_len(0.707*sz_scale), casing_radius(0.5*0.39*sz_scale); // 9mm for reference, scaled 2x to make it easier to see
+	float light_amt = 1.0; // default is fully lit if not in a room
+
+	if (room_id >= 0) {
+		room_t const &room(get_room(room_id));
+		min_eq(light_amt, (get_room_light_amt(room) + room.light_intensity)); // assume room lights are on for this floor
+	}
 	point casing_pos(gun_pos + 0.05*CAMERA_RADIUS*plus_z);
 	cube_t casing(casing_pos); // starts vertical
 	casing.expand_by(casing_radius);

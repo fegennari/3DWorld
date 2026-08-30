@@ -168,6 +168,13 @@ bool building_t::point_in_courtyard(point const &pos_bs) const {
 	return (has_courtyard && has_room_geom() && interior->room_geom->courtyard.contains_pt(pos_bs));
 }
 
+float building_t::get_room_light_amt(room_t const &room) const {
+	// exterior light: multiply perimeter/area by window spacing to make unitless; none for basement rooms
+	float light_amt((room.zc() < ground_floor_z1) ? 0.0f : get_window_vspace()*room.get_light_amt());
+	if (!is_house && room.is_hallway) {light_amt *= 2.0;} // double the light in office building hallways because they often connect to other lit hallways
+	return light_amt;
+}
+
 void building_t::clear_existing_room_geom() {
 	if (!interior) return; // error?
 	interior->create_fc_occluders(); // not really part of room geom, but needed for generating and drawing room geom, so we create them here
@@ -260,8 +267,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 		bool const is_basement(has_basement() && r->part_id == (int)basement_part_ix); // includes extended basement and parking garage
 		bool const is_mall(r->is_mall());
 		unsigned const room_id(r - rooms.begin());
-		float light_amt(is_basement ? 0.0f : window_vspacing*r->get_light_amt()); // exterior light: multiply perimeter/area by window spacing to make unitless; none for basement rooms
-		if (!is_house && r->is_hallway) {light_amt *= 2.0;} // double the light in office building hallways because they often connect to other lit hallways
+		float const light_amt(get_room_light_amt(*r));
 		float const floor_height(r->is_single_floor ? r->dz() : window_vspacing); // secondary buildings are always one floor
 		r->lit_by_floor = 0; // starts unlit; set below
 

@@ -1525,7 +1525,7 @@ bool building_t::reassign_room_as_bedroom(rand_gen_t rgen, light_ix_assign_t &li
 		float const z1(room.z1() + c.floor_id*floor_spacing), z2(z1 + floor_spacing), zval(z1 + fc_thick);
 		assert(z2 < room.z2() + fc_thick); // floor within room range, with some added padding
 		bool const is_lit(room.is_lit_on_floor(c.floor_id));
-		float light_amt(floor_spacing*room.get_light_amt()); // assuming not in basement
+		float light_amt(get_room_light_amt(room));
 		if (is_lit) {light_amt += room.light_intensity;}
 		if (!add_bedroom_objs(rgen, room, blockers, chair_color, zval, c.room_id, c.floor_id, light_amt, objs_start, is_lit, 0, 1, light_ix_assign)) continue; // is_basement=0, force=1
 		interior->remove_objects_in_room(c.room_id, objs_start, z1, z2, lights_bcubes); // only remove objects from old room if valid placement, and don't remove newly added objects

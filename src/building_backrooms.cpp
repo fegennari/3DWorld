@@ -114,8 +114,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 	assert(has_room_geom());
 	float const floor_spacing(get_window_vspace()), wall_thickness(1.2*get_wall_thickness()), wall_half_thick(0.5*wall_thickness); // slightly thicker than regular walls
 	float const ceiling_z(zval + get_floor_ceil_gap()); // Note: zval is at floor level, not at the bottom of the room
-	//float const tot_light_amt(room.light_intensity /*+ floor_spacing*room.get_light_amt()*/); // ???
-	float const tot_light_amt(0.75);
+	float const tot_light_amt(0.75); // no windows and not a single room; use a light amount less than max since it's in the basement
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const objs_start(objs.size());
 	if (interior->room_geom->backrooms_start == 0) {interior->room_geom->backrooms_start = objs_start;}
