@@ -664,6 +664,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				} // for l
 				valid_lights.swap(split_lights);
 			}
+			if (f == 0 && !valid_lights.empty()) {r->light_intensity *= valid_lights.size();} // multiply by light count
 			rand_gen_t rgen_lights(rgen); // copy state so that we don't modify rgen
 			unsigned const objs_start_inc_lights(objs.size());
 			bool const walls_not_shared(is_backrooms); // multi-floor backrooms have different walls and can't share the light stack
