@@ -635,7 +635,7 @@ int line_int_thick_cylinder(point const &p1, point const &p2, point const &cp1, 
 	assert(ri1 == ri2 && ro1 == ro2);
 	assert(ro1 > 0.0 && ro2 > 0.0 && ri1 >= 0.0 && ri2 >= 0.0);
 	assert(ro1 >= ri1 && ro2 >= ri2);
-	//if (point_in_cylinder(cp1, cp2, p1, ro1, ro2) && !point_in_cylinder(cp1, cp2, p1, ri1, ri2)) return 3; // t = ???
+	//if (point_in_cylinder(cp1, cp2, p1, ro1, ro2) && !point_in_cylinder(cp1, cp2, p1, ri1, ri2)) return 3; // can't use, doesn't compute t
 	// translate so that cp1 is at (0,0,0), swap if r1 > r2?
 	vector3d v12[2] = {(p1 - cp1), (p2 - cp1)};
 	vector3d const c2(cp2 - cp1);
@@ -1220,8 +1220,7 @@ void vproj_plane(vector3d const &vin, vector3d const &n, vector3d &vout) { // pr
 
 // ************ Rotations ************
 
-// OK if vrot is zero_vector, sin = sqrt(1 - cos^2) ???
-// Note: angle is in radians
+// Notes: OK if vrot is zero_vector; angle is in radians
 #define CREATE_ROT_MATRIX(vrot, angle) \
 	double const mag(vrot.mag()); assert(mag != 0.0); \
 	double const X(vrot.x/mag), Y(vrot.y/mag), Z(vrot.z/mag), c(cos(angle)), s(sin(angle)); \

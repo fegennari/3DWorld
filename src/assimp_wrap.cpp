@@ -608,7 +608,7 @@ public:
 		// aiProcess_ImproveCacheLocality - optional, but already supported by the model3d class
 		// aiProcess_FindDegenerates, aiProcess_FindInvalidData - optional
 		// aiProcess_FlipUVs - not needed since this can be done in the texture loading
-		// aiProcess_CalcTangentSpace - ???
+		// aiProcess_CalcTangentSpace - not used for 3DWorld
 		// aiProcess_GenBoundingBoxes - calculate mesh AABBs
 		unsigned flags(aiProcess_Triangulate | aiProcess_SortByPType | aiProcess_JoinIdenticalVertices |
 			           aiProcess_FixInfacingNormals | aiProcess_GenUVCoords | aiProcess_OptimizeMeshes);

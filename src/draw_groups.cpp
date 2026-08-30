@@ -99,13 +99,12 @@ void set_color_v2(const colorRGBA &color, int status, shader_t &shader) {
 inline bool is_droplet(int type) {
 	return ((object_types[type].flags & OBJ_IS_DROP) || type == HAIL || type == CHARRED);
 }
-
 inline bool get_cull_face(int type, colorRGBA const &color) {
 	return (color.alpha < 1.0 && type != ROCKET && type != STAR5 && type != GRENADE && type != LANDMINE);
 }
 
 void scale_color_uw(colorRGBA &color, point const &pos) {
-	water_color_atten_at_pos(color, pos); // ???
+	water_color_atten_at_pos(color, pos);
 	if (underwater) {color.R *= 0.45; color.G *= 0.45; color.B *= 0.85;}
 }
 

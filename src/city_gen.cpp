@@ -1068,7 +1068,6 @@ public:
 	void create_connector_bend(cube_t const &int_bcube, bool dx, bool dy, unsigned road_ix_x, unsigned road_ix_y) {
 		uint8_t const conns[4] = {6, 5, 10, 9};
 		isecs[0].emplace_back(int_bcube, road_ix_x, road_ix_y, conns[2*dy + dx], true, false); // add_stoplights=0
-		//blockers.push_back(int_bcube); // ???
 	}
 	void split_connector_roads(float road_spacing) { // required for correct shadow maps, since default segments may be too long
 		// Note: here we use segs, maybe 2-way isecs for bends, but not plots
@@ -2672,8 +2671,9 @@ public:
 		for (auto i = conn_isecs.begin(); i != conn_isecs.end(); ++i) {
 			bool const is_last(i+1 == conn_isecs.end()), next_dir(is_last ? last_dir : (i+1)->dir);
 			unsigned const next_road_ix(is_last ? last_road_ix : (i+1)->road_ix);
-			if (i->dim) {global_rn.create_connector_bend(i->int_bcube, (next_dir ^ i->dim), (i->dir ^ i->dim), next_road_ix, i->road_ix);} // Y
-			else        {global_rn.create_connector_bend(i->int_bcube, (i->dir ^ i->dim), (next_dir ^ i->dim), i->road_ix, next_road_ix);} // X
+			if (i->dim) {global_rn.create_connector_bend(i->int_bcube, (next_dir ^ i->dim), (i->dir   ^ i->dim), next_road_ix, i->road_ix  );} // Y
+			else        {global_rn.create_connector_bend(i->int_bcube, (i->dir   ^ i->dim), (next_dir ^ i->dim), i->road_ix,   next_road_ix);} // X
+			//blockers.push_back(i->int_bcube); // not needed, since a road can't fit through the space the bend occupies anyway?
 			// decrease_only=1; remove any dirt that the prev road added
 			hq.flatten_sloped_region(i->fop.x1, i->fop.y1, i->fop.x2, i->fop.y2, i->fop.z1, i->fop.z2, i->fop.dim, i->fop.border, i->fop.skip_six, i->fop.skip_eix, 0, 1);
 			hq.flatten_region_to(i->int_bcube, city_params.road_border, 1); // one more pass to fix mesh that was raised above the intersection by a sloped road segment

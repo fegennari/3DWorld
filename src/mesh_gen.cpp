@@ -470,7 +470,7 @@ void estimate_zminmax(bool using_eq) {
 }
 
 float get_median_height(float distribution_pos) {
-	if (height_histogram.empty()) {return distribution_pos;} // ???
+	if (height_histogram.empty()) return distribution_pos; // unclear what else we can return
 	return height_histogram[max(0, min((int)height_histogram.size()-1, int(height_histogram.size()*distribution_pos)))];
 }
 

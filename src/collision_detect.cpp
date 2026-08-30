@@ -655,7 +655,7 @@ void add_coll_point(int i, int j, int index, float zminv, float zmaxv, int add_t
 	unsigned const size((unsigned)vcm.cvals.size());
 
 	if (size > 1 && cobj.status == COLL_STATIC && coll_objects[vcm.cvals[size-2]].status == COLL_DYNAMIC) {
-		std::rotate(vcm.cvals.begin(), vcm.cvals.begin()+size-1, vcm.cvals.end()); // rotate last point to first point???
+		std::rotate(vcm.cvals.begin(), vcm.cvals.begin()+size-1, vcm.cvals.end()); // rotate last point to first point
 	}
 	if (is_dynamic) return;
 
@@ -1711,7 +1711,7 @@ void force_onto_surface_mesh(point &pos) { // for camera
 	camera_coll_id = -1;
 	camera_obj.pos = pos;
 	camera_obj.velocity.assign(0.0, 0.0, -1.0);
-	//camera_obj.velocity += (pos - camera_last_pos)/tstep; // ???
+	//camera_obj.velocity += (pos - camera_last_pos)/tstep; // camera isn't a physics object, so it has no velocity; but this is what it would have been
 
 	if (world_mode == WMODE_GROUND) {
 		unsigned const nsteps(CAMERA_STEPS); // *** make the number of steps determined by fticks? ***

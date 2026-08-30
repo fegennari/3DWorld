@@ -750,7 +750,6 @@ bool obj_layer::has_alpha_texture() const {
 bool coll_obj::is_player() const { // sort of a hack
 	return ((cp.coll_func == camera_collision) || (cp.coll_func == smiley_collision));
 }
-
 bool coll_obj::is_invis_player() const { // sort of a hack
 	if (cp.coll_func == smiley_collision && has_invisibility(cp.cf_index)) return 1;
 	if (cp.coll_func == camera_collision && has_invisibility(-1))          return 1;
@@ -761,7 +760,7 @@ bool coll_obj::truly_static() const {
 	if (may_be_dynamic())                      return 0;
 	if (cp.flags & COBJ_DESTROYABLE)           return 0;
 	if (cp.cobj_type == COBJ_TYPE_MODEL3D)     return 1;
-	if (cp.cobj_type == COBJ_TYPE_VOX_TERRAIN) return 0; // ???
+	if (cp.cobj_type == COBJ_TYPE_VOX_TERRAIN) return 0; // can be modified, including with weapon fire, so not static; probably makes no difference
 	return (destroy < max((int)SHATTERABLE, destroy_thresh+1));
 }
 

@@ -367,7 +367,8 @@ void building_t::add_tunnel_objects(rand_gen_t rgen) {
 					conn.water_flow  = rgen.rand_uniform(0.25, 0.5)*(conn.dir ? 1.0 : -1.0);
 				}
 				t.conns.push_back(conn);
-				//basement_ext_bcube.union_with_point(conn.dir ? p2 : p1); // ???
+				// should sewer tunnels contribute to the extb bcube? maybe not, since they don't have indir lighting, standard AI path finding, object coll/physics, etc.
+				//basement_ext_bcube.union_with_point(conn.dir ? p2 : p1);
 				avoid_vals[num_avoid] = pos; avoid_radii[num_avoid++] = radius; // should we check dir or track it separately? may not matter much
 			} // for n
 			t.conns_added = 1; // flag so that we don't re-add if room geom is re-added

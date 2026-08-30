@@ -239,8 +239,8 @@ unsigned const trailer_sig = 0xbeefdead;
 
 bool tex_mod_map_manager_t::read_mod(string const &fn) {
 
-	//assert(mod_map.empty()); // ???
-	mod_map.clear(); // allow merging ???
+	//assert(mod_map.empty()); // should this be more strict?
+	mod_map.clear(); // allow merging, or overwrite?
 	FILE *fp(fopen(fn.c_str(), "rb"));
 
 	if (fp == NULL) {

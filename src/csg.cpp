@@ -371,9 +371,9 @@ bool csg_cube::subtract_from_internal(const csg_cube &cube, vector<csg_cube> &ou
 					}
 				}
 				if (all_in) { // full 2D slice
-					unsigned char edgeflags(cube.eflags); // |= vs. &=~ ???
-					if (i3[dim] != 0)        edgeflags &= ~EFLAGS[dim][0]; // first  side not on original cube edge
-					if (i3[dim] != n[dim]-1) edgeflags &= ~EFLAGS[dim][1]; // second side not on original cube edge
+					unsigned char edgeflags(cube.eflags);
+					if (i3[dim] != 0)        {edgeflags &= ~EFLAGS[dim][0];} // first  side not on original cube edge
+					if (i3[dim] != n[dim]-1) {edgeflags &= ~EFLAGS[dim][1];} // second side not on original cube edge
 					csg_cube ncube(edgeflags);
 
 					for (unsigned l = 0; l < 3; ++l) {

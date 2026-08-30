@@ -543,7 +543,7 @@ void change_world_mode() { // switch terrain mode: 0 = normal/ground, 1 = univer
 	else if (combined_gu) {
 		setup_current_system();
 	}
-	if (!map_mode) {reset_offsets();} // ???
+	if (!map_mode) {reset_offsets();} // seems like a reasonable thing to do
 	init_x        = 1;
 	camera_change = 1;
 	if (world_mode == WMODE_GROUND || world_mode == WMODE_INF_TERRAIN) {apply_grass_scale();}
@@ -715,9 +715,7 @@ void update_mouse_pos(int dx, int dy) {
 		if (dx == 0 && dy == 0) break;
 
 		if (world_mode == WMODE_UNIVERSE) {
-			vector3d delta(dx, dy, 0.0); // mouse delta
-			delta *= (1280.0/window_width); // ???
-			if (player_ship_inited()) {player_ship().turn(delta);}
+			if (player_ship_inited()) {player_ship().turn((1280.0/window_width)*vector3d(dx, dy, 0.0));} // apply mouse delta, normalized to 1280 window width
 			update_cpos();
 		}
 		else if (map_mode) { // map mode click and drag

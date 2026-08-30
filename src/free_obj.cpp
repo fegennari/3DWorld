@@ -281,7 +281,7 @@ float free_obj::coll_physics(point const &copos, vector3d const &vcoll, float ob
 	
 	// compute collision force
 	float const c(-dot_product(norm, vd)); // norm is not really correct in all cases
-	//if (c <= 0.0) return 0.0; // ???
+	//if (c <= 0.0) return 0.0; // pushed in the direction we were already moving; should this case be skipped?
 	vector3d const deltav(norm*(c*(obj_mass/(mass0 + obj_mass))*(1.0 + elastic)));
 	assert(!is_nan(deltav));
 	dvel += deltav; // accumulate velocity change and add into velocity after all collisions are processed

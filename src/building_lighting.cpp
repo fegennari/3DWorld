@@ -2806,7 +2806,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			if (is_rr) {lit_area.z2() = bcube.z2();} // include the full roof peak and skylight frame
 			else {lit_area.z2() += fc_thick;} // include the tops of the skylight
 			point lpos(sl.get_cube_center());
-			if (is_rotated()) {do_xy_rotate(building_center, lpos);} // ???
+			if (is_rotated()) {do_xy_rotate(building_center, lpos);} // maybe not needed, since skylight is usually centered on building; also, the light shape itself isn't rotated
 			vector3d const light_dir((sun_moon_pos - lpos).get_norm());
 			float const light_dist(3.0*window_vspacing); // larger is more physically correct (directional), but produces lower shadow resolution due to wasted texels
 			lpos += light_dist*light_dir;

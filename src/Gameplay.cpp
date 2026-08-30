@@ -598,7 +598,7 @@ bool camera_collision(int index, int obj_index, vector3d const &velocity, point 
 		sstate.register_death(source);
 		camera_reset  = 0;
 		b2down        = 0;
-		following     = 0; // ???
+		following     = 0; // stop following seekd if something hit us; unclear if this should be true
 		orig_camera   = camera_origin;
 	}
 	if (cam_filter_color.alpha > 0.0) {add_camera_filter(cam_filter_color, CAMERA_SPHERE_TIME, -1, CAM_FILT_DAMAGE);}
@@ -1846,7 +1846,6 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	case W_BBBAT: // baseball bat
 		do_impact_damage(fpos, dir, velocity, fpos, radius, shooter, weapon_id, 1.0);
 		gen_sound(SOUND_SWING, fpos);
-		//cobj.register_coll() ???
 		return 1;
 
 	case W_PLASMA:
@@ -2688,7 +2687,7 @@ void init_game_mode() {
 	
 		for (int i = CAMERA_ID; i < num_smileys; ++i) {
 			sstates[i].killer = NO_SOURCE; // no one
-			if (game_mode == GAME_MODE_FPS) {init_sstate(i, 1);} // ???
+			if (game_mode == GAME_MODE_FPS) {init_sstate(i, 1);}
 		}
 	}
 	if (play_gameplay_alert && frame_counter > 0) {gen_sound(SOUND_ALERT, get_camera_pos(), 0.5);} // not on first frame
