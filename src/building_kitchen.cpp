@@ -865,6 +865,7 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 		add_stack_of_plates(plate_area, plate_radius, room_id, light_amt, RO_FLAG_NOCOLL, rgen, blockers, objs);
 	} // for i
 	if (rgen.rand_bool()) {add_buckets_to_room(rgen, place_area, zval, room_id, light_amt, objs_start, 1);} // maybe add a bucket
+	if (!in_mall && rgen.rand_bool()) {add_wet_floor_sign_to_room(rgen, room, zval, room_id, light_amt, objs_start);} // mall restaurants already have wet floor signs
 	if (!in_mall && !is_restaurant()) {add_door_sign("Kitchen", room, zval, room_id);} // not needed in malls, and sign may be blocked in restaurants
 	// add floor stains
 	unsigned const num_stains(rgen.rand() % 5); // 0-4

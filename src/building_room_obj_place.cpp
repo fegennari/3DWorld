@@ -380,6 +380,35 @@ void building_t::add_trash_to_trashcan(rand_gen_t &rgen, cube_t const &tc, unsig
 	reverse(objs.begin()+trash_start, objs.end()); // ordered top down, in the order the player must take the trash
 }
 
+void building_t::add_wet_floor_sign_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_WETF_SIGN)) return;
+	float const floor_spacing(get_window_vspace()), wall_thick(get_wall_thickness());
+	cube_t place_area(get_walkable_room_bounds(room));
+	place_area.expand_by_xy(-4.0*wall_thick); // not too close to the wall
+	if (!place_area.is_strictly_normalized()) return; // shouldn't happen
+	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_WETF_SIGN)); // D, W, H
+	float const height(0.25*floor_spacing), hwidth(0.5*height*sz.y/sz.z), hdepth(0.5*height*sz.x/sz.z), radius(max(hwidth, hdepth));
+	bool const dim(rgen.rand_bool());
+
+	for (unsigned n = 0; n < 10; ++n) { // 10 attempts
+		point const pos(gen_xy_pos_in_area(place_area, radius, rgen, zval)); // take bounding cylinder, since it's almost square
+		cube_t sign(pos);
+		sign.z2() += height;
+		set_wall_width(sign, pos[ dim], hdepth,  dim);
+		set_wall_width(sign, pos[!dim], hwidth, !dim);
+		if (is_obj_placement_blocked(sign, room, 1) || overlaps_other_room_obj(sign, objs_start)) continue; // bad placement
+
+		if (has_pool() && zval < ground_floor_z1) { // check if above pool, in case it's placed in a swimming pool room
+			cube_t sign_ext(sign);
+			sign_ext.z1() -= floor_spacing; // extend down to pool
+			sign_ext.expand_by_xy(wall_thick);
+			if (interior->pool.intersects(sign_ext)) continue;
+		}
+		interior->room_geom->objs.emplace_back(sign, TYPE_WETF_SIGN, room_id, dim, rgen.rand_bool(), 0, tot_light_amt);
+		break; // success/done
+	} // for n
+}
+
 cube_t get_book_bcube(rand_gen_t &rgen, point const &pos, float floor_spacing, bool dim, bool dir) {
 	float const book_sz(0.07*floor_spacing);
 	vector3d book_scale(book_sz*rgen.rand_uniform(0.8, 1.2), book_sz*rgen.rand_uniform(0.8, 1.2), 0.0);
@@ -3265,6 +3294,7 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 			add_ball_to_room(rgen, room, ball_area, zval, room_id, tot_light_amt, objs_start, BALL_TYPE_BEACH, avoid_xy, in_pool);
 		}
 	}
+	if (rgen.rand_bool()) {add_wet_floor_sign_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);}
 }
 
 // add objects to rooms connected to walkways, since the walkways themselves aren't actual rooms (and aren't inside the building bcube);

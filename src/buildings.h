@@ -2429,6 +2429,7 @@ private:
 		unsigned objs_start, bool plastic_tc, unsigned max_books=0, unsigned max_num_xy=0);
 	void add_trashcan_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool check_last_obj);
 	void add_trash_to_trashcan(rand_gen_t &rgen, cube_t const &tc, unsigned room_id, float tot_light_amt);
+	void add_wet_floor_sign_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	bool add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement);
 	bool add_desk_to_room    (rand_gen_t rgen, room_t const &room, vect_cube_t const &blockers, colorRGBA const &chair_color, float zval, unsigned room_id, float tot_light_amt,
 		unsigned objs_start, bool is_basement, unsigned desk_ix=0, bool no_computer=0, bool force_computer=0, bool add_phone=0, bool not_tall=0, int against_window_mode=2);

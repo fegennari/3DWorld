@@ -413,6 +413,7 @@ bool building_t::add_cafeteria_objs(rand_gen_t rgen, room_t const &room, float &
 		} // for c
 	} // for r
 	add_corner_trashcans(rgen, room, zval, room_id, tot_light_amt, objs_start, rgen.rand_bool(), 1); // random dim, both_ends=1
+	if (rgen.rand_bool()) {add_wet_floor_sign_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);}
 
 	if (!in_mall) {
 		add_clock_to_room_wall(rgen, room, zval, room_id, tot_light_amt, objs_start);

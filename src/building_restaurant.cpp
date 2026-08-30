@@ -365,6 +365,7 @@ void building_t::add_mall_restaurant_objs(rand_gen_t &rgen, room_t const &room, 
 	}
 	if (has_dining) {add_cafeteria_objs(rgen, pub_area, zval, room_id, 0, light_amt, objs_start);} // floor_ix=0
 	else {add_corner_trashcans(rgen, pub_area, zval, room_id, light_amt, objs_start, !sdim, 1);} // both_ends=1
+	if (rgen.rand_bool()) {add_wet_floor_sign_to_room(rgen, room, zval, room_id, light_amt, objs_start);}
 }
 
 cube_t building_t::add_restaurant_counter(cube_t const &wall, bool dim, bool dir, unsigned room_id, float light_amt,
