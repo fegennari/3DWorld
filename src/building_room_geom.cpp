@@ -8217,7 +8217,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_PG_BEAM:    return texture_color(get_concrete_tid());
 	case TYPE_SHELF_WALL: return texture_color(get_shelf_wall_tid(*this));
 	case TYPE_PARK_SPACE: return LT_GRAY; // texture_color(...)?
-	case TYPE_ELEVATOR: return LT_BROWN; // ???
+	case TYPE_ELEVATOR: return (LT_GRAY + BROWN)*0.5; // interior is brown and exterior is light gray, so take the average?
 	case TYPE_RUG:      return texture_color(get_rug_tid());
 	case TYPE_PICTURE:  return (has_extra() ? GRAY : texture_color(get_picture_tid())); // set abstract art to gray since color is unknown; incorrect for user screenshots
 	case TYPE_BCASE:    return get_textured_wood_color();
