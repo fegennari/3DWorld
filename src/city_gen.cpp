@@ -1365,6 +1365,16 @@ public:
 		}
 		return 1; // not contained in a plot
 	}
+	bool get_nearest_streetlight(point const &pos, point &sl_pos) const {
+		if (!bcube.contains_pt_xy(pos)) return 0;
+		float dmin_sq(0.0);
+
+		for (auto const &s : streetlights) {
+			float const dsq(p2p_dist_sq(pos, s.pos));
+			if (dmin_sq == 0.0 || dsq < dmin_sq) {sl_pos = s.pos; dmin_sq = dsq;}
+		}
+		return (dmin_sq > 0.0);
+	}
 	void add_plot_cut(cube_t const &cut) {
 		if (bcube.intersects_xy(cut)) {plot_cuts.push_back(cut);}
 	}
@@ -2540,6 +2550,12 @@ public:
 		}
 		return 0;
 	}
+	bool get_nearest_streetlight(point const &pos, point &sl_pos) const {
+		for (road_network_t const &rn : road_networks) {
+			if (rn.get_nearest_streetlight(pos, sl_pos)) return 1;
+		}
+		return 0;
+	}
 	void add_plot_cut(cube_t const &cut) {
 		for (road_network_t &rn : road_networks) {rn.add_plot_cut(cut);}
 	}
@@ -3682,6 +3698,7 @@ public:
 	bool tile_contains_tunnel(cube_t const &bcube) const {return road_gen.tile_contains_tunnel(bcube);}
 	bool cube_int_underground_obj(cube_t const &c) const {return road_gen.cube_int_underground_obj(c);}
 	bool is_invalid_placement_for_cube(cube_t const &c) const {return road_gen.is_invalid_placement_for_cube(c);}
+	bool get_nearest_streetlight(point const &pos, point &sl_pos) const {return road_gen.get_nearest_streetlight(pos, sl_pos);}
 	void add_plot_cut(cube_t const &cut) {road_gen.add_plot_cut(cut);}
 	void add_city_ug_elevator_entrance(ug_elev_info_t const &uge) {road_gen.add_city_ug_elevator_entrance(uge);}
 	void get_ponds_in_xy_range(cube_t const &range, vect_cube_t &ponds, bool for_plants) const {road_gen.get_ponds_in_xy_range(range, ponds, for_plants);}
@@ -3909,9 +3926,9 @@ bool check_valid_scenery_pos(point const &pos, float radius, bool is_tall) {
 	if (model_bcube_checker.check_sphere_coll(pos_bs, radius, 1)) return 0; // xy_only=1
 	return 1;
 }
-bool check_mesh_disable(point const &pos, float radius) {return (have_cities() && city_gen.check_mesh_disable(pos, radius));} // Note: pos is in camera space
-bool check_inside_city (point const &pos, float radius) {return (have_cities() && city_gen.check_inside_city (pos, radius));} // Note: pos is in camera space
-bool city_has_grass_at (point const &pos, float radius, cube_t &blocker) {return (have_cities() && city_gen.has_grass_at(pos, radius, blocker));} // Note: pos is in camera space
+bool check_mesh_disable(point const &pos, float radius) {return (have_cities() && city_gen.check_mesh_disable(pos, radius));} // Note: pos is in building space
+bool check_inside_city (point const &pos, float radius) {return (have_cities() && city_gen.check_inside_city (pos, radius));} // Note: pos is in building space
+bool city_has_grass_at (point const &pos, float radius, cube_t &blocker) {return (have_cities() && city_gen.has_grass_at(pos, radius, blocker));} // Note: pos is in building space
 cube_t get_city_grass_bcube_at(cube_t const &test_cube) {return (have_cities() ? city_gen.get_city_grass_bcube_at(test_cube) : cube_t());}
 
 bool camera_in_city_bounds(unsigned rcp_mask, cube_t *city_bcube) {
@@ -3937,4 +3954,7 @@ bool has_cars_enabled () {return (city_params.num_cars > 0);}
 vector3d get_nom_car_size() {return city_params.get_nom_car_size();}
 void draw_car_in_pspace(car_t &car, shader_t &s, vector3d const &xlate, bool shadow_only, unsigned btype) {city_gen.draw_car_in_pspace(car, s, xlate, shadow_only, btype);}
 void set_car_model_color(car_t &car, unsigned btype) {city_gen.set_car_model_color(car, btype);}
+colorRGBA get_streetlight_light_color () {return streetlight_ns::light_color;}
+float     get_streetlight_light_radius() {return streetlight_ns::light_dist*city_params.road_width;}
+bool get_nearest_streetlight(point const &pos, point &sl_pos) {return city_gen.get_nearest_streetlight((pos - get_tiled_terrain_model_xlate()), sl_pos);} // camera => building space
 

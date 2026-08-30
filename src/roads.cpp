@@ -473,20 +473,20 @@ void streetlights_t::draw_streetlights(road_draw_state_t &dstate, bool shadow_on
 	//timer_t t("Draw Streetlights");
 	select_no_texture();
 	bool const is_local_shadow(camera_pdu.far_ < 0.1*FAR_CLIP); // Note: somewhat of a hack, but I don't have a better way to determine this
-	for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {i->draw(dstate, shadow_only, is_local_shadow, always_on);}
+	for (auto const &s : streetlights) {s.draw(dstate, shadow_only, is_local_shadow, always_on);}
 }
 
 void streetlights_t::add_streetlight_dlights(vector3d const &xlate, cube_t &lights_bcube, bool always_on) const {
 	if (!always_on && !is_night(STREETLIGHT_ON_RAND)) return; // none of them can be on
-	for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {i->add_dlight(xlate, lights_bcube, always_on);}
+	for (auto const &s : streetlights) {s.add_dlight(xlate, lights_bcube, always_on);}
 }
 
 bool streetlights_t::proc_streetlight_sphere_coll(point &center, float radius, vector3d const &xlate, vector3d *cnorm) const {
 	float const pradius(streetlight_ns::get_streetlight_pole_radius()), rtot(pradius + radius), y_end(center.y + rtot - xlate.y);
 
-	for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {
-		if (i->pos.y > y_end) break; // streetlights are sorted by y-val; if this holds, we can no longer intersect
-		if (i->proc_sphere_coll(center, radius, xlate, cnorm)) return 1;
+	for (auto const &s : streetlights) {
+		if (s.pos.y > y_end) break; // streetlights are sorted by y-val; if this holds, we can no longer intersect
+		if (s.proc_sphere_coll(center, radius, xlate, cnorm)) return 1;
 	}
 	return 0;
 }
@@ -494,10 +494,10 @@ bool streetlights_t::proc_streetlight_sphere_coll(point &center, float radius, v
 bool streetlights_t::check_streetlight_sphere_coll_xy(point const &center, float radius, cube_t &coll_cube) const {
 	float const pradius(streetlight_ns::get_streetlight_pole_radius()), rtot(pradius + radius), y_end(center.y + rtot);
 
-	for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {
-		if (i->pos.y > y_end) break; // streetlights are sorted by y-val; if this holds, we can no longer intersect
-		if (!dist_xy_less_than(i->pos, center, rtot)) continue;
-		coll_cube.set_from_point(i->pos);
+	for (auto const &s : streetlights) {
+		if (s.pos.y > y_end) break; // streetlights are sorted by y-val; if this holds, we can no longer intersect
+		if (!dist_xy_less_than(s.pos, center, rtot)) continue;
+		coll_cube.set_from_point(s.pos);
 		coll_cube.expand_by_xy(pradius);
 		coll_cube.z2() += streetlight_ns::get_streetlight_height();
 		return 1;
@@ -507,7 +507,7 @@ bool streetlights_t::check_streetlight_sphere_coll_xy(point const &center, float
 
 bool streetlights_t::line_intersect_streetlights(point const &p1, point const &p2, float &t) const {
 	bool ret(0);
-	for (auto i = streetlights.begin(); i != streetlights.end(); ++i) {ret |= i->line_intersect(p1, p2, t);}
+	for (auto const &s : streetlights) {ret |= s.line_intersect(p1, p2, t);}
 	return ret;
 }
 
