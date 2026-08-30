@@ -1536,12 +1536,14 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
-		if ((int)i->room_id != room_id)                     continue; // wrong room
-		if (i->is_tv_or_monitor() && i->is_tv_monitor_on()) return 0; // TV or monitor emits light
-		if (!i->is_light_type() || !i->is_light_on())       continue; // not a light, or light not on
-		//if (i->light_is_out()) continue; // broken light; continuing here doesn't work because sparks won't be drawn
-		if (!room.is_single_floor && unsigned(max(0.0f, (i->z1() - room.z1()))/floor_spacing) != floor_ix) continue; // different floors
-		return 0; // lit by a room light, including one in a closet (Note that closets are only in house bedrooms, which should always have windows anyway)
+		if ((int)i->room_id != room_id) continue; // wrong room
+		
+		if ((i->is_light_type   () && i->is_light_on     () /*&& !i->light_is_out()*/) || // light that's turned on; include broken lights so that sparks are drawn
+			(i->is_tv_or_monitor() && i->is_tv_monitor_on())) // TV or monitor emits light
+		{
+			if (!room.is_single_floor && unsigned(max(0.0f, (i->z1() - room.z1()))/floor_spacing) != floor_ix) continue; // different floors
+			return 0; // lit by a room light, including one in a closet (Note that closets are only in house bedrooms, which should always have windows anyway)
+		}
 	}
 	rooms_visited.insert(room_id); // mark this room as visited before making recursive calls
 	unsigned num_doors(0);
