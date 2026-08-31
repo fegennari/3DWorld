@@ -2875,7 +2875,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				hash_mix_point(lpos, shadow_caster_hash); // update when light (sun/moon) pos changes
 				bool const cache_shadows(!force_smap_update && sl.ix == shadow_caster_hash);
 				sl.ix = shadow_caster_hash; // store new hashval in the skylight for next frame
-				assign_light_for_building_interior(dl_sources.back(), &sl, clipped_area, cache_shadows);
+				cube_t const clipped_area_rot(is_rotated() ? get_rotated_bcube(clipped_area) : clipped_area);
+				assign_light_for_building_interior(dl_sources.back(), &sl, clipped_area_rot, cache_shadows);
 			}
 			if (add_sky_lighting) { // add a weaker unshadowed vertical light using cur_ambient
 				point lpos2(sl.get_cube_center());
@@ -2888,8 +2889,9 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				if (!is_rot_cube_visible(clipped_area2, xlate, 1)) {} // VFC; inc_mirror_reflections=1
 				else if (check_occlusion && !clipped_area2.contains_pt(camera_rot) && check_obj_occluded(clipped_area2, camera_bs, oc)) {} // occlusion culling
 				else { // add the light
+					cube_t const clipped_area2_rot(is_rotated() ? get_rotated_bcube(clipped_area2) : clipped_area2);
 					dl_sources.emplace_back(light_radius, lpos2, lpos2, cur_ambient, 0);
-					dl_sources.back().set_custom_bcube(clipped_area2);
+					dl_sources.back().set_custom_bcube(clipped_area2_rot);
 					dl_sources.back().disable_shadows();
 				}
 			}
