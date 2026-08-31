@@ -278,7 +278,6 @@ bool check_player_proximity(point const &pos, float radius, bool use_bottom) {
 	return pr.ret;
 }
 
-
 void object_line_coll(dwobject &obj, point const &old_pos, float radius, unsigned obj_index, int &cindex) {
 
 	vector3d cnorm;
@@ -295,7 +294,6 @@ void object_line_coll(dwobject &obj, point const &old_pos, float radius, unsigne
 		assert(!is_nan(obj.pos));
 	}
 }
-
 
 void set_global_state() {
 	camera_view = 0;
@@ -773,7 +771,6 @@ void check_contained_cube_sides() {
 }
 
 void flag_cobjs_indoors_outdoors() {
-
 	for (coll_obj_group::iterator i = coll_objects.begin(); i != coll_objects.end(); ++i) {
 		if (i->fixed && !i->no_draw()) {i->check_indoors_outdoors();}
 	}
@@ -785,13 +782,11 @@ void coll_obj_group::clear_ids() {
 	drawn_ids.clear();
 	platform_ids.clear();
 }
-
 void coll_obj_group::clear() { // unused, but may be useful
 	has_lt_atten = has_voxel_cobjs = 0;
 	vector<coll_obj>::clear();
 	clear_ids();
 }
-
 
 void coll_obj_group::finalize() {
 
@@ -904,7 +899,6 @@ void coll_obj::add_to_vector(coll_obj_group &cobjs, int type_) {
 	cobjs.push_back(*this);
 }
 
-
 void coll_obj::check_if_cube() {
 
 	if (type != COLL_POLYGON || thickness == 0.0 || npoints != 4) return;
@@ -943,7 +937,6 @@ void copy_polygon_to_cobj(polygon_t const &poly, coll_obj &cobj) {
 	cobj.npoints = (short)poly.size();
 	for (int j = 0; j < cobj.npoints; ++j) {cobj.points[j] = poly[j].v;}
 }
-
 void copy_tquad_to_cobj(coll_tquad const &tquad, coll_obj &cobj) {
 	cobj.npoints = tquad.npts;
 	for (int j = 0; j < cobj.npoints; ++j) {cobj.points[j] = tquad.pts[j];}
@@ -953,7 +946,6 @@ void maybe_reserve_fixed_cobjs(size_t size) {
 	unsigned const ncobjs(fixed_cobjs.size());
 	if (size > 2*ncobjs) {fixed_cobjs.reserve(ncobjs + (FIXED_COBJS_SWAP ? 1.1 : 1.0)*size);} // reserve to the correct size
 }
-
 
 void add_polygons_to_cobj_vector(vector<coll_tquad> const &ppts, coll_obj const &cobj, int const *group_ids, unsigned char cobj_type, bool add_as_rotated_cube) {
 
@@ -988,11 +980,10 @@ void add_polygons_to_cobj_vector(vector<coll_tquad> const &ppts, coll_obj const 
 	} // for t
 }
 
-
 void create_xyz_groups(int *group_ids, bool use_vbo) {
 	for (unsigned i = 0; i < 3; ++i) {
 		group_ids[i] = (int)obj_draw_groups.size();
-		obj_draw_groups.push_back(obj_draw_group(use_vbo));
+		obj_draw_groups.emplace_back(use_vbo);
 	}
 }
 
@@ -2087,7 +2078,6 @@ int read_coll_objects(const char *filename) {
 	return 1;
 }
 
-
 string texture_str(int tid) {
 	if (tid < 0) {return "none";} // or -1
 	assert((unsigned)tid < textures.size());
@@ -2095,14 +2085,12 @@ string texture_str(int tid) {
 }
 
 void light_source::write_to_cobj_file(ostream &out, bool is_diffuse) const {
-
 	// 'L'/"light": // point/spot/line light: ambient_size diffuse_size xpos ypos zpos color [direction|pos2 [beamwidth=1.0 [inner_radius=0.0 [is_line_light=0 [use_shadow_map=0 [num_dlight_rays=0]]]]]]
 	out << "light " << (is_diffuse ? 0.0 : radius) << " " << (is_diffuse ? radius : 0.0) << " " << pos.raw_str() << " " << color.raw_str() << " "
 		<< (is_line_light() ? pos2 : dir).raw_str() << " " << bwidth << " " << r_inner << " " << is_line_light() << " "
 		<< (smap_enabled() ? (is_cube_face ? 2 : 1) : 0) << " " << num_dlight_rays << endl;
 }
 void light_source_trig::write_to_cobj_file(ostream &out, bool is_diffuse) const {
-
 	// Note: cube map lights should write out all 6 faces here because the beamwidth has been set to 0.4 (not 1.0)
 	triggers.write_to_cobj_file(out);
 	sensor.write_to_cobj_file(out);
@@ -2301,7 +2289,6 @@ void write_def_coll_objects_file() {
 	write_coll_objects_file(coll_objects, "coll_objects_out.txt");
 }
 
-
 void init_models() {
 	build_hmv_shape();
 	gen_star_points();
@@ -2310,7 +2297,6 @@ void init_models() {
 void free_models() {
 	delete_hmv_shape();
 }
-
 
 void gen_star_points() {
 	for (unsigned i = 0; i < 2*N_STAR_POINTS; ++i) { // alternate outside and inside points
