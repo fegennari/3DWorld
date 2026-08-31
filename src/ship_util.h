@@ -78,7 +78,7 @@ struct query_data {
 
 struct base_query_data {
 	vector<cached_obj> const *objs;
-	point const pos; // compiler bug if const& ???
+	point const &pos;
 	free_obj const *const questioner;
 	bool exit_query=0;
 
