@@ -890,7 +890,6 @@ void texture_t::load_from_gl() { // also set tid?
 void bind_1d_texture(unsigned tid, bool is_array) {
 	glBindTexture((is_array ? GL_TEXTURE_1D_ARRAY : GL_TEXTURE_1D), tid);
 }
-
 void bind_2d_texture(unsigned tid, bool is_array, bool multisample) {
 	glBindTexture(get_2d_texture_target(is_array, multisample), tid);
 	//assert(glIsTexture(tid)); // too slow?
@@ -934,7 +933,6 @@ void setup_texture(unsigned &tid, bool mipmap, bool wrap_s, bool wrap_t, bool mi
 }
 
 void setup_1d_texture(unsigned &tid, bool mipmap, bool wrap, bool mirror, bool nearest) {
-
 	assert(tid == 0);
 	assert(!nearest || !mipmap);
 	glGenTextures(1, &tid);
@@ -1065,7 +1063,6 @@ void update_player_bbb_texture(float extra_blood, bool recreate) {
 
 
 void gen_blur_inv_texture() {
-
 	texture_t &tex(textures[BLUR_TEX_INV]);
 	assert(tex.ncolors == 4);
 	unsigned char *tex_data(tex.get_data());
@@ -1078,7 +1075,6 @@ void gen_blur_inv_texture() {
 }
 
 void gen_stripe_texture(int tid, bool horiz) {
-
 	texture_t &tex(textures[tid]);
 	assert(tex.ncolors == 3);
 	unsigned char *tex_data(tex.get_data());
@@ -1092,7 +1088,6 @@ void gen_stripe_texture(int tid, bool horiz) {
 }
 
 void gen_tree_end_texture() {
-
 	texture_t &tex(textures[TREE_END_TEX]);
 	unsigned char *tex_data(tex.get_data());
 	int const w2(tex.width >> 1), h2(tex.height >> 1);
@@ -1109,7 +1104,6 @@ void gen_tree_end_texture() {
 }
 
 void gen_blur_cent_texture() {
-
 	texture_t &tex(textures[BLUR_CENT_TEX]);
 	assert(textures[BLUR_CENT_TEX].ncolors == 4);
 	unsigned char *tex_data(tex.get_data());
@@ -1127,7 +1121,6 @@ void gen_blur_cent_texture() {
 }
 
 void gen_gradient_texture() { // for horizon
-
 	texture_t &tex(textures[GRADIENT_TEX]); // 1D
 	assert(tex.width == 1 && tex.ncolors == 4);
 	unsigned char *tex_data(tex.get_data());
@@ -1723,23 +1716,19 @@ void setup_texgen_full(float sx, float sy, float sz, float sw, float tx, float t
 	set_texgen_vec4(vector4d(sx, sy, sz, sw), 0, shader, mode);
 	set_texgen_vec4(vector4d(tx, ty, tz, tw), 1, shader, mode);
 }
-
 void setup_texgen(float xscale, float yscale, float tx, float ty, float z_off, shader_t &shader, int mode) {
 	assert(xscale != 0.0 && yscale != 0.0);
 	setup_texgen_full(xscale, 0.0, z_off, tx, 0.0, yscale, z_off, ty, shader, mode);
 }
 
 void get_poly_texgen_dirs(vector3d const &norm, vector3d v[2]) { // similar to get_ortho_vectors(), but not normalized
-
 	v[0] = all_zeros;
 	v[0][get_min_dim(norm)] = 1.0;
 	cross_product(norm, v[0], v[1]);
 	cross_product(norm, v[1], v[0]);
 }
 
-void setup_polygon_texgen(vector3d const &norm, float const scale[2], float const xlate[2],
-	vector3d const &offset, bool swap_txy, shader_t &shader, int mode)
-{
+void setup_polygon_texgen(vector3d const &norm, float const scale[2], float const xlate[2], vector3d const &offset, bool swap_txy, shader_t &shader, int mode) {
 	vector3d v[2];
 	get_poly_texgen_dirs(norm, v);
 	
@@ -1765,7 +1754,6 @@ void get_tex_coord(vector3d const &dir, vector3d const &sdir, unsigned txsize, u
 
 
 unsigned texture_t::get_texel_ix(float u, float v) const {
-
 	u -= 1.0E-6f; v -= 1.0E-6f; // make 1.0 equal width-1 | height-1
 	int tx(int(width*u) % width), ty(int(height*v) % height); // width and height can be any nonzero value
 	if (tx < 0) {tx += width;}
