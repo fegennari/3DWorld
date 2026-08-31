@@ -836,35 +836,6 @@ void check_cobj_alignment(unsigned index) {
 	}
 	cobjs.erase(out, cobjs.end());
 
-#if 0 // Note: unfinished and disabled
-	// allow rotation of cubes, which will become extruded polygons, so polygons need to work as well;
-	// curved cobjs such as spheres, rotated cylinders, and capsules are generally unstable since they only contact the ground at a single point;
-	// spheres are handled by is_rolling_cobj() and should be okay;
-	// Z-axis cylinders can rest on a flat surface, but as soon as they start to rotate they're no longer axis aligned
-	if (cobj.v_fall == 0.0 && (cobj.type == COLL_CUBE || cobj.type == COLL_POLYGON) && !cobjs.empty()) {
-		float const support_toler(-max(100.0*tolerance, 0.01*cobj_height)); // negative tolerance to make intersections more likely
-		vector3d normal(plus_z); // okay for cubes and Z-oriented cylinders
-		vector<point> support_pts;
-		bool supported(0);
-
-		for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
-			coll_obj const &c(coll_objects.get_cobj(*i));
-			if (c.is_point_supported(center_of_mass)) {supported = 1; break;}
-			// fill in support_pts, which generally requires determining intersection points, which is not implemented for all cobjs;
-			// this works for cubes, but as soon as the cube rotates it's no longer axis aligned
-			cobj.get_contact_points(c, support_pts, 1, support_toler);
-		}
-		if (!supported && !support_pts.empty()) { // can rotate due to gravity and maybe fall
-			rot_val_t const rot_val(get_cobj_rot_axis(support_pts, normal, center_of_mass));
-		
-			if (rot_val.axis != zero_vector) { // apply rotation if not stable at rest
-				float const angle(0.1); // need to calculate this
-				cobj.rotate_about(rot_val.pt, rot_val.axis, angle);
-				return;
-			}
-		}
-	}
-#endif
 	if (check_top_face_agreement(cobjs)) {
 		cube_t bcube(cobj);
 		bcube.d[2][1] = bcube.d[2][0]; // top edge starts at cobj bottom

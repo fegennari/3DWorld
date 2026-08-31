@@ -1095,7 +1095,7 @@ void voxel_model_ground::create_block_hook(unsigned block_ix) { // lod_level == 
 		unsigned const cp_ix((params.top_tex_used && normal.z > 0.5) ? 2 : fabs(eval_noise_texture_at((pts[0] + pts[1] + pts[2])/3.0)) > 0.5);
 		int cindex(-1);
 
-#if 1 // only gets here ~5% of the time for the large voxel terrain scene
+		// only gets here ~5% of the time for the large voxel terrain scene
 		if (v+3 < num_verts) { // have a next triangle
 			point const pts2[3] = {td.get_vert(v+3).v, td.get_vert(v+4).v, td.get_vert(v+5).v};
 
@@ -1112,7 +1112,6 @@ void voxel_model_ground::create_block_hook(unsigned block_ix) { // lod_level == 
 				}
 			}
 		}
-#endif
 		if (cindex < 0) {cindex = add_simple_coll_polygon(pts, 3, cparams[cp_ix], normal);}
 		if (add_as_fixed) {coll_objects.get_cobj(cindex).fixed = 1;} // mark as fixed so that lmap cells will be generated and cobjs will be re-added
 		data_blocks[block_ix].cids.push_back(cindex);
