@@ -13,6 +13,7 @@ pre_load_full_tiled_terrain 1 # long load times but no initial lag when rotating
 #init_game_mode 2 # start in building gameplay mode
 game_mode_disable_mask 2 # disable FPS gameplay mode; only building gameplay and non-game mode are enabled
 #game_mode_disable_mask 3 # only building gameplay mode is enabled
+use_grass_tess 1 # set to 0 for low end GPUs and integrated graphics
 play_gameplay_alert 0 # disable the alert sound
 vsync_enabled 1
 show_map_view_fractal 0 # 0=off, 1=Mandelbrot, 2=Tricorn, 3=Burning Ship, 4=Mandelbox

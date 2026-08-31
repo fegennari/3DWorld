@@ -44,14 +44,22 @@ void main() {
 	epos            = fg_ModelViewMatrix  * fin_vert;
 	gl_Position     = fg_ProjectionMatrix * epos;
 	gl_FogFragCoord = length(epos.xyz);
+
+	// calculate weights
 	vec4 weights    = texture(weight_tex, tc2);
 	float grass_weight = weights.b; // grass weight in weights {sand, dirt, grass, rock, [snow]}
 	//grass_weight = ((grass_weight < 0.2) ? 0.0 : grass_weight);
+	float noise_weight = texture(noise_tex, 11.3*vec2((fg_Color.r + local_translate.x), (fg_Color.g + local_translate.y))).r; // "hash" the color + local translate
+	bool skip_grass = (grass_weight < noise_weight);
 	bool is_city = (weights.g > 0.5 && weights.a > 0.5);
 	if (is_city) {fin_vert.z -= 0.2*fg_Vertex.z;} // shorten city grass that have dirt and rock weights set to 1.0; top vertex only
-	float noise_weight = texture(noise_tex, 11.3*vec2((fg_Color.r + local_translate.x), (fg_Color.g + local_translate.y))).r; // "hash" the color + local translate
+	vertex_from_vs = fin_vert.xyz;
 	
 	// calculate lighting
+	if (skip_grass) { // optimization: skip lighting calc
+		fg_Color_vf = vec4(0.0);
+		return;
+	}
 	vec3 shadow  = mix(vec3(1.0), texture(shadow_tex, tc2).rgb, (is_city ? 0.25 : 1.0)); // {mesh_shadow, tree_shadow, ambient_occlusion}; low city shadows, since no mesh shadows
 	float ambient_scale = 1.5*shadow.b * (1.5 - 0.75*tc.s); // decreased ambient at base, increased ambient at tip
 	vec3 normal   = (2.0*texture(normal_tex, tc2).xyz - vec3(1.0));
@@ -60,7 +68,6 @@ void main() {
 	float diffuse_scale = min(shadow.r, shadow.g); // min of mesh and tree shadow
 	bool apply_cloud_shadows = !is_city; // skip cloud shadows in city because the ground doesn't have cloud shadows
 	vec3 color    = do_shadowed_lighting(vertex, epos, eye_norm, ad_color, ambient_scale, diffuse_scale, apply_cloud_shadows);
-	float alpha   = fg_Color.a * ascale * ((grass_weight < noise_weight) ? 0.0 : 1.0); // skip some grass blades by making them transparent
+	float alpha   = fg_Color.a * ascale * (skip_grass ? 0.0 : 1.0); // skip some grass blades by making them transparent
 	fg_Color_vf   = vec4(color, alpha);
-	vertex_from_vs= fin_vert.xyz;
 } 
