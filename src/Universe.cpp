@@ -102,15 +102,12 @@ float get_screen_width() {return 1920.0;} // normalize to window_width=1920
 float calc_sphere_size(point const &pos, point const &camera, float radius, float d_adj) {
 	return get_screen_width()*radius/max(TOLERANCE, (p2p_dist(pos, camera) + d_adj)); // approx. in pixels
 }
-
 bool sphere_size_less_than(point const &pos, point const &camera, float radius, float num_pixels) {
 	return (get_screen_width()*radius < num_pixels*p2p_dist(pos, camera));
 }
-
 float get_pixel_size(float radius, float dist) {
 	return min(10000.0f, get_screen_width()*radius/max(dist, TOLERANCE)); // approx. in pixels
 }
-
 bool get_draw_as_line(float dist, vector3d const &vcp, float vcp_mag) {
 	return (get_pixel_size(1.0, dist)*cross_product(get_player_velocity(), vcp).mag() > 1.0f*vcp_mag);
 }
@@ -121,7 +118,6 @@ void set_star_light_atten(int light, float atten, shader_t *shader=NULL) {
 
 
 s_object get_shifted_sobj(s_object const &sobj) {
-
 	s_object sobj2(sobj);
 	UNROLL_3X(sobj2.cellxyz[i_] += uxyz[i_];)
 	return sobj2;
@@ -191,14 +187,13 @@ void destroy_sobj(s_object const &target) {
 
 // *** DRAW CODE ***
 
-
 struct planet_draw_data_t {
-	unsigned ix;
-	float size;
-	bool selected;
+	unsigned ix=0;
+	float size=0.0;
+	bool selected=0;
 	upos_point_type pos; // pos cached before planet update
 	shadow_vars_t svars;
-	planet_draw_data_t() : ix(0), size(0.0), selected(0) {}
+	planet_draw_data_t() {}
 	planet_draw_data_t(unsigned ix_, float size_, upos_point_type const &pos_, shadow_vars_t const &svars_, bool sel) :
 		ix(ix_), size(size_), selected(sel), pos(pos_), svars(svars_) {}
 };
@@ -207,7 +202,6 @@ struct planet_draw_data_t {
 float get_light_scale(unsigned light) {return (is_light_enabled(light) ? 1.0 : 0.0);}
 
 void set_light_scale(shader_t &s, bool use_light2) {
-
 	vector3d const light_scale(get_light_scale(0), get_light_scale(1), (use_light2 ? 1.0 : 0.0));
 	s.add_uniform_vector3d("light_scale", light_scale);
 }
@@ -242,7 +236,6 @@ class universe_shader_t : public shader_t {
 		set_uniform_float(get_loc("ss_radius"),  svars.ss_radius);
 		upload_mvm_to_shader(*this, "fg_ViewMatrix");
 	}
-
 public:
 	void enable_planet(urev_body const &body, shadow_vars_t const &svars, bool use_light2) {
 		if (!is_setup()) {
@@ -489,7 +482,6 @@ void draw_one_star(colorRGBA const &colorA, colorRGBA const &colorB, point const
 	ss.disable_star_shader();
 }
 
-
 void invalidate_cached_stars() {++star_cache_ix;}
 
 
@@ -602,9 +594,7 @@ bool is_shadowed(point const &pos, float radius, bool expand, ussystem const &so
 	return 0;
 }
 
-
 void atten_color(colorRGBA &color, point const &p1, point const &p2, float radius, float expand) {
-
 	assert(radius > 0.0 && expand > 0.0 && expand != 1.0);
 	float const dist(p2p_dist(p1, p2));
 	assert(isfinite(dist) && dist > 0.0);
@@ -628,7 +618,6 @@ bool get_universe_sun_pos(point const &pos, point &spos) {
 	}
 	return 0;
 }
-
 
 bool has_sun_lighting(point const &pos) {
 	s_object result;
@@ -712,14 +701,12 @@ int set_uobj_color(point const &pos, float radius, bool known_shadowed, int shad
 
 
 void ucell::draw_nebulas(ushader_group &usg) const {
-
 	point const &camera(get_player_pos());
 
 	for (unsigned i = 0; i < galaxies->size(); ++i) { // back-to-front sort not needed?
 		if ((*galaxies)[i].nebula.is_valid()) {(*galaxies)[i].nebula.draw(rel_center, camera, U_VIEW_DIST, usg.nebula_shader);}
 	}
 }
-
 
 bool ucell::is_visible() const {
 
@@ -734,7 +721,6 @@ bool ucell::is_visible() const {
 	}
 	return 0;
 }
-
 
 void ucell::draw_all_stars(ushader_group &usg, bool clear_star_pld) {
 
@@ -1057,7 +1043,6 @@ void maybe_show_uobj_info(uobject const *const uobj) {
 }
 
 void add_nearby_uobj_text(text_drawer_t &text_drawer) {
-
 	for (auto i = show_info_uobjs.begin(); i != show_info_uobjs.end(); ++i) {
 		assert(*i != nullptr);
 		string const str((*i)->get_name() + ": " + (*i)->get_info());
@@ -1069,7 +1054,6 @@ void add_nearby_uobj_text(text_drawer_t &text_drawer) {
 
 
 // *** UPDATE CODE ***
-
 
 void universe_t::init() {
 
@@ -1129,16 +1113,13 @@ void universe_t::shift_cells(int dx, int dy, int dz) {
 
 
 // *** GENERATION CODE ***
-inline int gen_rand_seed1(point const &center) {
 
+inline int gen_rand_seed1(point const &center) {
 	return 196613*(int(RS_SCALE*center.x+0.5)) +
 		   393241*(int(RS_SCALE*center.y+0.5)) +
 		   786433*(int(RS_SCALE*center.z+0.5)) + RAND_CONST*123;
 }
-
-
 inline int gen_rand_seed2(point const &center) {
-
 	return 6291469*(int(RS_SCALE*center.x+0.5)) +
 		   3145739*(int(RS_SCALE*center.y+0.5)) +
 		   1572869*(int(RS_SCALE*center.z+0.5)) + RAND_CONST*456;
@@ -1168,7 +1149,6 @@ void ucell::gen_cell(int const ii[3]) {
 
 ugalaxy:: ugalaxy() {}
 ugalaxy::~ugalaxy() {}
-
 
 bool ugalaxy::create(ucell const &cell, int index) {
 
@@ -1207,22 +1187,17 @@ bool ugalaxy::create(ucell const &cell, int index) {
 	return 0;
 }
 
-
 void ugalaxy::apply_scale_transform(point &pos_) const {
-
 	UNROLL_3X(pos_[i_] *= scale[i_];)
 	rotate_vector3d(axis, xy_angle, pos_);
 }
 
-
 point ugalaxy::gen_valid_system_pos() const {
-
 	float const rsize(radius*(1.0 - sqrt(rand2d())));
 	point pos2(gen_rand_vector2(rsize));
 	apply_scale_transform(pos2);
 	return pos2 + pos;
 }
-
 
 float ugalaxy::get_radius_at(point const &pos_, bool exact) const {
 
@@ -1240,14 +1215,11 @@ float ugalaxy::get_radius_at(point const &pos_, bool exact) const {
 	return rval;
 }
 
-
 bool ugalaxy::is_close_to(ugalaxy const &g, float overlap_amount) const {
-
 	vector3d const delta(pos - g.pos);
 	float const dist(delta.mag());
 	return (dist < TOLERANCE || dist < ((overlap_amount/dist)*(get_radius_at(-delta) + g.get_radius_at(delta)) + SYSTEM_MIN_SPACING));
 }
-
 
 void ugalaxy::calc_color() {
 
@@ -1261,7 +1233,6 @@ void ugalaxy::calc_color() {
 	color.set_valid_color();
 }
 
-
 void ugalaxy::calc_bounding_sphere() {
 
 	float dist_sq_max(0.0);
@@ -1271,7 +1242,6 @@ void ugalaxy::calc_bounding_sphere() {
 	}
 	radius = sqrt(dist_sq_max);
 }
-
 
 void ugalaxy::process(ucell const &cell) {
 
@@ -1350,7 +1320,6 @@ void ugalaxy::process(ucell const &cell) {
 	for (uasteroid_field &af : asteroid_fields) {af.init(gen_valid_system_pos(), radius*rand_uniform2(0.005, 0.01));}
 	gen = 1;
 }
-
 
 bool ugalaxy::gen_system_loc(vector<point> const &placed) {
 
@@ -1479,7 +1448,6 @@ uplanet *ussystem::get_planet_by_name(string const &name) {
 }
 
 umoon *ussystem::get_moon_by_name(string const &name) { // slow
-
 	for (unsigned i = 0; i < planets.size(); ++i) {
 		umoon *moon(planets[i].get_moon_by_name(name));
 		if (moon != nullptr) return moon;
@@ -1553,7 +1521,6 @@ void uplanet::calc_temperature() {
 	assert(orbit > TOLERANCE);
 	temp = system->sun.get_temperature_at_dist(orbit); // ~2-50
 }
-
 
 void uplanet::create(bool phase) {
 
@@ -1944,7 +1911,6 @@ void ustar::gen_color() {
 colorRGBA ustar::get_ambient_color_val() const {
 	return (is_ok() ? colorRGBA(color.R, color.G, color.B, color.A)*sqrt(radius/STAR_MAX_SIZE) : BLACK);
 }
-
 colorRGBA ustar::get_light_color() const {
 	// max the RGB for the two colors in each color channel to get a saturation effect
 	return colorRGBA(max(colorA.R, colorB.R), max(colorA.G, colorB.G), max(colorA.B, colorB.B), color.A);
@@ -2002,7 +1968,6 @@ void uobj_solid::adjust_colorAB(float delta) {
 }
 
 void uobj_solid::gen_colorAB(float delta) {
-
 	colorA = colorB = color;
 	adjust_colorAB(delta);
 }
@@ -2195,7 +2160,6 @@ void universe_t::free_context() { // should be OK even if universe isn't setup
 // *** MEMORY - FREE CODE ***
 
 void ucell::free_uobj() {
-
 	gen = 0;
 
 	if (galaxies != nullptr) {
@@ -2261,7 +2225,6 @@ void rotated_obj::apply_gl_rotate() const {
 	rotate_from_v2v(rot_axis, plus_z);
 	rotate_about(rot_ang, plus_z); // in degrees
 }
-
 void rotated_obj::rotate_vector(vector3d &v) const {
 	rotate_norm_vector3d_into_plus_z(rot_axis, v);
 	rotate_vector3d(plus_z, rot_ang/TO_DEG, v); // in radians
@@ -2616,7 +2579,6 @@ void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float
 }
 
 void uplanet::draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, float size_, shadow_vars_t const &svars, float camera_dist_from_center) const {
-
 	float const cloud_radius(PLANET_ATM_RSCALE*radius);
 	usg.enable_atmospheric_shader(*this, make_pt_global(pos_), svars); // always WHITE
 	fgPushMatrix();
@@ -2632,7 +2594,6 @@ void uplanet::draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, f
 // *** PROCESSING/QUERY CODE ***
 
 bool umoon::shadowed_by_planet() {
-
 	assert(planet != NULL && planet->system != NULL);
 	vector3d const v1(pos, planet->pos), v2(planet->pos, planet->system->sun.pos);
 	float const dotp(dot_product(v1, v2));
@@ -2644,7 +2605,6 @@ bool umoon::shadowed_by_planet() {
 }
 
 string uplanet::get_atmos_string() const {
-
 	if (atmos == 0.0    ) {return "None";}
 	if (gas_giant       ) {return "Dense Toxic";}
 	if (atmos < 0.25    ) {return "Trace";}
@@ -2653,7 +2613,6 @@ string uplanet::get_atmos_string() const {
 }
 
 string urev_body::get_info() const {
-
 	ostringstream oss;
 	oss << "Radius: " << radius << ", Temp: " << temp << ", Resources: " << resources << ", Water: " << water
 		<< ", Atmos: " << atmos << " (" << get_atmos_string() << "), Vegetation: " << get_vegetation() << endl
@@ -3118,7 +3077,6 @@ bool universe_t::get_trajectory_collisions(line_query_state &lqs, s_object &resu
 
 
 float get_temp_in_system(s_object const &clobj, point const &pos, point &sun_pos) {
-
 	assert(clobj.system >= 0);
 	ussystem const &system(clobj.get_system());
 	ustar const &sun(system.sun);
@@ -3290,7 +3248,6 @@ bool s_object::write(ostream &out) const {
 		<< galaxy << " " << cluster << " " << system << " " << planet << " " << moon << " " << id;
 	return out.good();
 }
-
 bool s_object::read(istream &in) {
 	if (!in.good()) return 0;
 	return ((in >> type >> cellxyz[0] >> cellxyz[1] >> cellxyz[2] >> galaxy >> cluster >> system >> planet >> moon >> id) && in.good());
@@ -3344,9 +3301,8 @@ bool s_object::operator<(const s_object &I) const {
 }
 
 void s_object::print() const {
-	cout << "type: " << type << ", cell: " << cellxyz[0] << ", " << cellxyz[1] << ", " << cellxyz[2] << ", galaxy: "
-		 << galaxy << ", cluster: " << cluster << ", system: " << system << ", planet = " << planet << ", moon = "
-		 << moon << ", id = " << id << endl;
+	cout << "type: " << type << ", cell: " << cellxyz[0] << ", " << cellxyz[1] << ", " << cellxyz[2] << ", galaxy: " << galaxy
+		 << ", cluster: " << cluster << ", system: " << system << ", planet = " << planet << ", moon = " << moon << ", id = " << id << endl;
 }
 
 bool s_object::bad_cell() const {
