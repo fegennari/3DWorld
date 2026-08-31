@@ -215,22 +215,17 @@ void set_light_scale(shader_t &s, bool use_light2) {
 
 class universe_shader_t : public shader_t {
 
-	typedef map<const char *, int> name_loc_map; // key is a pointer? use a string?
+	typedef map<string, int> name_loc_map;
 	name_loc_map name_to_loc;
 	shadowed_uobject shadowed_state;
 
 	int get_loc(char const *const name) {
-#if 1
-		return get_uniform_loc(name);
-#else
 		name_loc_map::const_iterator it(name_to_loc.find(name));
 		if (it != name_to_loc.end()) {return it->second;}
 		int const loc(get_uniform_loc(name));
 		name_to_loc[name] = loc;
 		return loc;
-#endif
 	}
-
 	void shared_setup(const char *texture_name="tex0") {
 		begin_shader();
 		add_uniform_int(texture_name, 0);
