@@ -413,11 +413,6 @@ void rgeom_mat_t::add_vert_torus_to_verts(point const &center, float r_inner, fl
 		for (unsigned i = ixs_start; i < indices.size(); i += 6) {std::swap(indices[i+4], indices[i+5]);}
 	} // for s
 }
-void rgeom_mat_t::add_contained_vert_torus_to_verts(cube_t const &c, colorRGBA const &color, float tscale, bool low_detail) { // unused
-	float const r_inner(0.5*c.dz()), r_outer(0.25*(c.dx() + c.dy()) - r_inner);
-	assert(r_inner > 0.0 && r_outer > 0.0); // cube must be wider than it is tall
-	add_vert_torus_to_verts(c.get_cube_center(), r_inner, r_outer, color, tscale, low_detail);
-}
 void rgeom_mat_t::add_ortho_torus_to_verts(point const &center, float r_inner, float r_outer, unsigned dim, colorRGBA const &color,
 	float tscale, bool low_detail, int half_or_quarter, float s_offset, unsigned ndivo, unsigned ndivi, float spiral_offset)
 {
