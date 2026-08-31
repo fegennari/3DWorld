@@ -92,45 +92,20 @@ u_ship::~u_ship() {
 
 void u_ship::init() {
 
-	lhyper       = 0;
-	damaged      = 0;
-	last_hit     = 0;
-	target_set   = 0;
-	fire_primary = 0;
-	has_obstacle = 0;
-	captured     = 0;
-	dest_override= 0;
-	eflags       = 0;
-	alignment    = init_align;
-	retarg_time  = 0;
-	exp_time     = 0;
-	tup_time     = 0;
-	disable_t    = 0;
-	elapsed_on_t = 0;
-	last_targ_t  = FFIRE_WAIT_T; // start off ready to fire on an attacking ally
-	kills        = 0;
-	docked       = 0;
-	o_docked     = 0;
-	exp_val      = 0.0;
-	cloaked      = 0.0;
-	fuel         = 1.0;
-	tow_mass     = 0.0;
-	used_cargo   = 0.0; // ???
-	roll_val     = 0.0;
-	pitch_r      = 0.0;
-	yaw_r        = 0.0;
-	roll_r       = 0.0;
-	cached_rsv   = 0.0;
-	size_scale   = 1.0;
+	lhyper      = damaged = target_set = fire_primary = has_obstacle = captured = dest_override = docked = o_docked = 0;
+	last_hit    = eflags = 0;
+	alignment   = init_align;
+	retarg_time = exp_time = tup_time = disable_t = elapsed_on_t = kills = 0;
+	last_targ_t = FFIRE_WAIT_T; // start off ready to fire on an attacking ally
+	fuel        = size_scale = 1.0;
+	exp_val     = cloaked = tow_mass = used_cargo = roll_val = pitch_r = yaw_r = roll_r = cached_rsv = 0.0;
 	check_size_scale();
-	shields      = get_max_shields();
-	armor        = get_max_armor();
-	ncrew        = specs().ncrew;
-	tcent        = all_zeros;
-	hit_dir      = zero_vector;
-	obs_orient   = zero_vector;
-	target_dir   = zero_vector;
-	time         = rand() % (SHIP_AI_DELAY/2 + 1); // to randomize startups
+	shields     = get_max_shields();
+	armor       = get_max_armor();
+	ncrew       = specs().ncrew;
+	tcent       = all_zeros;
+	hit_dir     = obs_orient = target_dir = zero_vector;
+	time        = rand() % (SHIP_AI_DELAY/2 + 1); // to randomize startups
 	if (rand()&1) {dest_mgr.clear();} // sometimes clear the destination (and possibly choose a new one) and sometimes keep it
 	
 	if (!is_orbiting()) {

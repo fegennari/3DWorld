@@ -60,21 +60,16 @@ void free_obj::init() {
 	reset_timer = 0;
 	shadow_val  = 0;
 	sobj_coll_tid = -1;
-	temperature = 0.0;
-	extra_mass  = 0.0;
-	rot_rate    = 0.0;
-	sobj_dist   = 0.0;
+	temperature = extra_mass = rot_rate = sobj_dist = 0.0;
 	ambient_scale = DEF_AMBIENT_SCALE;
 	draw_rscale = 1.0;
-	target_obj  = NULL;
-	parent      = NULL;
+	target_obj  = nullptr;
+	parent      = nullptr;
 	pos         = reset_pos;
-	velocity    = zero_vector;
-	dvel        = zero_vector;
+	velocity    = dvel = gvect = zero_vector;
 	upv         = init_up;
 	dir         = init_dir.get_norm(); // must be orthogonal to up_vector
 	rot_axis    = plus_z;
-	gvect       = zero_vector;
 	near_b_hole = 0;
 	ra1 = ra2   = 0.0;
 	invalidate_rotv();
