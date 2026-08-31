@@ -500,7 +500,6 @@ public:
 		unsigned smoothing_group(0), prev_smoothing_group(0), num_faces(0), num_objects(0), num_groups(0), obj_group_id(0);
 		vector<point> v; // vertices
 		vector<vector3d> n; // normals
-		// weighted_normal can also be used, but doesn't work well; see face_weight_avg mode selected by recalc_normals==2
 		vector<counted_normal> vn; // vertex normals
 		vector<point2d<float> > tc; // texture coords
 		vector<colorRGB> colors; // vertex colors

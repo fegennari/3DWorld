@@ -392,7 +392,7 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 		for (unsigned i = 0; i < faces.size(); ++i) {
 			if (faces[i].mat == -1) {def_mat.push_back(i);} // faces not assigned to a material get the default material
 		}
-		vector<counted_normal> normals; // weighted_normal can also be used, but doesn't work well
+		vector<counted_normal> normals;
 
 		if (use_vertex_normals) {
 			// build vertex lists and compute face normals

@@ -2716,15 +2716,6 @@ void model3d::proc_model_normals(vector<counted_normal> &cn, int recalc_normals,
 	}
 }
 
-void model3d::proc_model_normals(vector<weighted_normal> &wn, int recalc_normals, float nmag_thresh) { // unused
-	for (weighted_normal &i : wn) {
-		if (!i.is_valid()) continue; // invalid, remains invalid
-		float const mag(i.mag());
-		if (mag < TOLERANCE) {i.weight = 0.0; continue;} // make invalid
-		i /= mag; // normalize
-	}
-}
-
 void model3d::write_to_cobj_file(ostream &out) const {
 
 	// 'O' <filename> <group_cobjs_level> <recalc_normals/use_vertex_normals> <write_file> [<voxel_xy_spacing>]

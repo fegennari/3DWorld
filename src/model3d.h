@@ -150,17 +150,6 @@ struct counted_normal : public vector3d { // size = 16
 	bool is_valid() const {return (count > 0);}
 };
 
-// unused
-struct weighted_normal : public vector3d { // size = 16
-	float weight=0.0;
-
-	weighted_normal() {}
-	weighted_normal(vector3d const &n, float w=1.0) : vector3d(w*n), weight(w) {}
-	void add_normal(vector3d const &n, float w=1.0) {*this += w*n; weight += w;}
-	void add_normal(vector3d const &n, point const *const poly_pts, unsigned npts) {add_normal(n, polygon_area(poly_pts, npts));}
-	bool is_valid() const {return (weight > 0.0);}
-};
-
 //template<typename T> class vertex_map_t : public unordered_map<T, unsigned, hash_by_bytes<T>> {
 template<typename T> class vertex_map_t : public map<T, unsigned> {
 	int last_mat_id=-1;
@@ -669,7 +658,6 @@ public:
 	bool read_from_disk(string const &fn);
 	bool write_as_obj_file(string const &fn);
 	static void proc_model_normals(vector<counted_normal> &cn, int recalc_normals, float nmag_thresh=0.7);
-	static void proc_model_normals(vector<weighted_normal> &wn, int recalc_normals, float nmag_thresh=0.7);
 	void write_to_cobj_file(std::ostream &out) const;
 
 	// animations
