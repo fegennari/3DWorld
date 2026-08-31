@@ -207,7 +207,6 @@ void setup_current_system(float sun_intensity) { // called in ground mode
 		regen_mesh  = 1; // regen texture (is this needed?)
 		//init_temperature = univ_temp; // ???
 	}
-	//if (regen_mesh) *** regen mesh ***
 	setup_landscape_tex_colors(c1, c2);
 
 	if (regen_mesh) {
@@ -993,7 +992,6 @@ void u_ship::near_sobj(s_object &clobj, int coll) {
 	urev_body const &world(clobj.get_world());
 
 	if (is_player_ship()) {
-		//if (coll == 2) {
 		if (claim_planet && (coll || dist_less_than(pos, world.get_pos(), 2.0*radius))) {
 			bool const homeworld(clobj.type == UTYPE_PLANET && !has_homeworld());
 
@@ -1039,7 +1037,6 @@ orbiting_ship *add_orbiting_ship(unsigned sclass, bool guardian, bool on_surface
 		world.rotate_vector(dir);
 		angle = atan2(dir.y, dir.x);
 	}
-
 	// not sure what to set orbit_radius to - could collide with other orbiting objects
 	float const orbit_radius(on_surface ? 0.0 : 2.0*world.get_radius()), rate(0.0);
 	point const start_pos((pos_from_parent && on_surface) ? point(parent->get_pos() - world.get_pos()) : all_zeros);
@@ -1113,7 +1110,7 @@ void orbiting_ship::update_state() {
 		world = &planet.moons[moon_ix];
 	}
 	result.object = world;
-	//velocity = zero_vector; // ???
+	//velocity = zero_vector; // is this needed, or is velocity always at zero anyway?
 
 	if (!world->is_ok()) { // was destroyed
 		if (!is_exploding()) {destroy_ship(0.0);}

@@ -665,8 +665,8 @@ void collision_detect_objects(vector<cached_obj> &objs, unsigned t) {
 					if (fabs(pisd - obj.pos.y) > radius || !dist_less_than(pos_i, obj.pos, radius)) continue; // no intersection
 
 					if (proc_coll(objs[ix].obj, obj.obj)) {
-						objs[ix].refresh(); // ???
-						obj.refresh(); // ???
+						objs[ix].refresh(); // may not be needed, but shouldn't hurt
+						obj     .refresh(); // may not be needed, but shouldn't hurt
 					}
 				}
 			}

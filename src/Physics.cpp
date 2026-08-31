@@ -921,7 +921,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 				}
 			}
 			if (status != 4) {
-				check_vert_collision(obj_index, 0, iter); // one last time before the object is "stopped"???
+				check_vert_collision(obj_index, 0, iter); // one last time before the object is "stopped"
 				velocity = zero_vector;
 				if (!disabled()) {status = 4;}
 			}
@@ -1078,9 +1078,9 @@ int dwobject::check_water_collision(float vz_old) {
 	vector3d old_v(velocity);
 	if (!has_water(xpos, ypos)) return 0; // not over water
 	water_height = water_matrix[ypos][xpos];
-	if (!is_mesh_disabled(xpos, ypos) && water_height < mesh_height[ypos][xpos]) return 0;
-	if (!(flags & IN_WATER) && (pos.z - radius) > water_height)                  return 0; // ???
-	if (!is_mesh_disabled(xpos, ypos) && (pos.z + radius + SMALL_NUMBER) < mesh_height[ypos][xpos]) return 0;
+	if (!is_mesh_disabled(xpos, ypos) && water_height < mesh_height[ypos][xpos]) return 0; // no water above the terrain
+	if (!(flags & IN_WATER) && (pos.z - radius) > water_height)                  return 0; // object is above the water level
+	if (!is_mesh_disabled(xpos, ypos) && (pos.z + radius + SMALL_NUMBER) < mesh_height[ypos][xpos]) return 0; // object is below the terrain?
 	bool const exp_on_coll((otype.flags & EXPL_ON_COLL) != 0);
 	
 	if (temperature > W_FREEZE_POINT) { // water - object adds to water if precipitation

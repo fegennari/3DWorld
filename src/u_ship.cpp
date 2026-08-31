@@ -153,7 +153,6 @@ void u_ship::init() {
 }
 
 void u_ship::create_from(u_ship_base const &base) { // related to u_ship_base::create_from()
-
 	ncrew      = base.ncrew;
 	shields    = base.shields;
 	armor      = base.armor;
@@ -1839,8 +1838,8 @@ bool u_ship::try_fire_weapon() { // player fire
 		if (weap_turret(wid)) { // weapon is turreted
 			ctarg = target_obj;
 			float search_dist(specs().sensor_dist);
-			if (weap.range > 0.0) search_dist = min(search_dist, (c_radius + weap.range)); // ???
-			if (ctarg == NULL)    ctarg       = get_closest_ship(pos, 0.0, search_dist, 1, 0, 0); // no target selected
+			if (weap.range > 0.0) {min_eq(search_dist, (c_radius + weap.range));} // don't search past where our weapons can reach
+			if (ctarg == NULL)    {ctarg = get_closest_ship(pos, 0.0, search_dist, 1, 0, 0);} // no target selected
 		}
 		if (ctarg != NULL) { // have a target
 			fire_dir = (ctarg->get_pos() - pos).get_norm();
@@ -2061,7 +2060,7 @@ bool u_ship::capture_ship(u_ship *ship, bool add_as_fighter) { // this captures 
 		assert(fighter != NULL && fighter != ship && fighter != this && fighter != parent);
 
 		if (!fighter->invalid() && fighter->get_parent() == ship) {
-			// reset alignment, target, etc? - does fighter ignore, accept capturer as parent's parent, attack capturer, attack parent???
+			// reset alignment, target, etc? - does fighter ignore, accept capturer as parent's parent, attack capturer, or attack parent?
 			if (rand()&1) { // keep <ship> as a parent
 				fighter->target_obj = NULL; // reset target
 				fighter->alignment  = ship->alignment;

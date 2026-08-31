@@ -278,9 +278,7 @@ void update_deformation(dwobject &obj) {
 	}
 }
 
-
 void mirror_about_plane(vector3d const &norm, point const &pt) { // applies to GL state
-
 	float const dp(dot_product(pt, norm));
 	float const m[16] = {1-2*norm.x*norm.x,  -2*norm.x*norm.y,  -2*norm.x*norm.z, 0.0,
 			              -2*norm.x*norm.y, 1-2*norm.y*norm.y,  -2*norm.y*norm.z, 0.0,
@@ -298,6 +296,4 @@ void print_matrix(float const *const m, std::string const &prefix, std::ostream 
 		out << endl;
 	}
 }
-
-// Note: instance_render_t::draw_and_clear() is defined in shaders.cpp
 

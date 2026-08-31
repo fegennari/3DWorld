@@ -310,7 +310,7 @@ void cast_light_ray(lmap_manager_t *lmgr, point p1, point p2, float weight, floa
 			vector3d const delta(p1 - cpos), delta_dir(delta.get_norm());
 			float const height(zval - cpos.z), dp(dot_product(snow_cnorm, delta_dir));
 			
-			if (dp > 0.0) { // else ray entered under the snow, so we can't really update the position???
+			if (dp > 0.0) { // else ray entered under the snow, so we can't really update the position
 				float const dist(min(delta.mag(), height*snow_cnorm.z/dp));
 				snow_coll = 1;
 				cpos     += delta_dir*dist;

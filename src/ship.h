@@ -449,8 +449,8 @@ public:
 	void get_bounding_sphere(point &c, float &r) const;
 	void draw_svol(point const &tpos, float cur_radius, point const &spos, int ndiv, bool player, free_obj const *const obj=NULL) const;
 	string get_name()  const {return "Bounded Cylinder";}
-	float get_volume() const {return min(  ship_cylinder::get_volume(),  bcube.get_volume());} // ???
-	float get_s_area() const {return 0.5f*(ship_cylinder::get_s_area() + bcube.get_s_area());} // ???
+	float get_volume() const {return min(  ship_cylinder::get_volume(),  bcube.get_volume());} // lower bound, no analytical solution for the actual volume
+	float get_s_area() const {return 0.5f*(ship_cylinder::get_s_area() + bcube.get_s_area());} // approximate/guess, no analytical solution for the actual area
 };
 
 // Note: we generally use r1 == r1 for a true cylinder (not a truncated cone)
@@ -881,7 +881,7 @@ public:
 	void set_temp(float temp, point const &tcenter, free_obj const *source);
 	float damage(float val, int type, point const &hit_pos, free_obj const *source, int wc);
 	void draw_obj(uobj_draw_data &ddata) const;
-	bool calc_rvs() const {return 1;} // ???
+	bool calc_rvs() const {return 1;} // unclear what to set this to
 	string get_name() const {return "Comet";}
 };
 

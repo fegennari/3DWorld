@@ -419,7 +419,7 @@ void person_base_t::set_velocity(vector3d const &v) {
 	if (vmag > TOLERANCE) {vel = v*(speed/vmag);} // normalize to original velocity; avoid divide-by-zero
 }
 void person_base_t::stop() {
-	//dir = vel.get_norm(); // ???
+	//dir = vel.get_norm(); // is this needed/useful? most likely dir will already match their previous vel
 	vel = zero_vector;
 	anim_time  = 0.0; // reset animation so that ped is standing normally and not mid-stride - should really transition this gradually somehow
 	is_stopped = 1;

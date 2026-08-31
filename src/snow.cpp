@@ -368,7 +368,7 @@ private:
 		if (it != vmap[map_ix].end()) { // existing vertex
 			ix = it->second;
 			assert(ix < data.size());
-			data[ix].n = (data[ix].n + n)*0.5; // average the normals???
+			data[ix].n = (data[ix].n + n)*0.5; // average the normals; should this be normalized?
 		}
 		else {
 			ix = (unsigned)data.size();

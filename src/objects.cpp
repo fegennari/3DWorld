@@ -267,8 +267,8 @@ bool coll_obj::clip_in_2d(float const bb[2][2], float &val, int d1, int d2, int 
 		return 1;
 
 	case COLL_CYLINDER_ROT:
-	case COLL_TORUS: // ???
-	case COLL_CAPSULE: // ???
+	case COLL_TORUS:
+	case COLL_CAPSULE:
 		val = d[d3][dir];
 		// should really do something with this - can be very inaccurate
 		return 1;

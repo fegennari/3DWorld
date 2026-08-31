@@ -210,7 +210,7 @@ float get_tree_z_bottom(float z, point const &pos) {
 
 
 bool tree::is_over_mesh() const {
-	//if (world_mode != WMODE_GROUND) return 1; // ???
+	if (world_mode != WMODE_GROUND) return 1; // shouldn't be called in tiled terrain mode, but if it is called, any pos is over the mesh
 	float const r(tdata().sphere_radius);
 	int const x1(get_xpos(tree_center.x - r)), y1(get_ypos(tree_center.y - r));
 	int const x2(get_xpos(tree_center.x + r)), y2(get_ypos(tree_center.y + r));

@@ -998,7 +998,7 @@ void update_valleys_and_draw_spillover() {
 		for (auto j = cc.begin(); j != cc.end(); ++j) { // update all connected valleys
 			valley &v(valleys[*j]);
 			float const delta_z(combined.zval - v.zval); // new - old
-			v.w_volume  = max(TOLERANCE, (v.w_volume + delta_z*v.area/v.get_volume())); // not sure about this???
+			v.w_volume  = max(TOLERANCE, (v.w_volume + delta_z*v.area/v.get_volume())); // not sure about this...
 			v.dz       += delta_z;
 			v.zval      = combined.zval; // do we want to update v.w_volume based on v.dz?
 			v.blood_mix = combined.blood_mix;
@@ -1227,7 +1227,7 @@ void float_downstream(point &pos, float radius) {
 void change_water_level(float water_level) {
 	water_h_off_rel = 0.0; // so that get_rel_wpz() will return the base water level
 	water_h_off_rel = water_level - get_rel_wpz();
-	def_water_level = water_plane_z = get_water_z_height(); // ???
+	def_water_level = water_plane_z = get_water_z_height();
 	calc_watershed();
 }
 
@@ -1557,7 +1557,7 @@ void make_outside_water(int x, int y) {
 void update_water_zval(int x, int y, float old_mh) {
 
 	assert(!point_outside_mesh(x, y));
-	if (!get_water_enabled(x, y)) return; // ???
+	if (!get_water_enabled(x, y)) return; // skip update, or error?
 
 	if (mesh_height[y][x] < water_plane_z) { // check if this pos is under the mesh
 		make_outside_water(x, y); // previously above the mesh
