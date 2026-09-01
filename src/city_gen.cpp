@@ -667,9 +667,10 @@ public:
 			// Note: we can't just call hq.get_road_zval_at_pt(p_int) here becase the terrain may not have been flattened yet (for prev placed tracks)
 			float const z_prev(i->get_start_z() + tr*(i->get_end_z() - i->get_start_z())); // interpolated from endpoints, assuming road seg is a constant slope
 			float const delta_z(z_cur - z_prev); // positive: track is above the road; negative: track is below the road
-			if      (0 && delta_z >  4.0*width) {} // bridge?
-			else if (0 && delta_z < -4.0*width) {} // tunnel?
-			else { // adjust the tracks to meet the road
+			//if      (delta_z >  4.0*width) {} // bridge?
+			//else if (delta_z < -4.0*width) {} // tunnel?
+			//else
+			{ // adjust the tracks to meet the road
 				p2   = p_int; // this segment will end at the road's center
 				p2.z = z_prev;
 				to_re_flatten.push_back(*i);

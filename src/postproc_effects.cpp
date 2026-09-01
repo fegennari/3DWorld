@@ -312,8 +312,6 @@ void run_postproc_effects() {
 	float const drunkenness(get_player_drunkenness());
 	vector3d const shrooms(get_player_shrooms());
 	int index(-1);
-	static xform_matrix prev_mvm, prev_pjm; // previous frame's matrices, for use with motion blur, etc.
-	static bool prev_mat_valid(0);
 	if (enable_ssao && (display_mode & 0x20)) {add_ssao();} // key '6'
 	
 	if (cur_explosion_sphere.radius > 0.0 && camera_pdu.sphere_visible_test(cur_explosion_sphere.pos, cur_explosion_sphere.radius)) {
@@ -359,11 +357,5 @@ void run_postproc_effects() {
 	}
 	if (enable_postproc_recolor) {add_color_only_effect("recolor", 0.0);} // add recolor at the very end
 	if (vignette_color.A > 0.0 ) {add_vignette(vignette_color);}
-
-	if (0 && !prev_mat_valid) { // capture matrices from this frame for use with next frame (if needed in the future)
-		prev_mvm = fgGetMVM();
-		prev_pjm = fgGetPJM();
-		prev_mat_valid = 1;
-	}
 }
 

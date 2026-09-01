@@ -1040,11 +1040,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 					float const shelf_depth(0.15*floor_spacing), garage_width(c_sz[!pri_dim]);
 					wscale     = min(0.9f*garage_width, (garage_width - 2.0f*shelf_depth))/gs_door_height; // avoid clipping through shelves
 					gdoor_dir ^= 1; // facing away from the house, not toward it
-					
-					if (0) { // move against the house? no, this causes problems with window cutouts/stencil masks
-						bool ext_dir(c.d[!pri_dim][1] == bcube.d[!pri_dim][1]), adj_part(parts[1].d[!pri_dim][ext_dir] != c.d[!pri_dim][ext_dir]);
-						c.translate_dim(!pri_dim, (parts[adj_part].d[!pri_dim][ext_dir] - c.d[!pri_dim][!ext_dir]));
-					}
+					// move against the house? no, this causes problems with window cutouts/stencil masks
 				} // else shed
 				bool const has_door(add_door(place_door(c, pri_dim, gdoor_dir, gs_door_height, 0.0, 0.0, 0.0, wscale, 0, is_garage, rgen), parts.size(), pri_dim, gdoor_dir, 0));
 				if (is_garage && has_door) {doors.back().type = tquad_with_ix_t::TYPE_GDOOR;} // make it a garage door rather than a house door
