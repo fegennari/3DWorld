@@ -385,6 +385,7 @@ class pond_t : public city_obj_t {
 	class cat_tail_draw_data_t {
 		unsigned num_cap_verts=0, num_cap_ixs=0, num_leaf_verts=0, num_leaf_ixs=0;
 		indexed_vao_manager_t cap_vao, leaf_vao;
+		vector<sphere_t> fluffs;
 	public:
 		bool is_setup() const {return cap_vao.is_valid();}
 		size_t get_gpu_mem() const {return (cap_vao.gpu_mem + leaf_vao.gpu_mem);}

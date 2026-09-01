@@ -744,6 +744,8 @@ void pond_t::cat_tail_draw_data_t::create_verts(vect_cube_t const &cat_tails, un
 			cur_stem   = next_stem;
 			prev_stem_draw = next_stem_draw;
 		} // for s
+		// pampas grass fluff doesn't really look correct because it's not angled like the stem, doesn't meet the point, and should replace capsules
+		//fluffs.emplace_back(prev_stem_draw, 0.5*ct_radius); // tip
 		// leaves
 		unsigned const nleaves(6 + (rgen.rand() % 4)); // 6-9
 
@@ -847,6 +849,19 @@ void pond_t::cat_tail_draw_data_t::draw(draw_state_t &dstate, bool shadow_only) 
 	leaf_vao.pre_render(1, 1); // using_index=1, do_bind_vbo=1
 	draw_indexed_tri_verts(num_leaf_verts, num_leaf_ixs, GL_TRIANGLES);
 	leaf_vao.post_render();
+
+	if (!fluffs.empty()) {
+		static quad_batch_draw qbd;
+
+		for (sphere_t const &f : fluffs) {
+			vector3d const normal((plus_z + (dstate.camera_bs - f.pos).get_norm()).get_norm()); // 50% +z and 50% camera view dir
+			qbd.add_billboard(f.pos, dstate.camera_bs, plus_z, WHITE, f.radius, 1.33*f.radius, tex_range_t(), 0, &normal);
+		}
+		select_texture(get_texture_by_name("leaves/pampas_grass.png"));
+		dstate.s.add_uniform_float("min_alpha", 0.5);
+		qbd.draw_and_clear();
+		dstate.s.add_uniform_float("min_alpha", DEF_CITY_MIN_ALPHA); // restore to the default
+	}
 	dstate.enable_normal_maps();
 	glDisable(GL_CULL_FACE);
 }
