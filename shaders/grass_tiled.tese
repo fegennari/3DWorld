@@ -38,7 +38,8 @@ void main() {
 	delta      *= dist/length(delta); // renormalize to original length
 	vertex      = base + delta;
 	gl_Position = fg_ModelViewProjectionMatrix * vec4(vertex, 1.0);
-	fg_Color_vf = interpolate4D(fg_Color_vf_ES[0], fg_Color_vf_ES[1], fg_Color_vf_ES[2]); // could also use tip color
+	float alpha = min(fg_Color_vf_ES[0].a, min(fg_Color_vf_ES[1].a, fg_Color_vf_ES[2].a)); // take min alpha to skip any blades with disabled verts
+	fg_Color_vf = vec4(interpolate3D(fg_Color_vf_ES[0].rgb, fg_Color_vf_ES[1].rgb, fg_Color_vf_ES[2].rgb), alpha); // could also use tip color
 
 #ifdef INCLUDE_NORMALS
 	vertex_from_vs = vertex;

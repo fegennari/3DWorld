@@ -19,11 +19,7 @@ void main() {
 	tc          = get_grass_tc();
 	vec4 vertex = fg_Vertex;
 	vertex.xy  += local_translate;
-#ifdef ENABLE_VERTEX_CLIP
-	vec2 v = vertex.xy + xlate.xy;
-	if ((v.x > clip_box1.x && v.y > clip_box1.y && v.x < clip_box1.z && v.y < clip_box1.w) ||
-	    (v.x > clip_box2.x && v.y > clip_box2.y && v.x < clip_box2.z && v.y < clip_box2.w)) {vertex.z -= 1.1*height;} // translate slightly more than height to account for wind
-#endif
+	vec2 v      = vertex.xy + xlate.xy; // capture before wind; used for clipping
 	vec2 tc2    = vec2((vertex.x - x1)*dx_inv, (vertex.y - y1)*dy_inv); // scaled same as (x2 - x1 - 1.0*DX_VAL)
 	float z_val = texture(height_tex, tc2).r;
 	float ascale= 1.0;
@@ -51,13 +47,17 @@ void main() {
 	//grass_weight = ((grass_weight < 0.2) ? 0.0 : grass_weight);
 	float noise_weight = texture(noise_tex, 11.3*vec2((fg_Color.r + local_translate.x), (fg_Color.g + local_translate.y))).r; // "hash" the color + local translate
 	bool skip_grass = (grass_weight < noise_weight);
+#ifdef ENABLE_VERTEX_CLIP
+	if ((v.x > clip_box1.x && v.y > clip_box1.y && v.x < clip_box1.z && v.y < clip_box1.w) ||
+	    (v.x > clip_box2.x && v.y > clip_box2.y && v.x < clip_box2.z && v.y < clip_box2.w)) {skip_grass = true;} // translate slightly more than height to account for wind
+#endif
 	bool is_city = (weights.g > 0.5 && weights.a > 0.5);
 	if (is_city) {fin_vert.z -= 0.2*fg_Vertex.z;} // shorten city grass that have dirt and rock weights set to 1.0; top vertex only
 	vertex_from_vs = fin_vert.xyz;
 	
 	// calculate lighting
 	if (skip_grass) { // optimization: skip lighting calc
-		fg_Color_vf = vec4(0.0);
+		fg_Color_vf = vec4(0.0); // skip some grass blades by making them transparent
 		return;
 	}
 	vec3 shadow  = mix(vec3(1.0), texture(shadow_tex, tc2).rgb, (is_city ? 0.25 : 1.0)); // {mesh_shadow, tree_shadow, ambient_occlusion}; low city shadows, since no mesh shadows
@@ -68,6 +68,6 @@ void main() {
 	float diffuse_scale = min(shadow.r, shadow.g); // min of mesh and tree shadow
 	bool apply_cloud_shadows = !is_city; // skip cloud shadows in city because the ground doesn't have cloud shadows
 	vec3 color    = do_shadowed_lighting(vertex, epos, eye_norm, ad_color, ambient_scale, diffuse_scale, apply_cloud_shadows);
-	float alpha   = fg_Color.a * ascale * (skip_grass ? 0.0 : 1.0); // skip some grass blades by making them transparent
+	float alpha   = fg_Color.a * ascale;
 	fg_Color_vf   = vec4(color, alpha);
 } 
