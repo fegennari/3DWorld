@@ -1046,6 +1046,7 @@ void building_t::add_hallway_steam_pipes(rand_gen_t &rgen, unsigned room_id, uns
 				for (unsigned S = 0; S < 2; ++S) {
 					bool const side(bool(S) ^ first_side);
 					set_wall_width(pipe_ext, (rbounds.d[dim][side] - (side ? 1.0 : -1.0)*pipe_radius), pipe_radius, dim); // along one room wall
+					if (!room.intersects(pipe_ext)) continue; // parent room does not contain or intersect this pipe segment; will assert in is_obj_placement_blocked()
 					if (pipe_ext.d[dim][0] < pipe.d[dim][0]-pipe_cont_toler || pipe_ext.d[dim][1] > pipe.d[dim][1]+pipe_cont_toler)    continue; // not contained in the parent pipe
 					if (is_obj_placement_blocked(pipe_ext, room, 1, 1) || overlaps_other_room_obj(pipe_ext, objs_start, 1, &objs_end)) continue; // conservative
 					
