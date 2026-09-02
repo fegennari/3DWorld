@@ -98,7 +98,6 @@ void building_t::create_industrial_floorplan(unsigned part_id, float window_hspa
 	} // for d
 	// should there be an entryway room, then the main room doesn't overlap the sub-rooms? but then there will be empty space above them
 	// add entire part as a room (open floor); must be done last so that smaller contained rooms are picked up in early exit queries (model occlusion, light toggle, door conn)
-	// what about RTYPE_POWERPLANT (which has not yet been added)?
 	add_assigned_room(part, part_id, (is_warehouse() ? RTYPE_WAREHOUSE : (is_powerplant() ? RTYPE_POWERGEN : RTYPE_FACTORY))); // num_lights will be calculated later
 	rooms.back().set_has_subroom();
 	rooms.back().is_single_floor = 1;
@@ -775,9 +774,48 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 	unsigned const objs_start(objs.size());
 	add_ladders_to_nested_room_roofs(rgen, room, zval, room_id, light_amt, place_area_upper); // added for both factories and warehouses
 
-	if (room_is_factory || room_is_powergen) { // add factory-specific objects
+	if (room_is_factory || room_is_powergen) { // add factory/powerplant-specific objects
 		cube_t const center_ladder(add_factory_ladders_and_catwalks(rgen, room, zval, room_id, light_amt, place_area, place_area_upper,
 			beams_z1, support_width, supports, lights, ladders, beam_pos));
+
+		if (room_is_powergen) { // add powerplant-specific objects (boilers)
+			float const boiler_height(rgen.rand_uniform(0.6, 0.75)*window_vspace), boiler_len(rgen.rand_uniform(1.2, 1.5)*boiler_height), boiler_width(boiler_height);
+			vector3d const boiler_sz(boiler_len, boiler_width, boiler_height);
+			unsigned const num(2 + (rgen.rand()%3)); // 2-4
+			cube_t avoid(interior->ind_info->entrance_area);
+			avoid.expand_in_dim(edim, doorway_width); // don't block entrance area
+			unsigned const blocker_ix(objs.size());
+			objs.emplace_back(avoid, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS); // block off the entrance area
+
+			for (unsigned n = 0; n < num; ++n) {
+				unsigned const boiler_obj_ix(objs.size());
+				if (!place_obj_along_wall(TYPE_BOILER, room, boiler_height, boiler_sz, rgen, zval, room_id, light_amt, place_area,
+					objs_start, 0.5, 1, 4, 0, LT_GRAY, 0, SHAPE_CYLIN, 0.25*boiler_width)) continue;
+				room_object_t const boiler(objs[boiler_obj_ix]); // deep copy
+				// add vent pipe
+				cube_t center_pipe(boiler.get_cube_center());
+				center_pipe.expand_by_xy(0.08*boiler_width); // set radius
+				center_pipe.z2() = ceil_zval; // extend up to the ceiling
+				bool placed(0);
+
+				for (unsigned nsw = 0; nsw < 10 && !placed; ++nsw) { // shifts in width
+					float const shift_w((nsw == 0) ? 0.0 : 0.35*boiler_width*rgen.signed_rand_float());
+
+					for (unsigned nsl = 0; nsl < 10 && !placed; ++nsl) { // shifts in length
+						cube_t pipe(center_pipe);
+						pipe.translate_dim( boiler.dim, ((nsl == 0) ? 0.0 : 0.2*boiler_len*rgen.signed_rand_float()));
+						pipe.translate_dim(!boiler.dim, shift_w);
+
+						// check beams, lights, and previously placed objects; skip the boiler; may still intersect vents on ceiling ducts
+						if (!has_bcube_int(pipe, beams) && !has_bcube_int(pipe, lights) && !overlaps_other_room_obj(pipe, objs_start_inc_lights, 0, &boiler_obj_ix)) {
+							objs.emplace_back(pipe, TYPE_DUCT, room_id, 0, 1, (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI | RO_FLAG_IN_FACTORY), light_amt, SHAPE_CYLIN, WHITE); // vertical
+							placed = 1;
+						}
+					} // for nsl
+				} // for nsw
+			} // for n
+			objs[blocker_ix].remove();
+		}
 		// add transformer(s)
 		unsigned const num_transformers(room_is_powergen ? (4 + (rgen.rand()%5)) : 1); // 1 for factory, 4-8 for powerplant (though they may not all be placed)
 		float const tzval(zval - TRANSFORMER_Z_SHIFT*0.6*window_vspace); // transformer is slightly below floor level
