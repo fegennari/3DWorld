@@ -2806,7 +2806,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			if (is_rr) {lit_area.z2() = bcube.z2();} // include the full roof peak and skylight frame
 			else {lit_area.z2() += fc_thick;} // include the tops of the skylight
 			point lpos(sl.get_cube_center());
-			if (is_rotated()) {do_xy_rotate(building_center, lpos);} // maybe not needed, since skylight is usually centered on building; also, the light shape itself isn't rotated
+			if (is_rotated()) {do_xy_rotate(building_center, lpos);}
 			vector3d const light_dir((sun_moon_pos - lpos).get_norm());
 			float const light_dist(3.0*window_vspacing); // larger is more physically correct (directional), but produces lower shadow resolution due to wasted texels
 			lpos += light_dist*light_dir;
@@ -2857,6 +2857,10 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				else { // change the light direction correctly
 					corner_horiz_dist = 0.5*diag_sz; // calculate the radius
 				}
+				cube_t const clipped_area_rot(is_rotated() ? get_rotated_bcube(clipped_area) : clipped_area);
+				cube_t clamp_area(clipped_area_rot);
+				clamp_area.expand_by_xy(0.1*light_radius); // must be a tight cube to guarantee overlap with a narrow beamwidth
+				clamp_area.clamp_pt_xy(lpos); // light bounds must overlap the clip cube area
 				float const dp(light_dist/sqrt(light_dist*light_dist + corner_horiz_dist*corner_horiz_dist)), bwidth(0.5*(1.0 - dp));
 				vector3d const spotlight_dir(dir_always_vert ? -plus_z : -light_dir); // points either downward or away from the sun/moon
 				dl_sources.emplace_back(light_radius, lpos, lpos, color, 0, spotlight_dir, bwidth);
@@ -2875,7 +2879,6 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				hash_mix_point(lpos, shadow_caster_hash); // update when light (sun/moon) pos changes
 				bool const cache_shadows(!force_smap_update && sl.ix == shadow_caster_hash);
 				sl.ix = shadow_caster_hash; // store new hashval in the skylight for next frame
-				cube_t const clipped_area_rot(is_rotated() ? get_rotated_bcube(clipped_area) : clipped_area);
 				assign_light_for_building_interior(dl_sources.back(), &sl, clipped_area_rot, cache_shadows);
 			}
 			if (add_sky_lighting) { // add a weaker unshadowed vertical light using cur_ambient
@@ -2889,8 +2892,12 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				if (!is_rot_cube_visible(clipped_area2, xlate, 1)) {} // VFC; inc_mirror_reflections=1
 				else if (check_occlusion && !clipped_area2.contains_pt(camera_rot) && check_obj_occluded(clipped_area2, camera_bs, oc)) {} // occlusion culling
 				else { // add the light
+					cube_t clamp_area(clipped_area2);
+					clamp_area.expand_by_xy(0.75*light_radius);
+					clamp_area.clamp_pt_xy(lpos2); // light bounds must overlap the clip cube area
 					cube_t const clipped_area2_rot(is_rotated() ? get_rotated_bcube(clipped_area2) : clipped_area2);
-					dl_sources.emplace_back(light_radius, lpos2, lpos2, cur_ambient, 0);
+					if (is_rotated()) {do_xy_rotate(building_center, lpos2);}
+					dl_sources.emplace_back(light_radius, lpos2, lpos2, cur_ambient, 0); // not directional
 					dl_sources.back().set_custom_bcube(clipped_area2_rot);
 					dl_sources.back().disable_shadows();
 				}
