@@ -2858,12 +2858,14 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					corner_horiz_dist = 0.5*diag_sz; // calculate the radius
 				}
 				cube_t const clipped_area_rot(is_rotated() ? get_rotated_bcube(clipped_area) : clipped_area);
-				cube_t clamp_area(clipped_area_rot);
-				clamp_area.expand_by_xy(0.1*light_radius); // must be a tight cube to guarantee overlap with a narrow beamwidth
-				clamp_area.clamp_pt_xy(lpos); // light bounds must overlap the clip cube area
 				float const dp(light_dist/sqrt(light_dist*light_dist + corner_horiz_dist*corner_horiz_dist)), bwidth(0.5*(1.0 - dp));
 				vector3d const spotlight_dir(dir_always_vert ? -plus_z : -light_dir); // points either downward or away from the sun/moon
 				dl_sources.emplace_back(light_radius, lpos, lpos, color, 0, spotlight_dir, bwidth);
+
+				if (!dl_sources.back().calc_bcube().intersects(clipped_area_rot)) { // outside the valid area, skip this skylight
+					dl_sources.pop_back();
+					continue;
+				}
 				// check for dynamic shadow casters
 				bool force_smap_update(building_action_key); // update if a door is open or closed
 				unsigned shadow_caster_hash(0);
