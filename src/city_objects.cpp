@@ -1809,6 +1809,42 @@ void sculpture_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_
 	}
 }
 
+// bike racks
+
+bike_rack_t::bike_rack_t(cube_t const &c, bool dim_, bool dir_) : oriented_city_obj_t(c, dim_, dir_) {
+	num_slots = max(1U, min(20U, unsigned(round_fp(1.5*get_width()/get_depth()))));
+}
+/*static*/ void bike_rack_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
+	if (!shadow_only) {select_no_texture();}
+	if (!shadow_only) {bind_default_flat_normal_map();}
+	if (!shadow_only) {dstate.s.set_specular(0.5, 40.0, 1.0);}
+}
+/*static*/ void bike_rack_t::post_draw(draw_state_t &dstate, bool shadow_only) {
+	if (!shadow_only) {dstate.s.clear_specular_and_metalness();}
+}
+void bike_rack_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
+	float const ro(0.5*get_depth()), ri(0.07*ro), spacing(get_width()/num_slots);
+	float const ndiv_scale(dist_scale*dstate.get_lod_factor(pos));
+	unsigned const ndivi(shadow_only ? 8 : max(4U, min(16U, unsigned(0.7f*ndiv_scale)))), ndivo(shadow_only ? 12 : max(8U, min(48U, unsigned(2.0f*ndiv_scale))));
+	dstate.s.set_cur_color(GRAY); // select from multiple colors?
+
+	for (unsigned n = 0; n < num_slots+1; ++n) { // draw each ring
+		point rpos(pos);
+		rpos[!dim] = bcube.d[!dim][0] + n*spacing;
+		draw_rot_torus(rpos, (dim ? plus_x : plus_y), ri, ro, ndivi, ndivo); // untextured
+	}
+}
+void bike_rack_t::get_bike_pos_vect(vector<point> &bposs, rand_gen_t &rgen) const {
+	float const spacing(get_width()/num_slots);
+
+	for (unsigned n = 0; n < num_slots; ++n) {
+		if (rgen.rand_float() > 0.5) continue; // no bike
+		point bpos(pos);
+		bpos[!dim] = bcube.d[!dim][0] + (n + 0.5)*spacing;
+		bposs.push_back(bpos);
+	}
+}
+
 // ponds
 
 bool point_in_ellipse(point const &p, cube_t const &c) {

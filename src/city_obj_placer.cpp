@@ -1372,9 +1372,34 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 			point pos;
 			if (!try_place_obj(plot, blockers, rgen, (radius + spacing), spacing, 20, pos, 0)) continue; // 20 tries
 			cube_t const bc(get_cube_height_radius(pos, radius, radius*rgen.rand_uniform(2.0, 4.0))); // random height
-			sculpture_t const sculpture(bc, rgen.rand());
-			sculpt_groups.add_obj(sculpture, sculptures);
+			sculpt_groups.add_obj(sculpture_t(bc, rgen.rand()), sculptures);
 			add_cube_to_colliders_and_blockers(bc, colliders, blockers);
+		} // for n
+	}
+	// place commercial bike racks
+	if (plot.is_commercial() && building_obj_model_loader.is_model_valid(OBJ_MODEL_BICYCLE)) {
+		unsigned const num_bike_racks(rgen.rand_uniform(0.0, 2.5)); // 0-2
+		float const sz_scale(0.06*city_params.road_width), br_height(1.0*sz_scale), br_depth(br_height), spacing(2.0*min_obj_spacing);
+		vector<point> bposs;
+
+		for (unsigned n = 0; n < num_bike_racks; ++n) {
+			bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // is dir used?
+			float const br_length(rgen.rand_uniform(2.0, 5.0)*br_depth);
+			point pos;
+			if (!try_place_obj(plot, blockers, rgen, (0.5*br_length + spacing), spacing, 20, pos, 0)) continue; // 20 tries
+			cube_t br(pos);
+			br.expand_in_dim( dim, 0.5*br_depth );
+			br.expand_in_dim(!dim, 0.5*br_length);
+			br.z1() -= 0.1*br_height; // shift down slightly into the ground
+			br.z2()  = br.z1() + br_height;
+			brack_groups.add_obj(bike_rack_t(br, dim, dir), bike_racks);
+			add_cube_to_colliders_and_blockers(br, colliders, blockers);
+			bposs.clear();
+			bike_racks.back().get_bike_pos_vect(bposs, rgen);
+
+			for (point const &bp : bposs) {
+				// TODO: place bike
+			}
 		} // for n
 	}
 	// place power poles if there are houses or streetlights
@@ -2686,6 +2711,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	bldg_groups    .create_groups(bldgs,     all_objs_bcube);
 	bball_groups   .create_groups(bballs,    all_objs_bcube);
 	pfloat_groups  .create_groups(pfloats,   all_objs_bcube);
+	brack_groups   .create_groups(bike_racks,all_objs_bcube);
 	if (skyway.valid) {all_objs_bcube.assign_or_union_with_cube(skyway.bcube);}
 	if (add_parking_lots && frame_counter <= 1) {cout << "parking lots: " << parking_lots.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << endl;}
 }
@@ -2988,6 +3014,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(ug_elevs,  uge_groups,      dstate, 0.20, shadow_only, 0);
 	draw_objects(bballs,    bball_groups,    dstate, 0.12, shadow_only, 1);
 	draw_objects(pfloats,   pfloat_groups,   dstate, 0.15, shadow_only, 1);
+	draw_objects(bike_racks,brack_groups,    dstate, 0.08, shadow_only, 1);
 	draw_objects(gstations, gass_groups,     dstate, 0.25, shadow_only, 1);
 	draw_objects(bldgs,     bldg_groups,     dstate, 0.25, shadow_only, 1);
 	draw_objects(park_wfs,  park_wf_groups,  dstate, 0.08, shadow_only, 1);
@@ -3195,6 +3222,7 @@ bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector
 	if (proc_vector_sphere_coll(bldgs,     bldg_groups,     pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(clines,    cline_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(sculptures,sculpt_groups,   pos, p_last, radius, xlate, cnorm)) return 1;
+	if (proc_vector_sphere_coll(bike_racks,brack_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
 	// Note: no coll with tree_planters because the tree coll should take care of it;
 	// no coll with hcaps, manholes, sewers, tcones, flowers, pladders, bballs, pfloats, pigeons, ppaths, or birds
 	return had_coll;
@@ -3236,7 +3264,7 @@ bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &
 	check_vector_line_intersect(bldgs,     bldg_groups,     p1, p2, t, ret);
 	for (gas_station_t const &gs : gstations) {ret |= gs.line_intersect(p1, p2, t);}
 	// Note: nothing to do for parking lots, tree_planters, hcaps, manholes, sewers, tcones, sculptures, flowers, pladders, chairs, pdecks, bballs, pfloats,
-	// clines, pigeons, ppaths, park_wfs, or birds;
+	// bike_racks, clines, pigeons, ppaths, park_wfs, or birds;
 	// mboxes, swings, tramps, umbrellas, bikes, plants, ponds, p_solars, bb_hoops, statues, and skyways are ignored because they're small or not simple shapes
 	return ret;
 }
@@ -3348,7 +3376,7 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, vect_cube_t const &plo
 	if (check_city_obj_pt_xy_contains(park_wf_groups,  park_wfs,  pos, obj_ix, 1)) {color = colorRGBA(0.1, 0.3, 0.1); return 1;} // is_cylin=1
 	if (check_vect_cube_contains_pt_xy(plot_cuts, pos)) {color = colorRGBA(0.7, 0.7, 1.0); return 1;} // mall skylight; very light blue
 	// Note: ppoles, hcaps, manholes, sewers, mboxes, tcones, sculptures, flowers, pladders, chairs, stopsigns, flags, clines, pigeons, birds, swings,
-	// umbrellas, bikes, statues, plants, and wfounts are skipped; pillars aren't visible under walkways;
+	// umbrellas, bikes, statues, pfloats, bike_racks, plants, and wfounts are skipped; pillars aren't visible under walkways;
 	// free standing signs can be added, but they're small and expensive to iterate over and won't contribute much
 	return 0;
 }

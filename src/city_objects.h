@@ -379,6 +379,16 @@ struct sculpture_t : public city_obj_t {
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
 };
 
+struct bike_rack_t : public oriented_city_obj_t {
+	unsigned num_slots=0;
+
+	bike_rack_t(cube_t const &c, bool dim_, bool dir_);
+	static void pre_draw (draw_state_t &dstate, bool shadow_only);
+	static void post_draw(draw_state_t &dstate, bool shadow_only);
+	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
+	void get_bike_pos_vect(vector<point> &bposs, rand_gen_t &rgen) const;
+};
+
 class park_heightmap_t;
 
 class pond_t : public city_obj_t {
@@ -935,12 +945,13 @@ private:
 	vector<city_bldg_t> bldgs;
 	vector<beach_ball_t> bballs;
 	vector<pool_float_t> pfloats;
+	vector<bike_rack_t> bike_racks;
 	// index is last obj in group
 	city_obj_groups_t bench_groups, planter_groups, trashcan_groups, fhydrant_groups, sstation_groups, fountain_groups, wfount_groups, statue_groups, divider_groups,
 		pool_groups, plad_groups, chair_groups, pdeck_groups, ppole_groups, hcap_groups, manhole_groups, mbox_groups, tcone_groups, pigeon_groups, bird_groups, sign_groups,
 		stopsign_groups, flag_groups, nrack_groups, park_wf_groups, pgate_groups, cline_groups, ppath_groups, swing_groups, tramp_groups, umbrella_groups, bike_groups,
 		dumpster_groups, plant_groups, flower_groups, picnic_groups, bb_hoop_groups, pond_groups, walkway_groups, pillar_groups, wwe_groups, uge_groups, p_solar_groups,
-		gass_groups, bldg_groups, bball_groups, pfloat_groups, sewer_groups, sculpt_groups;
+		gass_groups, bldg_groups, bball_groups, pfloat_groups, sewer_groups, sculpt_groups, brack_groups;
 	skyway_t skyway; // optional
 	vect_parking_space_t pspaces;
 	vector<park_heightmap_t> park_hmaps;
