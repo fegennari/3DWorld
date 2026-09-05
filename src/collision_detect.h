@@ -160,8 +160,6 @@ public:
 	void re_add_coll_cobj(int index, int remove_old=1);
 	bool subtract_from_cobj(coll_obj_group &new_cobjs, csg_cube const &cube, bool include_polys);
 	int  intersects_cobj(coll_obj const &c, float toler=0.0) const;
-	void get_side_polygons(vector<tquad_t> &sides, int top_bot_only=0) const;
-	void get_contact_points(coll_obj const &c, vector<point> &contact_pts, bool vert_only=0, float toler=0.0) const;
 	int  is_anchored() const;
 	void move_cobj(vector3d const &vd, bool update_colls=1);
 	void translate_pts_and_bcube(vector3d const &vd);
