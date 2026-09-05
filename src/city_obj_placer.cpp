@@ -1384,17 +1384,29 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 	}
 	// place commercial bike racks
 	if (plot.is_commercial() && building_obj_model_loader.is_model_valid(OBJ_MODEL_BICYCLE)) {
-		unsigned const num_bike_racks(rgen.rand_uniform(0.0, 2.5)); // 0-2
+		unsigned const num_bike_racks(rgen.rand_uniform(0.0, 3.5)); // 0-3
 		float const sz_scale(0.06*city_params.road_width), br_height(1.0*sz_scale), br_depth(br_height), spacing(2.0*min_obj_spacing);
 		float bike_height(0.0), bike_len(0.0), bike_width(0.0);
 		get_bike_sz(bike_height, bike_len, bike_width);
+		cube_t br_area(plot);
+		for (unsigned d = 0; d < 2; ++d) {br_area.expand_in_dim(d, -0.05*plot.get_sz_dim(d));} // reserve the edges of the plot for the sidewalk/pedestrian path
 		vector<point> bposs;
+		point pos;
+		pos.z = plot.z1();
 
 		for (unsigned n = 0; n < num_bike_racks; ++n) {
-			bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // is dir used?
-			float const br_length(rgen.rand_uniform(2.0, 5.0)*br_depth);
-			point pos;
-			if (!try_place_obj(plot, blockers, rgen, (0.5*br_length + spacing), spacing, 20, pos, 0)) continue; // 20 tries
+			float const br_length(rgen.rand_uniform(2.5, 6.0)*br_depth), plot_edge_space(0.75*br_length), br_radius(0.5*br_length + spacing); // conservative radius
+			if (plot_edge_space > 0.5*min(br_area.dx(), br_area.dy())) continue; // plot is too small; shouldn't happen
+			bool dim(0), dir(0), placed(0);
+
+			for (unsigned n = 0; n < 20; ++n) { // 20 tries
+				dim = rgen.rand_bool();
+				dir = rgen.rand_bool();
+				pos[ dim] = br_area.d[dim][dir]; // near the edge of the plot
+				pos[!dim] = rgen.rand_uniform((br_area.d[!dim][0] + plot_edge_space), (br_area.d[!dim][1] - plot_edge_space)); // random point along the road
+				if (check_pt_and_place_blocker(pos, blockers, br_radius, spacing, 0)) {placed = 1; break;} // add_blocker=0
+			}
+			if (!placed) continue;
 			cube_t br(pos);
 			br.expand_in_dim( dim, 0.5*br_depth );
 			br.expand_in_dim(!dim, 0.5*br_length);
@@ -1406,7 +1418,8 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 			bike_racks.back().get_bike_pos_vect(bposs, rgen);
 
 			for (point const &bp : bposs) {
-				bicycle_t const bike(point(bp.x, bp.y, pos.z), bike_height, dim, dir);
+				bool const inv_dir(rgen.rand_float() < 0.25); // sometimes backwards
+				bicycle_t const bike(point(bp.x, bp.y, pos.z), bike_height, dim, (dir ^ inv_dir ^ 1));
 				bike_groups.add_obj(bike, bikes);
 				br.union_with_cube(bike.bcube);
 			}
