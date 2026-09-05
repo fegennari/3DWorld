@@ -1838,7 +1838,7 @@ void bike_rack_t::get_bike_pos_vect(vector<point> &bposs, rand_gen_t &rgen) cons
 	float const spacing(get_width()/num_slots);
 
 	for (unsigned n = 0; n < num_slots; ++n) {
-		if (rgen.rand_float() > 0.5) continue; // no bike
+		if (rgen.rand_float() > 0.4) continue; // no bike
 		point bpos(pos);
 		bpos[!dim] = bcube.d[!dim][0] + (n + 0.5)*spacing;
 		bposs.push_back(bpos);

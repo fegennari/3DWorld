@@ -49,6 +49,12 @@ void setup_parked_car(car_t &car, unsigned city_id, unsigned plot_ix) {
 	car.cur_road = plot_ix; // store plot_ix in road field
 	car.cur_road_type = TYPE_PLOT;
 }
+void get_bike_sz(float &height, float &length, float &width) {
+	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_BICYCLE)); // L, W, H
+	height = 0.078*city_params.road_width;
+	length = height*sz.x/sz.z;
+	width  = height*sz.y/sz.z;
+}
 
 size_t city_obj_placer_t::get_gpu_mem() const {
 	unsigned mem(0);
@@ -1084,8 +1090,8 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 
 				// maybe place a bike next to the picnic table
 				if (building_obj_model_loader.is_model_valid(OBJ_MODEL_BICYCLE) && rgen.rand_float() < 0.35) {
-					vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_BICYCLE)); // L, W, H
-					float const bike_height(0.078*city_params.road_width), bike_width(bike_height*sz.y/sz.z);
+					float bike_height(0.0), bike_len(0.0), bike_width(0.0);
+					get_bike_sz(bike_height, bike_len, bike_width);
 					bool const dim(pt.dim), dir(rgen.rand_bool()); // choose a random end of the picnic table
 					pos[ dim] = pt.bcube.d[dim][dir] + (dir ? 1.0 : -1.0)*0.25*bike_width;
 					pos[!dim] = pt.bcube.get_center_dim(!dim);
@@ -1380,6 +1386,8 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 	if (plot.is_commercial() && building_obj_model_loader.is_model_valid(OBJ_MODEL_BICYCLE)) {
 		unsigned const num_bike_racks(rgen.rand_uniform(0.0, 2.5)); // 0-2
 		float const sz_scale(0.06*city_params.road_width), br_height(1.0*sz_scale), br_depth(br_height), spacing(2.0*min_obj_spacing);
+		float bike_height(0.0), bike_len(0.0), bike_width(0.0);
+		get_bike_sz(bike_height, bike_len, bike_width);
 		vector<point> bposs;
 
 		for (unsigned n = 0; n < num_bike_racks; ++n) {
@@ -1393,13 +1401,16 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 			br.z1() -= 0.1*br_height; // shift down slightly into the ground
 			br.z2()  = br.z1() + br_height;
 			brack_groups.add_obj(bike_rack_t(br, dim, dir), bike_racks);
-			add_cube_to_colliders_and_blockers(br, colliders, blockers);
+			// add bikes
 			bposs.clear();
 			bike_racks.back().get_bike_pos_vect(bposs, rgen);
 
 			for (point const &bp : bposs) {
-				// TODO: place bike
+				bicycle_t const bike(point(bp.x, bp.y, pos.z), bike_height, dim, dir);
+				bike_groups.add_obj(bike, bikes);
+				br.union_with_cube(bike.bcube);
 			}
+			add_cube_to_colliders_and_blockers(br, colliders, blockers); // union of bike rack + bikes
 		} // for n
 	}
 	// place power poles if there are houses or streetlights
@@ -1920,8 +1931,9 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 		// maybe place a bike next to the house wall or fence;
 		// it would be nice if we could place a bike lying down, but the current model drawing code only supports rotations about the Z axis in the XY plane
 		if (building_obj_model_loader.is_model_valid(OBJ_MODEL_BICYCLE) && rgen.rand_float() < 0.6) { // 60% of the time (not always successful)
-			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_BICYCLE)); // L, W, H
-			float const bike_height(1.3*sz_scale), bike_len(bike_height*sz.x/sz.z), bike_width(bike_height*sz.y/sz.z), wall_extend(0.5*bike_len);
+			float bike_height(0.0), bike_len(0.0), bike_width(0.0);
+			get_bike_sz(bike_height, bike_len, bike_width);
+			float const wall_extend(0.5*bike_len);
 
 			for (unsigned n = 0; n < 4; ++n) { // make some attempts to generate a valid bike location
 				bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random house wall dim/dir
