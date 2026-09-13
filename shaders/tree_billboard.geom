@@ -7,12 +7,19 @@ uniform vec3 up_vector;
 in vec4 vertex_vs[1];
 in vec4 color_vs[1];
 in vec2 delta_vs[1];
+#ifdef USE_BINDLESS_TEXTURES
+#extension GL_ARB_bindless_texture : require
+in flat sampler2D color_tex_vs[1], normal_tex_vs[1];
+#endif
 
 out vec4 eye_space_pos;
 #ifdef TREE_BRANCHES
 out vec4 world_space_pos;
 #endif
 out vec2 tc;
+#ifdef USE_BINDLESS_TEXTURES
+out flat sampler2D color_tex, normal_tex;
+#endif
 
 void do_vertex(in vec4 pos, in vec3 delta, in float ts, in float tt) {
 	fg_Color_vf  = color_vs[0];
@@ -23,6 +30,10 @@ void do_vertex(in vec4 pos, in vec3 delta, in float ts, in float tt) {
 	eye_space_pos = fg_ModelViewMatrix * out_pos;
 	gl_Position   = fg_ProjectionMatrix * eye_space_pos;
 	tc            = vec2(ts, tt);
+#ifdef USE_BINDLESS_TEXTURES
+	color_tex     = color_tex_vs [0];
+	normal_tex    = normal_tex_vs[0];
+#endif
 	EmitVertex();
 }
 

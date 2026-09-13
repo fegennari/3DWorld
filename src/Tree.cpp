@@ -58,6 +58,7 @@ tree_placer_t tree_placer;
 
 
 extern bool has_snow, has_dl_sources, gen_tree_roots, tt_lightning_enabled, tree_indir_lighting, begin_motion, enable_grass_fire, rotate_trees, enable_reduce_leaves;
+extern bool tree_bindless_textures;
 extern int num_trees, do_zoom, display_mode, animate2, iticks, draw_model, frame_counter;
 extern int xoff2, yoff2, rand_gen_index, leaf_color_changed, scrolling, dx_scroll, dy_scroll, window_width, window_height;
 extern unsigned smoke_tid;
@@ -66,6 +67,7 @@ extern double sim_ticks;
 extern vector3d wind;
 extern lightning_t l_strike;
 extern coll_obj_group coll_objects;
+extern shader_t *cur_shader;
 
 void set_indir_color(shader_t &s);
 bool is_csm_active();
@@ -201,9 +203,31 @@ struct render_tree_branches_to_texture_t : public render_tree_to_texture_t {
 
 
 void tree_lod_render_t::finalize() {
+	if (tree_bindless_textures) return; // sort not needed
 	sort(leaf_vect  .begin(), leaf_vect  .end());
 	sort(branch_vect.begin(), branch_vect.end());
 }
+
+struct vert_tree_bb_t : public vert_tc_color {
+	GLuint64 lt_handle, bt_handle;
+	vert_tree_bb_t(vert_tc_color const &v, GLuint64 lth, GLuint64 bth) : vert_tc_color(v), lt_handle(lth), bt_handle(bth) {}
+
+	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL) {
+		set_array_client_state(1, 1, 0, 1, set_state);
+		unsigned const stride(sizeof(vert_tree_bb_t));
+		cur_shader->set_vertex_ptr(stride, vbo_ptr_offset);
+		cur_shader->set_tcoord_ptr(stride, ptr_add(vbo_ptr_offset, sizeof(point)), 0);
+		cur_shader->set_color4_ptr(stride, ptr_add(vbo_ptr_offset, sizeof(vert_tc_t)), 1);
+		if (set_state) {glEnableVertexAttribArray(4);} // location must match the shader
+		if (set_state) {glEnableVertexAttribArray(5);} // location must match the shader
+		glVertexAttribLPointer(4, 1, GL_UNSIGNED_INT64_ARB, stride, ptr_add(vbo_ptr_offset, offsetof(vert_tree_bb_t, lt_handle)));
+		glVertexAttribLPointer(5, 1, GL_UNSIGNED_INT64_ARB, stride, ptr_add(vbo_ptr_offset, offsetof(vert_tree_bb_t, bt_handle)));
+	}
+	static void unset_attrs() {
+		glDisableVertexAttribArray(4);
+		glDisableVertexAttribArray(5);
+	}
+};
 
 void tree_lod_render_t::render_billboards(shader_t &s, bool render_branches) const { // branches or leaves
 
@@ -211,24 +235,37 @@ void tree_lod_render_t::render_billboards(shader_t &s, bool render_branches) con
 	if (data.empty()) return;
 	s.add_uniform_vector3d("camera_pos", get_camera_pos());
 	s.add_uniform_vector3d("up_vector",  up_vector);
-	static vector<vert_tc_color> pts; // reused across frames
-	tree_data_t const *last_td(nullptr);
-	unsigned last_orient(0);
 
-	for (entry_t const &e : data) {
-		assert(e.td);
+	if (tree_bindless_textures) {
+		static vector<vert_tree_bb_t> pts; // reused across frames
 
-		if (e.td != last_td || e.orient != last_orient) {
-			last_td = e.td;
-			last_orient = e.orient;
-			draw_and_clear_verts(pts, GL_POINTS);
-			(render_branches ? e.td->get_render_branch_texture(e.orient) : e.td->get_render_leaf_texture(e.orient)).bind_texture();
+		for (entry_t const &e : data) {
+			assert(e.td);
+			texture_pair_t const &tp(render_branches ? e.td->get_render_branch_texture(e.orient) : e.td->get_render_leaf_texture(e.orient));
+			float const br_x(render_branches ? e.td->br_x : e.td->lr_x), br_z(render_branches ? e.td->br_z : e.td->lr_z);
+			pts.emplace_back(vert_tc_color(e.pos, br_x, br_z, e.cw.c), tp.t[0].get_bindless_handle(1), tp.t[1].get_bindless_handle(1)); // make_tex_resident=1
 		}
-		pts.emplace_back(e.pos, (render_branches ? e.td->br_x : e.td->lr_x), (render_branches ? e.td->br_z : e.td->lr_z), e.cw.c);
-	} // for i
-	assert(!pts.empty());
-	draw_and_clear_verts(pts, GL_POINTS);
-	pts.clear();
+		draw_and_clear_verts(pts, GL_POINTS);
+	}
+	else {
+		static vector<vert_tc_color> pts; // reused across frames
+		tree_data_t const *last_td(nullptr);
+		unsigned last_orient(0);
+
+		for (entry_t const &e : data) {
+			assert(e.td);
+
+			if (e.td != last_td || e.orient != last_orient) {
+				last_td = e.td;
+				last_orient = e.orient;
+				draw_and_clear_verts(pts, GL_POINTS);
+				(render_branches ? e.td->get_render_branch_texture(e.orient) : e.td->get_render_leaf_texture(e.orient)).bind_texture();
+			}
+			pts.emplace_back(e.pos, (render_branches ? e.td->br_x : e.td->lr_x), (render_branches ? e.td->br_z : e.td->lr_z), e.cw.c);
+		} // for i
+		assert(!pts.empty());
+		draw_and_clear_verts(pts, GL_POINTS);
+	}
 	bind_vbo(0);
 }
 

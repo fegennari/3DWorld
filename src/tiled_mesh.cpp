@@ -58,7 +58,7 @@ tile_offset_t model3d_offset;
 vector<clear_area_t> tile_smaps_to_clear;
 
 extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater, fog_enabled, volume_lighting, combined_gu, enable_depth_clamp, tt_triplanar_tex, use_grass_tess;
-extern bool use_instanced_pine_trees, enable_tt_model_reflect, water_is_lava, tt_fire_button_down, flashlight_on, camera_in_building, rotate_trees;
+extern bool use_instanced_pine_trees, enable_tt_model_reflect, water_is_lava, tt_fire_button_down, flashlight_on, camera_in_building, rotate_trees, tree_bindless_textures;
 extern bool player_in_int_elevator, player_in_mall;
 extern unsigned grass_density, max_unique_trees, shadow_map_sz, erosion_iters_tt, num_rnd_grass_blocks, tiled_terrain_gen_heightmap_sz;
 extern unsigned num_birds_per_tile, num_fish_per_tile, num_bflies_per_tile, room_geom_mem;
@@ -3121,11 +3121,12 @@ void tile_draw_t::draw_decid_tree_bl(shader_t &s, tree_lod_render_t &lod_rendere
 }
 
 void tile_draw_t::billboard_tree_shader_setup(shader_t &s) {
+	if (tree_bindless_textures) {s.set_prefixes("#define USE_BINDLESS_TEXTURES", 7);} // vert, frag, and geom
 	shared_shader_lighting_setup(s, 1);
 	s.begin_shader();
 	setup_tt_fog_post(s);
-	s.add_uniform_int("normal_map", 1);
-	s.add_uniform_int("color_map",   0);
+	s.add_uniform_int("normal_tex",  1);
+	s.add_uniform_int("color_tex",   0);
 	s.add_uniform_int("tc_start_ix", 0);
 	set_tree_dither_noise_tex(s, 2); // TU=2
 }
