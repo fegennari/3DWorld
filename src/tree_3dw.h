@@ -65,6 +65,16 @@ struct tree_leaf { // size = 64
 	point get_center() const {return 0.25*(pts[0] + pts[1] + pts[2] + pts[3]);} // average of all 4 leaf points
 };
 
+struct tree_leaf_ref_t : tree_leaf {
+	int type=-1; // -1 is invalid
+	colorRGBA color;
+
+	tree_leaf_ref_t() {}
+	tree_leaf_ref_t(tree_leaf const &l, unsigned t, colorRGBA const &c) : tree_leaf(l), type(t), color(c) {}
+	bool valid() const {return (type >= 0);}
+	void translate(vector3d const &xlate) {UNROLL_4X(pts[i_] += xlate;)}
+};
+
 inline bool comp_leaf(const tree_leaf &A, const tree_leaf &B) {return (A.pts[0].mag_sq() < B.pts[0].mag_sq());}
 
 struct draw_cylin : public cylinder_3dw { // size = 35 (36)
@@ -327,6 +337,7 @@ public:
 	void set_no_delete(bool no_delete_) {no_delete = no_delete_;}
 	bool operator<(tree const &t) const {return ((type != t.type) ? (type < t.type) : (tree_data < t.tree_data));}
 	void check_render_textures() {tdata().check_render_textures();}
+	tree_leaf_ref_t choose_random_leaf(rand_gen_t &rgen) const;
 	bool spraypaint_leaves(point const &pos, float radius, colorRGBA const &color);
 	void blast_damage(blastr const *const blast_radius);
 	void burn_leaves_within_radius(point const &bpos, float bradius, float damage);
@@ -364,6 +375,7 @@ public:
 	void remove_cobjs();
 	bool check_sphere_coll(point &center, float radius) const;
 	bool check_cube_int(cube_t const &c) const;
+	tree_leaf_ref_t choose_tree_leaf_in_area(point const &pos, float dist) const;
 	int draw_branches_and_leaves(shader_t &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves,
 		bool shadow_only, bool reflection_pass, vector3d const &xlate);
 	static void pre_leaf_draw(shader_t &shader, bool enable_opacity, bool shadow_only=0, bool use_fs_smap=0, bool enable_smap=1, bool enable_dlights=1);

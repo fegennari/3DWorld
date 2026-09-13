@@ -1524,9 +1524,7 @@ void tile_t::update_decid_trees() {
 void tile_t::set_mesh_ambient_color(shader_t &s) const {s.add_uniform_color("ambient_tint", avg_mesh_tex_color);}
 
 void tile_t::draw_decid_trees(shader_t &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves, bool reflection_pass, bool shadow_pass, bool enable_smap) {
-
 	if (decid_trees.empty() || !can_have_trees()) return;
-	//timer_t timer("Draw Decid Trees");
 	if (enable_smap) {bind_and_setup_shadow_map(s);}
 	if (draw_branches && !shadow_pass) {set_mesh_ambient_color(s);}
 	// Note: shadow_only mode doesn't help performance much
@@ -2119,6 +2117,10 @@ bool tile_t::check_sphere_collision(point &pos, float sradius, bool inc_dtrees, 
 bool tile_t::check_cube_int_trees(cube_t const &c) const { // cube is in camera space; deciduous trees only for now
 	if (decid_trees.empty()) return 0;
 	return decid_trees.check_cube_int(c - dtree_off.get_xlate());
+}
+
+tree_leaf_ref_t tile_t::choose_tree_leaf_in_area(point const &pos, float dist) const { // pos is in camera space, leaf is in global space
+	return decid_trees.choose_tree_leaf_in_area((pos - dtree_off.get_xlate()), dist);
 }
 
 bool tile_t::line_intersect_mesh(point const &v1, point const &v2, float &t, int &xpos, int &ypos, float inc_trees) const {
@@ -3491,6 +3493,10 @@ bool tile_draw_t::check_cube_int_trees(cube_t const &c) const {
 	tile_t const *const tile(get_tile_containing_point(c.get_cube_center())); // assumes cube is contained in one tile
 	return (tile ? tile->check_cube_int_trees(c) : 0);
 }
+tree_leaf_ref_t tile_draw_t::choose_tree_leaf_in_area_cont_tile(point const &pos, float dist) const {
+	tile_t const *const tile(get_tile_containing_point(pos));
+	return (tile ? tile->choose_tree_leaf_in_area(pos, dist) : tree_leaf_ref_t());
+}
 
 bool tile_draw_t::line_intersect_mesh(point const &v1, point const &v2, float &t, tile_t *&intersected_tile, int &xpos, int &ypos, float inc_trees) const {
 
@@ -3635,6 +3641,7 @@ void draw_tiled_terrain_water(shader_t &s, float zval) {terrain_tile_draw.draw_w
 bool check_player_tiled_terrain_collision() {return terrain_tile_draw.check_player_collision();}
 bool sphere_int_tiled_terrain(point &pos, float radius) {return terrain_tile_draw.check_sphere_collision(pos, radius);}
 bool cube_int_tiled_terrain_trees(cube_t const &c) {return terrain_tile_draw.check_cube_int_trees(c);}
+tree_leaf_ref_t choose_tree_leaf_in_area(point const &pos, float dist) {return terrain_tile_draw.choose_tree_leaf_in_area_cont_tile(pos, dist);}
 float get_tiled_terrain_water_level() {return (is_water_enabled() ? water_plane_z : terrain_tile_draw.get_actual_zmin());}
 
 bool try_bind_tile_smap_at_point(point const &pos, shader_t &s, bool check_only, unsigned *lod_level) { // pos in camera space

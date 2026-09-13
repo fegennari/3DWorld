@@ -29,6 +29,8 @@ int select_tid_from_list(vector<unsigned> const &tids, unsigned ix);
 colorRGBA get_bed_sheet_color(int tid, rand_gen_t &rgen);
 void invalidate_tile_smap_in_region(cube_t const &region, bool repeat_next_frame);
 void draw_xy_oval(float rx, float ry, int ndiv, point const &pos, float tscale_s, float tscale_t);
+int get_leaf_texture_id(unsigned type);
+void draw_tree_leaf(point const &pos, float scale, unsigned ttype, colorRGBA const &color, float xy_angle, vector3d const &tilt_axis, float tilt_angle, quad_batch_draw &qbd);
 bool get_sphere_poly_int_val(point const &sc, float sr, point const *const points, unsigned npoints, vector3d const &normal, float thickness, float &val, vector3d &cnorm);
 void get_pedestrians_in_area(cube_t const &area, int building_ix, vector<point> &pts);
 void register_fish_pond_visible(cube_t const &pond, unsigned pond_id);
@@ -1136,6 +1138,21 @@ bool clothesline_t::proc_sphere_coll(point &pos_, point const &p_last, float rad
 		if (sphere_vert_cylin_intersect(pos_, radius_, cylinder_3dw((end - height*plus_z), end, pradius, pradius), cnorm)) return 1;
 	}
 	return 0;
+}
+
+// falling leaves
+
+falling_leaf_t::falling_leaf_t(point const &pos_, float sz, colorRGBA const &c, unsigned ttype, rand_gen_t &rgen) : tree_type(ttype), lsize(sz), pos(pos_), color(c) {
+	xy_angle   = TWO_PI*rgen.rand_float();
+	tilt_angle = TWO_PI*rgen.rand_float();
+	tilt_axis  = rgen.signed_rand_vector_spherical();
+}
+void falling_leaf_t::draw(draw_state_t &dstate, bool &first_draw) const {
+	if (!dstate.check_sphere_visible(pos, 2.0*lsize)) return;
+	if (first_draw) {dstate.begin_tile(pos, 1, 1); first_draw = 0;} // bind shadow map on first draw; all leaves should be in the same tile
+	select_texture(get_leaf_texture_id(tree_type));
+	draw_tree_leaf(pos, lsize, tree_type, color, xy_angle, tilt_axis, tilt_angle, dstate.qbd);
+	dstate.qbd.draw_and_clear();
 }
 
 // power poles

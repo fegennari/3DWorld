@@ -36,6 +36,7 @@ float get_inner_sidewalk_width();
 cube_t get_plot_coll_region(cube_t const &plot_bcube);
 void play_hum_sound(point const &pos, float gain, float pitch);
 bool enable_instanced_pine_trees();
+tree_leaf_ref_t choose_tree_leaf_in_area(point const &pos, float dist);
 
 bool are_birds_enabled() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_BIRD_ANIM);}
 
@@ -3016,12 +3017,32 @@ void city_obj_placer_t::next_frame() {
 	if (!animate2) return;
 	float const fticks_stable(min(fticks, 1.0f)); // cap to 1/40s to improve stability
 	point const camera_bs(get_camera_building_space());
-
-	if (all_objs_bcube.contains_pt_xy(camera_bs)) { // player in city (approximate, since all_objs_bcube doesn't cover the entire city)
-		for (swingset_t    &s : swings   ) {s.next_frame(camera_bs, fticks_stable);}
-		for (ww_elevator_t &e : elevators) {e.next_frame(camera_bs, fticks_stable);}
-	}
 	next_frame_birds(camera_bs, fticks_stable);
+	if (!all_objs_bcube.contains_pt_xy(camera_bs)) return; // player not in city (approximate, since all_objs_bcube doesn't cover the entire city)
+	// below updates are only for the player's city
+	for (swingset_t    &s : swings   ) {s.next_frame(camera_bs, fticks_stable);}
+	for (ww_elevator_t &e : elevators) {e.next_frame(camera_bs, fticks_stable);}
+	// update falling leaves
+	float const add_dist(5.0*city_params.road_width), remove_dist(1.5*add_dist);
+	float const gravity(0.00004), terminal_v(0.08); // a fraction of normal gravity
+
+	for (falling_leaf_t &l : falling_leaves) {
+		if (l.pos.z < city_zval) {l.lsize = 0.0; continue;} // remove if reached the ground (but could accumulate for a while?)
+		if (!dist_less_than(l.pos, camera_bs, remove_dist)) {l.lsize = 0.0; continue;} // remove if too far from player
+		l.pos.z += l.vel_z;
+		l.vel_z -= gravity*fticks_stable; // apply gravitational acceleration
+		max_eq(l.vel_z, -terminal_v);
+	}
+	falling_leaves.erase(remove_if(falling_leaves.begin(), falling_leaves.end(), [](falling_leaf_t const &l) {return (l.lsize == 0.0);}), falling_leaves.end());
+	
+	if (falling_leaves.size() < 20 && leaf_rgen.rand_float() < 0.25*fticks) { // drop new tree leaves 10 times a second, at most 20 total
+		tree_leaf_ref_t const leaf(choose_tree_leaf_in_area(get_camera_pos(), add_dist));
+
+		if (leaf.valid()) {
+			float const leaf_size(0.5*p2p_dist(leaf.pts[0], leaf.pts[1]));
+			falling_leaves.emplace_back(leaf.get_center(), leaf_size, leaf.color, leaf.type, leaf_rgen);
+		}
+	}
 }
 
 void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_only, bool reflection_pass) {
@@ -3082,6 +3103,8 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 		draw_objects(pigeons,  pigeon_groups,  dstate, 0.03, shadow_only, 1);
 		draw_objects(birds,    bird_groups,    dstate, 0.03, shadow_only, 1);
 		draw_objects(pladders, plad_groups,    dstate, 0.06, shadow_only, 1);
+		bool first_draw(1);
+		for (falling_leaf_t &l : falling_leaves) {l.draw(dstate, first_draw);}
 	}
 	for (dstate.pass_ix = (shadow_only ? 1 : 0); dstate.pass_ix < 2; ++dstate.pass_ix) { // {solar panel, metal frame}; panel does not cast shadows
 		draw_objects(p_solars, p_solar_groups, dstate, (dstate.pass_ix ? 0.25 : 0.45), shadow_only, 0);

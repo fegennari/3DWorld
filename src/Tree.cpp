@@ -80,9 +80,13 @@ inline colorRGBA get_leaf_base_color(int type) {
 	UNROLL_3X(color[i_] = CLIP_TO_01(color[i_] + leaf_base_color[i_]);)
 	return color;
 }
+int get_leaf_texture_id(unsigned type) {
+	assert(type < NUM_TREE_TYPES);
+	return tree_types[type].leaf_tex;
+}
 colorRGBA get_leaf_texture_color(unsigned type) {
 	// alpha is always 1.0 - texture alpha is handled by check_poly_billboard_alpha()
-	return colorRGBA(texture_color(tree_types[type].leaf_tex), 1.0);
+	return colorRGBA(texture_color(get_leaf_texture_id(type)), 1.0);
 }
 colorRGBA get_avg_leaf_color(unsigned type) {
 	return get_leaf_base_color(type).modulate_with(get_leaf_texture_color(type));
@@ -317,7 +321,7 @@ void tree::add_tree_collision_objects() {
 		}
 	}
 	if (tree_coll_level >= 4) {
-		int const ltid(tree_types[type].leaf_tex);
+		int const ltid(get_leaf_texture_id(type));
 		colorRGBA const lcolor(get_avg_leaf_color(type)); // will be reset in update_leaf_cobj_color()
 		cobj_params cpl(0.3, lcolor, 0, 0, NULL, 0, ltid, 1.0, 0, 0);
 		cpl.flags |= COBJ_DESTROYABLE; // so that truly_static() returns false
@@ -375,6 +379,19 @@ bool tree_cont_t::check_cube_int(cube_t const &c) const {
 		if (i->check_cube_int(c)) return 1;
 	}
 	return 0;
+}
+
+tree_leaf_ref_t tree_cont_t::choose_tree_leaf_in_area(point const &pos, float dist) const {
+	static rand_gen_t rgen;
+	static vector<unsigned> cands;
+	cands.clear();
+
+	for (unsigned i = 0; i < size(); ++i) {
+		if (dist_less_than(pos, at(i).get_center(), dist)) {cands.push_back(i);}
+	}
+	if (cands.empty()) return tree_leaf_ref_t();
+	if (cands.size() < 60 && cands.size() < (rgen.rand() % 60)) return tree_leaf_ref_t(); // limit to one leaf per tree per second at 60 FPS
+	return at(cands[rgen.rand() % cands.size()]).choose_random_leaf(rgen);
 }
 
 
@@ -521,7 +538,7 @@ void tree_cont_t::pre_leaf_draw(shader_t &shader, bool enable_opacity, bool shad
 		float const wind_mag((has_snow || !animate2 /*|| shadow_only*/) ? 0.0f : 0.05f*REL_LEAF_SIZE*TREE_SIZE/(sqrt(nleaves_scale)*tree_scale)*min(2.0f, wind.mag()));
 		if (enable_smap) {shader.set_prefix("#define NO_SHADOW_PCF", (use_fs_smap ? 1 : 0));} // faster shadows
 		set_leaf_shader(shader, 0.75, 3, enable_opacity, (shadow_only || !enable_dlights), wind_mag, 0, use_fs_smap, enable_smap, 0, shadow_only); // no underwater trees
-		for (int i = 0; i < NUM_TREE_TYPES; ++i) {select_texture(((draw_model == 0) ? tree_types[i].leaf_tex : WHITE_TEX), TLEAF_START_TUID+i);}
+		for (int i = 0; i < NUM_TREE_TYPES; ++i) {select_texture(((draw_model == 0) ? get_leaf_texture_id(i) : WHITE_TEX), TLEAF_START_TUID+i);}
 	}
 	if (!shadow_only) {
 		shader.set_specular(0.2, 20.0); // small amount of specular
@@ -677,6 +694,16 @@ void tree::remove_leaf(unsigned i, bool update_data) {
 	make_private_tdata_copy();
 	update_data &= has_leaf_data();
 	tdata().remove_leaf_ix(i, update_data);
+}
+
+tree_leaf_ref_t tree::choose_random_leaf(rand_gen_t &rgen) const {
+	tree_data_t const &td(tdata());
+	vector<tree_leaf> const &leaves(td.get_leaves());
+	if (leaves.empty()) return tree_leaf_ref_t();
+	unsigned const lix(rgen.rand() % leaves.size());
+	tree_leaf_ref_t leaf(leaves[lix], type, td.get_leaf_color(lix));
+	leaf.translate(tree_center);
+	return leaf;
 }
 
 bool tree::spraypaint_leaves(point const &pos, float radius, colorRGBA const &color) {
@@ -951,7 +978,7 @@ void tree_data_t::draw_leaf_quads_from_vbo(unsigned max_leaves) const {
 }
 void tree_data_t::draw_leaves_shadow_only(float size_scale) {
 	if (leaves.empty()) return;
-	select_texture(tree_types[tree_type].leaf_tex);
+	select_texture(get_leaf_texture_id(tree_type));
 	draw_leaves(size_scale); // could disable normals and colors, but that doesn't seem to help much
 }
 

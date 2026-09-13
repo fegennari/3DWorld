@@ -391,6 +391,7 @@ public:
 	bool is_water_visible() const;
 	bool check_sphere_collision(point &pos, float sradius, bool inc_dtrees=1, bool inc_ptrees=1, bool inc_scenery=1) const;
 	bool check_cube_int_trees(cube_t const &c) const;
+	tree_leaf_ref_t choose_tree_leaf_in_area(point const &pos, float dist) const;
 	bool line_intersect_mesh(point const &v1, point const &v2, float &t, int &xpos, int &ypos, float inc_trees) const;
 }; // tile_t
 
@@ -480,6 +481,7 @@ public:
 	bool try_bind_tile_smap_at_point(point const &pos, shader_t &s, bool check_only, unsigned *lod_level) const;
 	bool check_sphere_collision(point &pos, float radius) const;
 	bool check_cube_int_trees(cube_t const &c) const;
+	tree_leaf_ref_t choose_tree_leaf_in_area_cont_tile(point const &pos, float dist) const;
 	bool check_player_collision() const;
 	bool line_intersect_mesh(point const &v1, point const &v2, float &t, tile_t *&intersected_tile, int &xpos, int &ypos, float inc_trees) const;
 	float get_actual_zmin() const;

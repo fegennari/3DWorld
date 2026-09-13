@@ -730,6 +730,17 @@ private:
 	bool add_item(unsigned id, float dz, float hwidth, float hthick, float zadj, bool is_model, bool cdir, colorRGBA const &color, rand_gen_t &rgen);
 };
 
+struct falling_leaf_t {
+	unsigned tree_type;
+	float lsize, xy_angle, tilt_angle, vel_z=0.0;
+	point pos;
+	vector3d tilt_axis;
+	colorRGBA color;
+
+	falling_leaf_t(point const &pos_, float sz, colorRGBA const &c, unsigned ttype, rand_gen_t &rgen);
+	void draw(draw_state_t &dstate, bool &first_draw) const;
+};
+
 struct park_path_t : public city_obj_t {
 	vector<point> pts;
 	float hwidth;
@@ -953,6 +964,7 @@ private:
 	vector<beach_ball_t> bballs;
 	vector<pool_float_t> pfloats;
 	vector<bike_rack_t> bike_racks;
+	vector<falling_leaf_t> falling_leaves; // not used with groups
 	// index is last obj in group
 	city_obj_groups_t bench_groups, planter_groups, trashcan_groups, fhydrant_groups, sstation_groups, fountain_groups, wfount_groups, statue_groups, divider_groups,
 		pool_groups, plad_groups, chair_groups, pdeck_groups, ppole_groups, hcap_groups, manhole_groups, mbox_groups, tcone_groups, pigeon_groups, bird_groups, sign_groups,
@@ -968,7 +980,7 @@ private:
 	cube_t all_objs_bcube;
 	vect_cube_t park_restrooms, park_grass_blockers;
 	vect_bird_place_t bird_locs;
-	rand_gen_t bird_rgen;
+	rand_gen_t bird_rgen, leaf_rgen;
 	unsigned num_spaces=0, filled_spaces=0, num_x_plots=0, num_y_plots=0;
 	float plot_subdiv_sz=0.0;
 	bool has_residential_plots=0;

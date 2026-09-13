@@ -424,6 +424,20 @@ void draw_and_clear_tris(vector<vert_norm_color> &vn, vector<vert_norm_tc_color>
 	draw_and_clear_verts(vntc, GL_TRIANGLES);
 }
 
+void draw_tree_leaf(point const &pos, float scale, unsigned ttype, colorRGBA const &color, float xy_angle, vector3d const &tilt_axis, float tilt_angle, quad_batch_draw &qbd) {
+	float const leaf_x_ar(tree_types[ttype].leaf_x_ar);
+	vector3d dirs[2] = {(leaf_points[3] - leaf_points[0]), (leaf_points[1] - leaf_points[0])};
+
+	for (unsigned d = 0; d < 2; ++d) {
+		dirs[d]   *= 0.5*scale;
+		dirs[d].x *= leaf_x_ar;
+	}
+	rotate_vector3d_multi(plus_z, xy_angle, dirs, 2);
+	rotate_vector3d_multi(tilt_axis, tilt_angle, dirs, 2);
+	vector3d const normal(cross_product(dirs[0], dirs[1]).get_norm());
+	qbd.add_quad_dirs((pos + dirs[1]), dirs[0], -dirs[1], color, ((normal.z < 0.0) ? -normal : normal)); // normal should poiny up
+}
+
 
 void draw_group(obj_group &objg, shader_t &s, lt_atten_manager_t &lt_atten_manager) {
 
@@ -472,7 +486,6 @@ void draw_group(obj_group &objg, shader_t &s, lt_atten_manager_t &lt_atten_manag
 			for (unsigned j = 0; j < ordering.size(); ++j) {
 				dwobject const &obj(objg.get_obj(ordering[j].second));
 				int const tree_type(ordering[j].first), tid(tree_types[tree_type].leaf_tex);
-				float const leaf_scale(obj.init_dir.z), leaf_x_ar(tree_types[tree_type].leaf_x_ar);
 				assert(tid >= 0);
 			
 				if (draw_model == 0 && tid != last_tid) {
@@ -480,22 +493,14 @@ void draw_group(obj_group &objg, shader_t &s, lt_atten_manager_t &lt_atten_manag
 					select_texture(tid);
 					last_tid = tid;
 				}
+				float const leaf_scale(obj.init_dir.z), t(((float)obj.time)/((float)otype.lifetime));
 				point pos(obj.pos);
 				if (place_obj_on_grass(pos, leaf_scale)) {pos.z = 0.25*obj.pos.z + 0.75*pos.z-leaf_scale;} // leaf is partially on grass
-				float const t(((float)obj.time)/((float)otype.lifetime));
 				colorRGBA const dry_color(1.0, 0.7, 0.1); // this is the final color, even for partially burnt leaves - oh well
 				colorRGBA leaf_color(WHITE);
 				UNROLL_3X(leaf_color[i_] *= obj.vdeform[i_];) // vdeform is the color
 				if (leaf_color.get_luminance() > 0.1) {blend_color(leaf_color, dry_color, leaf_color, t, 0);} // not mostly burned
-				vector3d dirs[2] = {(leaf_points[3] - leaf_points[0]), (leaf_points[1] - leaf_points[0])};
-				
-				for (unsigned d = 0; d < 2; ++d) {
-					dirs[d]   *= 0.5*leaf_scale;
-					dirs[d].x *= leaf_x_ar;
-				}
-				rotate_vector3d_multi(plus_z, -obj.init_dir.x, dirs, 2);
-				rotate_vector3d_multi(obj.orientation, -obj.angle/TO_DEG, dirs, 2);
-				qbd.add_quad_dirs((pos + dirs[1]), dirs[0], -dirs[1], leaf_color, cross_product(dirs[0], dirs[1]).get_norm());
+				draw_tree_leaf(pos, leaf_scale, tree_type, leaf_color, -obj.init_dir.x, obj.orientation, -TO_RADIANS*obj.angle, qbd);
 			} // for j
 			qbd.draw_and_clear();
 			ls.clear_specular();
