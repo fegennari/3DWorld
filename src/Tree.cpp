@@ -58,7 +58,7 @@ tree_placer_t tree_placer;
 
 
 extern bool has_snow, has_dl_sources, gen_tree_roots, tt_lightning_enabled, tree_indir_lighting, begin_motion, enable_grass_fire, rotate_trees, enable_reduce_leaves;
-extern bool tree_bindless_textures;
+extern bool tree_bindless_textures, enable_use_temp_vbo;
 extern int num_trees, do_zoom, display_mode, animate2, iticks, draw_model, frame_counter;
 extern int xoff2, yoff2, rand_gen_index, leaf_color_changed, scrolling, dx_scroll, dy_scroll, window_width, window_height;
 extern unsigned smoke_tid;
@@ -202,7 +202,7 @@ struct render_tree_branches_to_texture_t : public render_tree_to_texture_t {
 };
 
 
-void tree_lod_render_t::finalize() {
+void tree_lod_render_t::finalize() { // 8 orients: 0.19ms, 1 orient: 0.13ms
 	if (tree_bindless_textures) return; // sort not needed
 	sort(leaf_vect  .begin(), leaf_vect  .end());
 	sort(branch_vect.begin(), branch_vect.end());
@@ -231,10 +231,12 @@ struct vert_tree_bb_t : public vert_tc_color {
 
 void tree_lod_render_t::render_billboards(shader_t &s, bool render_branches) const { // branches or leaves
 
+	//highres_timer_t timer("render_billboards"); // normal 8 orients: 0.25ms, 1 orient: 0.066ms | bindless: 0.035ms
 	vector<entry_t> const &data(render_branches ? branch_vect : leaf_vect);
 	if (data.empty()) return;
 	s.add_uniform_vector3d("camera_pos", get_camera_pos());
 	s.add_uniform_vector3d("up_vector",  up_vector);
+	enable_use_temp_vbo = 1; // seems to be faster, in paticular for bindless mode
 
 	if (tree_bindless_textures) {
 		static vector<vert_tree_bb_t> pts; // reused across frames
@@ -243,7 +245,7 @@ void tree_lod_render_t::render_billboards(shader_t &s, bool render_branches) con
 			assert(e.td);
 			texture_pair_t const &tp(render_branches ? e.td->get_render_branch_texture(e.orient) : e.td->get_render_leaf_texture(e.orient));
 			float const br_x(render_branches ? e.td->br_x : e.td->lr_x), br_z(render_branches ? e.td->br_z : e.td->lr_z);
-			pts.emplace_back(vert_tc_color(e.pos, br_x, br_z, e.cw.c), tp.t[0].get_bindless_handle(1), tp.t[1].get_bindless_handle(1)); // make_tex_resident=1
+			pts.emplace_back(vert_tc_color(e.pos, br_x, br_z, e.cw.c), tp.t[0].get_bindless_handle(), tp.t[1].get_bindless_handle());
 		}
 		draw_and_clear_verts(pts, GL_POINTS);
 	}
@@ -252,21 +254,32 @@ void tree_lod_render_t::render_billboards(shader_t &s, bool render_branches) con
 		tree_data_t const *last_td(nullptr);
 		unsigned last_orient(0);
 
-		for (entry_t const &e : data) {
+		for (entry_t const &e : data) { // combine all verts into a single dynamic VBO
 			assert(e.td);
-
-			if (e.td != last_td || e.orient != last_orient) {
-				last_td = e.td;
-				last_orient = e.orient;
-				draw_and_clear_verts(pts, GL_POINTS);
-				(render_branches ? e.td->get_render_branch_texture(e.orient) : e.td->get_render_leaf_texture(e.orient)).bind_texture();
-			}
 			pts.emplace_back(e.pos, (render_branches ? e.td->br_x : e.td->lr_x), (render_branches ? e.td->br_z : e.td->lr_z), e.cw.c);
+		}
+		set_ptr_state(pts.data(), pts.size(), 0, 1); // set_array_client_state=1
+		unsigned start_ix(0), cur_ix(0);
+
+		for (auto e = data.begin(); ; ++e, ++cur_ix) {
+			if (e != data.end() && e->td == last_td && e->orient == last_orient) continue; // same batch
+			
+			if (last_td) {
+				assert(start_ix < cur_ix);
+				(render_branches ? last_td->get_render_branch_texture(last_orient) : last_td->get_render_leaf_texture(last_orient)).bind_texture();
+				glDrawArrays(GL_POINTS, start_ix, (cur_ix - start_ix));
+				++num_frame_draw_calls;
+			}
+			if (e == data.end()) break; // done
+			last_td     = e->td;
+			last_orient = e->orient;
+			start_ix    = cur_ix;
 		} // for i
-		assert(!pts.empty());
-		draw_and_clear_verts(pts, GL_POINTS);
+		unset_ptr_state(pts.data());
+		pts.clear();
 	}
-	bind_vbo(0);
+	enable_use_temp_vbo = 0; // reset
+	bind_vbo(0); // not needed?
 }
 
 float get_default_tree_depth() {return TREE_DEPTH*tree_depth_scale*(0.5 + 0.5/tree_scale);}

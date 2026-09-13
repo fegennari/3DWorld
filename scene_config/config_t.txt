@@ -4,7 +4,7 @@ include config.txt
 ntrees 150
 max_unique_trees 100
 num_tree_bb_orients 8 # increases draw time and GPU memory usage
-tree_bindless_textures 0 # faster with core context, slower without
+tree_bindless_textures 1 # faster with 8 orients, slower with 1
 #use_core_context 1
 rotate_trees 1
 tree_4th_branches 1

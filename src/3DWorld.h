@@ -923,9 +923,8 @@ template <typename T> void draw_verts(T const *const verts, unsigned count, int 
 template <typename T> void draw_verts(vector<T> const &verts, int gl_type, unsigned start_ix=0, bool set_array_client_state=1) {
 	if (!verts.empty()) {draw_verts(verts.data(), verts.size(), gl_type, start_ix, set_array_client_state);}
 }
-
-template <typename T> void draw_and_clear_verts(vector<T> &verts, int gl_type) {
-	draw_verts(verts, gl_type);
+template <typename T> void draw_and_clear_verts(vector<T> &verts, int gl_type, unsigned start_ix=0, bool set_array_client_state=1) {
+	draw_verts(verts, gl_type, start_ix, set_array_client_state);
 	verts.clear();
 }
 
@@ -1054,7 +1053,7 @@ public:
 	bool is_resident() const {return is_handle_resident;}
 	void bind_gl(unsigned tu_id=0) const;
 	void gl_delete();
-	GLuint64 get_bindless_handle(bool make_tex_resident) const;
+	GLuint64 get_bindless_handle(bool make_tex_resident=1) const;
 	void make_resident() const;
 	void make_nonresident() const;
 };
