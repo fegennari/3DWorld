@@ -301,18 +301,16 @@ void ensure_texture_loaded(unsigned &tid, unsigned txsize, unsigned tysize, bool
 void build_texture_mipmaps(unsigned tid, unsigned dim);
 
 
-struct texture_pair_t {
-	texture_handle_t t[2]; // color, normal
-	bool multisample;
+struct texture_pair_t { // color + normal in texture array
+	texture_handle_t t;
+	bool multisample; // unused, always 0
 
 	texture_pair_t(bool multisample_=0) : multisample(multisample_) {}
-	bool is_valid() const {return (t[0].is_bound() && t[1].is_bound());}
-	unsigned get_tid(bool ix) const {return t[ix].tid;}
-	void free_context();
-	void bind_texture() const;
+	bool is_valid() const {return t.is_bound();}
+	unsigned get_tid() const {return t.tid;}
+	void free_context() {t.gl_delete();}
+	void bind_texture() const {t.bind_gl(0);} // tu_id=0
 	void ensure_tid(unsigned tsize, bool mipmap);
-	bool operator==(texture_pair_t const &tp) const {return (t[0] == tp.t[0] && t[1] == tp.t[1]);}
-	bool operator!=(texture_pair_t const &tp) const {return !operator==(tp);}
 };
 
 class render_to_texture_t {
@@ -324,7 +322,7 @@ public:
 	render_to_texture_t(unsigned tsize_) : tsize(tsize_) {}
 	virtual ~render_to_texture_t() {}
 	void render(texture_pair_t &tpair, float xsize, float ysize, point const &center, vector3d const &view_dir,
-		colorRGBA const &bkg_color, bool use_depth_buffer, bool mipmap);
+		colorRGBA const &bkg_color, bool use_depth_buffer);
 	virtual void draw_geom(bool is_normal_pass) = 0;
 };
 

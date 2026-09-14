@@ -155,8 +155,7 @@ public:
 		int tree_type, float deadness, float br_scale, float nl_scale, bool has_4th_branches, int tree_size);
 };
 
-bool const TREE_BILLBOARD_MULTISAMPLE = 0;
-
+bool const TREE_BILLBOARD_MULTISAMPLE = 0; // Note: doesn't work
 
 struct tree_texture_view_t {
 	texture_pair_t leaf_tex, branch_tex;

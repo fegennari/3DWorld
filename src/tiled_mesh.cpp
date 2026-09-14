@@ -3127,9 +3127,8 @@ void tile_draw_t::billboard_tree_shader_setup(shader_t &s) {
 	shared_shader_lighting_setup(s, 1);
 	s.begin_shader();
 	setup_tt_fog_post(s);
-	s.add_uniform_int("normal_tex",  1);
-	s.add_uniform_int("color_tex",   0);
-	s.add_uniform_int("tc_start_ix", 0);
+	s.add_uniform_int("color_normal_tex", 0); // texture array with both color and normal
+	s.add_uniform_int("tc_start_ix",      0);
 	set_tree_dither_noise_tex(s, 2); // TU=2
 }
 

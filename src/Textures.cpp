@@ -1835,7 +1835,7 @@ void ensure_texture_loaded(unsigned &tid, unsigned txsize, unsigned tysize, bool
 	if (tid) return; // already created
 	setup_texture(tid, mipmap, 0, 0, 0, 0, nearest, 1.0, 0, multisample);
 	if (multisample) {glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, NUM_TEX_MS_SAMPLES, GL_RGBA8, txsize, tysize, false);}
-	else {glTexImage2D(get_2d_texture_target(0, multisample), 0, GL_RGBA8, txsize, tysize, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);}
+	else {glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, txsize, tysize, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);}
 }
 
 void build_texture_mipmaps(unsigned tid, unsigned dim) {
@@ -1844,14 +1844,11 @@ void build_texture_mipmaps(unsigned tid, unsigned dim) {
 }
 
 
-void texture_pair_t::free_context() {
-	for (unsigned d = 0; d < 2; ++d) {t[d].gl_delete();}
-}
-void texture_pair_t::bind_texture() const {
-	for (unsigned d = 0; d < 2; ++d) {t[d].bind_gl(d);}
-}
 void texture_pair_t::ensure_tid(unsigned tsize, bool mipmap) {
-	for (unsigned d = 0; d < 2; ++d) {ensure_texture_loaded(t[d].tid, tsize, tsize, mipmap, 0, multisample);}
+	assert(tsize > 0);
+	if (t.tid) return; // already created
+	setup_texture(t.tid, mipmap, 0, 0, 0, 0, 0, 1.0, 1, multisample); // is_array=1
+	if (multisample) {glTexImage3DMultisample(GL_TEXTURE_2D_MULTISAMPLE_ARRAY, NUM_TEX_MS_SAMPLES, GL_RGBA8, tsize, tsize, 2, false);}
+	else {glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGBA8, tsize, tsize, 2, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);}
 }
-
 

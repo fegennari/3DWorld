@@ -9,7 +9,7 @@ in vec4 color_vs[1];
 in vec2 delta_vs[1];
 #ifdef USE_BINDLESS_TEXTURES
 #extension GL_ARB_bindless_texture : require
-in flat sampler2D color_tex_vs[1], normal_tex_vs[1];
+in flat sampler2DArray color_normal_tex_vs[1];
 #endif
 
 out vec4 eye_space_pos;
@@ -18,7 +18,7 @@ out vec4 world_space_pos;
 #endif
 out vec2 tc;
 #ifdef USE_BINDLESS_TEXTURES
-out flat sampler2D color_tex, normal_tex;
+out flat sampler2DArray color_normal_tex;
 #endif
 
 void do_vertex(in vec4 pos, in vec3 delta, in float ts, in float tt) {
@@ -31,8 +31,7 @@ void do_vertex(in vec4 pos, in vec3 delta, in float ts, in float tt) {
 	gl_Position   = fg_ProjectionMatrix * eye_space_pos;
 	tc            = vec2(ts, tt);
 #ifdef USE_BINDLESS_TEXTURES
-	color_tex     = color_tex_vs [0];
-	normal_tex    = normal_tex_vs[0];
+	color_normal_tex = color_normal_tex_vs[0];
 #endif
 	EmitVertex();
 }

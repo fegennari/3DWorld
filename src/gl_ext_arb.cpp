@@ -319,23 +319,21 @@ void set_temp_clear_color(colorRGBA const &clear_color, bool clear_depth, bool c
 }
 
 void render_to_texture_t::render(texture_pair_t &tpair, float xsize, float ysize, point const &center, vector3d const &view_dir,
-	colorRGBA const &bkg_color, bool use_depth_buffer, bool mipmap)
+	colorRGBA const &bkg_color, bool use_depth_buffer)
 {
-	assert(!(mipmap && tpair.multisample));
 	pre_render(xsize, ysize, 1, 1, center, view_dir); // setup matrices, etc.
-	tpair.ensure_tid(tsize, mipmap);
-	colorRGBA const clear_normal(0.5, 0.5, 0.5, 0.0);
-	colorRGBA const clear_colors[2] = {bkg_color, clear_normal};
-	unsigned fbo_id(0);
-	enable_fbo(fbo_id, tpair.get_tid(0), 0, tpair.multisample); // too slow to create and free fbos every time?
+	tpair.ensure_tid(tsize, 0); // mipmap=0
+	colorRGBA const clear_normal(0.5, 0.5, 0.5, 0.0), clear_colors[2] = {bkg_color, clear_normal};
+	unsigned const tid(tpair.get_tid());
+	unsigned fbo_id(0), layer(0);
+	enable_fbo(fbo_id, tid, 0, tpair.multisample, 1, &layer); // too slow to create and free fbos every time?
 	unsigned render_buffer(use_depth_buffer ? create_depth_render_buffer(tsize, tsize, tpair.multisample) : 0);
 
 	for (unsigned d = 0; d < 2; ++d) { // {color, normal}
-		if (d == 1) {bind_fbo_texture(fbo_id, tpair.get_tid(1), 0, tpair.multisample, 0);} // bind second texture; is_depth_fbo=0, is_array=0
+		layer = d;
+		if (d == 1) {bind_fbo_texture(fbo_id, tid, 0, tpair.multisample, 1, &layer);} // bind second texture; is_depth_fbo=0, is_array=1
 		set_temp_clear_color(clear_colors[d], use_depth_buffer);
 		draw_geom(d != 0);
-		//if (tpair.multisample) {glBlitFramebuffer(...);} // ???
-		if (mipmap) {build_texture_mipmaps(tpair.get_tid(d), 2);}
 	}
 	if (use_depth_buffer) {disable_and_free_render_buffer(render_buffer);}
 	free_fbo(fbo_id);
