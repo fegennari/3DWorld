@@ -1147,12 +1147,13 @@ falling_leaf_t::falling_leaf_t(point const &pos_, float sz, colorRGBA const &c, 
 	tilt_angle = TWO_PI*rgen.rand_float();
 	tilt_axis  = rgen.signed_rand_vector_spherical();
 }
-void falling_leaf_t::draw(draw_state_t &dstate, bool &first_draw) const {
+void falling_leaf_t::draw(draw_state_t &dstate, int &prev_ttype) const {
 	if (!dstate.check_sphere_visible(pos, 2.0*lsize)) return;
-	if (first_draw) {dstate.begin_tile(pos, 1, 1); first_draw = 0;} // bind shadow map on first draw; all leaves should be in the same tile
+	if (prev_ttype < 0) {dstate.begin_tile(pos, 1, 1);} // bind shadow map on first draw; all leaves should be in the same tile
+	else if ((int)tree_type != prev_ttype) {dstate.qbd.draw_and_clear();} // flush buffer on tree type change
+	prev_ttype = tree_type;
 	select_texture(get_leaf_texture_id(tree_type));
 	draw_tree_leaf(pos, lsize, tree_type, color, xy_angle, tilt_axis, tilt_angle, dstate.qbd);
-	dstate.qbd.draw_and_clear();
 }
 
 // power poles

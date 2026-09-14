@@ -738,7 +738,7 @@ struct falling_leaf_t {
 	colorRGBA color;
 
 	falling_leaf_t(point const &pos_, float sz, colorRGBA const &c, unsigned ttype, rand_gen_t &rgen);
-	void draw(draw_state_t &dstate, bool &first_draw) const;
+	void draw(draw_state_t &dstate, int &prev_ttype) const;
 };
 
 struct park_path_t : public city_obj_t {

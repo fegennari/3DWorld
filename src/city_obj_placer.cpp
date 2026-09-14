@@ -3103,8 +3103,9 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 		draw_objects(pigeons,  pigeon_groups,  dstate, 0.03, shadow_only, 1);
 		draw_objects(birds,    bird_groups,    dstate, 0.03, shadow_only, 1);
 		draw_objects(pladders, plad_groups,    dstate, 0.06, shadow_only, 1);
-		bool first_draw(1);
-		for (falling_leaf_t &l : falling_leaves) {l.draw(dstate, first_draw);}
+		int prev_ttype(-1); // starts unset
+		for (falling_leaf_t &l : falling_leaves) {l.draw(dstate, prev_ttype);}
+		dstate.qbd.draw_and_clear(); // draw any remaining verts for the last tree type
 	}
 	for (dstate.pass_ix = (shadow_only ? 1 : 0); dstate.pass_ix < 2; ++dstate.pass_ix) { // {solar panel, metal frame}; panel does not cast shadows
 		draw_objects(p_solars, p_solar_groups, dstate, (dstate.pass_ix ? 0.25 : 0.45), shadow_only, 0);
