@@ -3022,25 +3022,28 @@ void city_obj_placer_t::next_frame() {
 	// below updates are only for the player's city
 	for (swingset_t    &s : swings   ) {s.next_frame(camera_bs, fticks_stable);}
 	for (ww_elevator_t &e : elevators) {e.next_frame(camera_bs, fticks_stable);}
-	// update falling leaves
-	float const add_dist(5.0*city_params.road_width), remove_dist(1.5*add_dist);
-	float const gravity(0.00004), terminal_v(0.08); // a fraction of normal gravity
-
-	for (falling_leaf_t &l : falling_leaves) {
-		if (l.pos.z < city_zval) {l.lsize = 0.0; continue;} // remove if reached the ground (but could accumulate for a while?)
-		if (!dist_less_than(l.pos, camera_bs, remove_dist)) {l.lsize = 0.0; continue;} // remove if too far from player
-		l.pos.z += l.vel_z;
-		l.vel_z -= gravity*fticks_stable; // apply gravitational acceleration
-		max_eq(l.vel_z, -terminal_v);
-	}
-	falling_leaves.erase(remove_if(falling_leaves.begin(), falling_leaves.end(), [](falling_leaf_t const &l) {return (l.lsize == 0.0);}), falling_leaves.end());
 	
-	if (falling_leaves.size() < 20 && leaf_rgen.rand_float() < 0.25*fticks) { // drop new tree leaves 10 times a second, at most 20 total
-		tree_leaf_ref_t const leaf(choose_tree_leaf_in_area(get_camera_pos(), add_dist));
+	if (player_in_basement) {falling_leaves.clear();} // falling leaves not visible
+	else { // update falling leaves
+		float const add_dist(5.0*city_params.road_width), remove_dist(1.5*add_dist);
+		float const gravity(0.00004), terminal_v(0.08); // a fraction of normal gravity
 
-		if (leaf.valid()) {
-			float const leaf_size(0.5*p2p_dist(leaf.pts[0], leaf.pts[1]));
-			falling_leaves.emplace_back(leaf.get_center(), leaf_size, leaf.color, leaf.type, leaf_rgen);
+		for (falling_leaf_t &l : falling_leaves) {
+			if (l.pos.z < city_zval) {l.lsize = 0.0; continue;} // remove if reached the ground (but could accumulate for a while?)
+			if (!dist_less_than(l.pos, camera_bs, remove_dist)) {l.lsize = 0.0; continue;} // remove if too far from player
+			l.pos.z += l.vel_z;
+			l.vel_z -= gravity*fticks_stable; // apply gravitational acceleration
+			max_eq(l.vel_z, -terminal_v);
+		}
+		falling_leaves.erase(remove_if(falling_leaves.begin(), falling_leaves.end(), [](falling_leaf_t const &l) {return (l.lsize == 0.0);}), falling_leaves.end());
+	
+		if (falling_leaves.size() < 20 && leaf_rgen.rand_float() < 0.25*fticks) { // drop new tree leaves 10 times a second, at most 20 total
+			tree_leaf_ref_t const leaf(choose_tree_leaf_in_area(get_camera_pos(), add_dist));
+
+			if (leaf.valid()) {
+				float const leaf_size(0.5*p2p_dist(leaf.pts[0], leaf.pts[1]));
+				falling_leaves.emplace_back(leaf.get_center(), leaf_size, leaf.color, leaf.type, leaf_rgen);
+			}
 		}
 	}
 }
