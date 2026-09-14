@@ -1281,7 +1281,7 @@ void create_landscape_texture() {
 	int const def_id((default_ground_tex >= 0) ? default_ground_tex : GROUND_TEX);
 	float const xscale(((float)MESH_X_SIZE)/((float)width)), yscale(((float)MESH_Y_SIZE)/((float)height));
 	static char **tids = NULL;
-	if (tids == NULL) matrix_gen_2d(tids);
+	if (tids == NULL) {matrix_gen_2d(tids);}
 	assert(NTEX_DIRT < 128);
 	
 	for (int i = 0; i < MESH_Y_SIZE; ++i) { // makes a big performance improvement
@@ -1304,18 +1304,20 @@ void create_landscape_texture() {
 	int const j0((tox0 < 0) ? width -1 : 0), j1((tox0 < 0) ? -1 : width ), dj((tox0 < 0) ? -1 : 1);
 	int const wxtx(wx-tox0), wxtx3(3*wxtx), j00(max(0, -tox0)), j01(min(width, wx-tox0));
 	
-#pragma omp parallel for schedule(static,1)
+	if (scroll) { // serial part
+		for (int ii = 0; ii < height; ++ii) {
+			int const i((toy0 < 0) ? height-ii-1 : ii), lly(i + toy0);
+			if (lly >= 0 && lly < hy) {memmove((tex_data+3*(i*width+j00)), (tex_data+3*((j00+tox0)+lly*width)), 3*(j01-j00));} // range could be overlapping
+		}
+	}
+#pragma omp parallel for schedule(static,1) num_threads(4)
 	for (int ii = 0; ii < height; ++ii) {
 		int const i((toy0 < 0) ? height-ii-1 : ii);
 		float const yp(yscale*(float)i);
 		int const lly(i + toy0), offset(3*i*width), ypos(max(0, min(myszm1, (int)yp))), ypos1(min(myszm1, ypos+1));
 		float const ypi(yp - (float)ypos);
-		int j10(j0);
+		int const j10((scroll && lly >= 0 && lly < hy) ? ((tox0 < 0) ? min(j0, -tox0-1) : max(j0, wx-tox0)) : j0);
 
-		if (scroll && lly >= 0 && lly < hy) {
-			memmove((tex_data+offset+3*j00), (tex_data+3*((j00+tox0)+lly*width)), 3*(j01-j00)); // range could be overlapping
-			j10 = ((tox0 < 0) ? min(j0, -tox0-1) : max(j0, wx-tox0));
-		}
 		for (int j = j10; j != j1; j += dj) {
 			float const xp(xscale*(float)j);
 			int const o2(offset + 3*j), xpos(max(0, min(mxszm1, (int)xp))), xpos1(min(mxszm1, xpos+1));
@@ -1638,8 +1640,8 @@ void add_snow_to_landscape_texture(point const &pos, float acc) {
 void update_landscape_texture() {
 
 	ls_color_texels.clear();
-	if (landscape_changed)  lchanged0 = 1; // this is set if landscape ever changed
-	if (lchanged0)          regrow_landscape_texture_amt0();
+	if (landscape_changed)  {lchanged0 = 1;} // this is set if landscape ever changed
+	if (lchanged0)          {regrow_landscape_texture_amt0();}
 	if (!landscape_changed) return;
 	
 	if (ltx2 <= ltx1 || lty2 <= lty1) {
