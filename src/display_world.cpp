@@ -617,13 +617,11 @@ void set_inf_terrain_fog(bool underwater, float zmin2) {
 
 void scroll_scene() {
 
-	RESET_TIME;
-	point const camera(get_camera_pos());
-	cout << endl << "Shifting + "; // will produce "Shifting + Generating scene"
+	timer_t timer("Scroll Scene");
 	camera_change = 1;
 	scrolling     = 1;
-	dx_scroll     = int(camera.x*DX_VAL_INV);
-	dy_scroll     = int(camera.y*DY_VAL_INV);
+	dx_scroll     = int(get_camera_pos().x*DX_VAL_INV);
+	dy_scroll     = int(get_camera_pos().y*DY_VAL_INV);
 	vector3d const vd(-DX_VAL*dx_scroll, -DY_VAL*dy_scroll, 0.0);
 	surface_pos  += vd;
 	xoff2        += dx_scroll;
@@ -637,7 +635,6 @@ void scroll_scene() {
 	recreated = 1;
 	scrolling = 0;
 	clear_landscape_vbo = 1;
-	PRINT_TIME("*** Top Level: Final");
 }
 
 

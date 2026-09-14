@@ -603,7 +603,7 @@ void process_groups() {
 
 void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_zvals, int rgt_only) {
 	
-	cout << "Generating Scene..." << endl;
+	if (!scrolling) {cout << "Generating Scene..." << endl;}
 	RESET_TIME;
 	static int st_valid(0);
 	bool const inf_terrain(world_mode == WMODE_INF_TERRAIN);
@@ -621,7 +621,7 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 	if (generate_mesh) {
 		if (generate_mesh != 2) {
 		  gen_mesh(0, keep_sin_table, update_zvals);
-		  PRINT_TIME("Terrain Mesh generation");
+		  if (!scrolling) {PRINT_TIME("Terrain Mesh generation");}
 		  if (!inf_terrain) {gen_buildings();} // called from tile_draw_t::update() in tiled terrain mode
 		}
 		gen_tex_height_tables();
@@ -646,10 +646,10 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 	}
 	if (!inf_terrain) {
 		gen_scenery(t_trees); // must be generated after trees
-		PRINT_TIME("Scenery generation");
+		if (!scrolling) {PRINT_TIME("Scenery generation");}
 	}
 	add_all_coll_objects(coll_obj_file, (num_trees == 0));
-	PRINT_TIME("Collision object addition");
+	if (!scrolling) {PRINT_TIME("Collision object addition");}
 	if (!inf_terrain && !rgt_only ) {calc_watershed();}
 	if (!inf_terrain && !scrolling) {create_waypoints(user_waypoints);}
 	reanimate_objects(); // allow stationary/stuck objects to move about the new terrain (fast so no timing)
@@ -660,7 +660,7 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 	if (!scrolling || lf >= 0.4) {sflags |= SUN_SHADOW;}
 	if (!scrolling || lf <= 0.6) {sflags |= MOON_SHADOW;}
 	calc_visibility(sflags);
-	PRINT_TIME("Visibility calculation");
+	if (!scrolling) {PRINT_TIME("Visibility calculation");}
 
 	if (!inf_terrain) {
 		if (generate_mesh) {gen_grass();}
