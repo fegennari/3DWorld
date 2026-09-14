@@ -210,6 +210,12 @@ void unbind_temp_vbo() {
 	bind_vbo(0);
 }
 
+void draw_arrays_wrapper(int gl_type, unsigned start_ix, unsigned count, unsigned num_instances) {
+	if (num_instances > 1) {glDrawArraysInstanced(gl_type, start_ix, count, num_instances);}
+	else {glDrawArrays(gl_type, start_ix, count);}
+	++num_frame_draw_calls;
+}
+
 
 void pt_line_drawer::add_textured_pt(point const &v, colorRGBA c, int tid) {
 	if (tid >= 0) c = c.modulate_with(texture_color(tid));
@@ -676,8 +682,7 @@ template< typename vert_type_t > void vbo_block_manager_t<vert_type_t>::render_r
 		draw_quads_as_tris(count, offsets[six], num_instances);
 	}
 	else {
-		glDrawArraysInstanced(prim_type, offsets[six], count, num_instances); // default is quads
-		++num_frame_draw_calls;
+		draw_arrays_wrapper(prim_type, offsets[six], count, num_instances); // default is quads
 	}
 }
 

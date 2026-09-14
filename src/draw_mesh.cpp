@@ -227,8 +227,7 @@ void draw_mesh_vbo(bool shadow_pass) {
 	mesh_data_vao_mgr.enable_vao();
 
 	for (int i = 0; i < MESH_Y_SIZE-1; ++i) { // use glMultiDrawArrays()?
-		glDrawArrays(GL_TRIANGLE_STRIP, 2*i*MESH_X_SIZE, 2*MESH_X_SIZE);
-		++num_frame_draw_calls;
+		draw_arrays_wrapper(GL_TRIANGLE_STRIP, 2*i*MESH_X_SIZE, 2*MESH_X_SIZE);
 	}
 	mesh_data_vao_mgr.disable_vao();
 	s.end_shader();
@@ -357,7 +356,7 @@ struct mesh_vertex_draw : public mesh_data_store {
 		vert_norm_color::set_vbo_arrays(1, data.data());
 	}
 	void emit_strip() {
-		if (c >= 3) {glDrawArrays(GL_TRIANGLE_STRIP, 0, c); ++num_frame_draw_calls;} // at least one triangle
+		if (c >= 3) {draw_arrays_wrapper(GL_TRIANGLE_STRIP, 0, c);} // at least one triangle
 		c = 0;
 	}
 };
@@ -383,8 +382,7 @@ public:
 			upload_vector_to_vbo(data);
 		}
 		for (vector<unsigned>::const_iterator i = strip_ixs.begin(); i+1 != strip_ixs.end(); ++i) { // skip last element
-			glDrawArrays(GL_TRIANGLE_STRIP, *i, (*(i+1) - *i));
-			++num_frame_draw_calls;
+			draw_arrays_wrapper(GL_TRIANGLE_STRIP, *i, (*(i+1) - *i));
 		}
 		post_render();
 	}

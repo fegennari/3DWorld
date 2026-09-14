@@ -160,6 +160,8 @@ enum {FG_PROJECTION=0, FG_MODELVIEW};
 enum {GAME_MODE_NONE=0, GAME_MODE_FPS, GAME_MODE_DODGEBALL};
 unsigned const GAME_MODE_BUILDINGS = 2; // same as GAME_MODE_DODGEBALL
 
+extern unsigned num_frame_draw_calls;
+
 
 template<typename T> struct point2d { // size = 8
 
@@ -901,6 +903,7 @@ struct tex_range_t {
 
 bool bind_temp_vbo_from_verts(void const *const verts, unsigned count, unsigned vert_size, void const *&vbo_ptr_offset);
 void unbind_temp_vbo();
+void draw_arrays_wrapper(int gl_type, unsigned start_ix, unsigned count, unsigned num_instances=1);
 
 template< typename T> void set_ptr_state(T const *const verts, unsigned count, unsigned start_ix=0, bool set_array_client_state=1) {
 	void const *ptr_offset = NULL;
@@ -912,12 +915,10 @@ template <typename T> void unset_ptr_state(T const *const verts) {
 	if (verts) {unbind_temp_vbo();}
 }
 
-extern unsigned num_frame_draw_calls;
 template <typename T> void draw_verts(T const *const verts, unsigned count, int gl_type, unsigned start_ix=0, bool set_array_client_state=1) {
 	assert(count > 0);
 	set_ptr_state(verts, count, start_ix, set_array_client_state);
-	glDrawArrays(gl_type, start_ix, count);
-	++num_frame_draw_calls;
+	draw_arrays_wrapper(gl_type, start_ix, count);
 	unset_ptr_state(verts);
 }
 template <typename T> void draw_verts(vector<T> const &verts, int gl_type, unsigned start_ix=0, bool set_array_client_state=1) {

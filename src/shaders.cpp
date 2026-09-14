@@ -1290,12 +1290,12 @@ void instance_render_t::draw_and_clear(int prim_type, unsigned count, unsigned c
 	
 	if (index_type != GL_NONE) { // indexed
 		glDrawElementsInstanced(prim_type, count, index_type, indices, inst_xforms.size());
+		++num_frame_draw_calls;
 	}
 	else {
 		assert(indices == nullptr);
-		glDrawArraysInstanced(prim_type, first, count, inst_xforms.size());
+		draw_arrays_wrapper(prim_type, first, count, inst_xforms.size());
 	}
-	++num_frame_draw_calls;
 	shader_float_matrix_uploader<4,4>::disable(loc);
 	inst_xforms.clear();
 }

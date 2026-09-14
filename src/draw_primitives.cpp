@@ -885,9 +885,8 @@ unsigned sd_sphere_vbo_d::draw_setup(unsigned draw_ndiv) {
 
 void sd_sphere_vbo_d::draw_ndiv_pow2_vbo(unsigned draw_ndiv) {
 	unsigned const lod(draw_setup(draw_ndiv));
-	if (faceted) {glDrawArrays(GL_TRIANGLES, 0, 6*ndiv*ndiv);} // ndiv is ignored
-	else {glDrawRangeElements(GL_TRIANGLE_STRIP, 0, (ndiv+1)*(ndiv+1), get_count(lod), get_index_type_enum(), get_index_ptr(lod));}
-	++num_frame_draw_calls;
+	if (faceted) {draw_arrays_wrapper(GL_TRIANGLES, 0, 6*ndiv*ndiv);} // ndiv is ignored
+	else {glDrawRangeElements(GL_TRIANGLE_STRIP, 0, (ndiv+1)*(ndiv+1), get_count(lod), get_index_type_enum(), get_index_ptr(lod)); ++num_frame_draw_calls;}
 	post_render();
 }
 
@@ -1251,8 +1250,7 @@ void draw_sphere_vbo_pre_bound(int ndiv, bool textured, bool half, unsigned num_
 	unsigned const ix(((ndiv-1) << 2) + (half << 1) + textured), off1(sphere_vbo_offsets[ix-1]), off2(sphere_vbo_offsets[ix]);
 	assert(off1 < off2);
 	check_mvm_update();
-	glDrawArraysInstanced(GL_TRIANGLE_STRIP, off1, (off2 - off1), num_instances); // uses triangle strips separated by degenerate triangles
-	++num_frame_draw_calls;
+	draw_arrays_wrapper(GL_TRIANGLE_STRIP, off1, (off2 - off1), num_instances); // uses triangle strips separated by degenerate triangles
 }
 
 bool sphere_vbo_bound(0);

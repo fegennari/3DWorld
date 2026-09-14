@@ -250,8 +250,7 @@ unsigned grass_tile_manager_t::render_block(unsigned block_ix, unsigned lod, flo
 	unsigned const num_tris(ceil(density*(end_ix - start_ix)));
 	if (num_tris == 0) return 0;
 	bind_vbo(vbo); // needed because incoming vbo is 0 (so that instance attrib array isn't bound to a vbo)
-	glDrawArraysInstanced((use_tess ? GL_PATCHES : GL_TRIANGLES), 3*start_ix, 3*num_tris, num_instances);
-	++num_frame_draw_calls;
+	draw_arrays_wrapper((use_tess ? GL_PATCHES : GL_TRIANGLES), 3*start_ix, 3*num_tris, num_instances);
 	return num_instances*num_tris;
 }
 
@@ -637,7 +636,7 @@ public:
 
 	void draw_range(unsigned beg_ix, unsigned end_ix) const {
 		assert(beg_ix <= end_ix && end_ix <= grass.size());
-		if (beg_ix < end_ix) {glDrawArrays((use_grass_tess ? GL_PATCHES : GL_TRIANGLES), 3*beg_ix, 3*(end_ix - beg_ix)); ++num_frame_draw_calls;} // nonempty segment
+		if (beg_ix < end_ix) {draw_arrays_wrapper((use_grass_tess ? GL_PATCHES : GL_TRIANGLES), 3*beg_ix, 3*(end_ix - beg_ix));} // nonempty segment
 	}
 
 	static void setup_shaders(shader_t &s, bool distant) { // per-pixel dynamic lighting

@@ -271,8 +271,7 @@ void tree_lod_render_t::render_billboards(shader_t &s, bool render_branches) con
 			if (last_td) {
 				assert(start_ix < cur_ix);
 				(render_branches ? last_td->get_render_branch_texture(last_orient) : last_td->get_render_leaf_texture(last_orient)).bind_texture();
-				glDrawArrays(GL_POINTS, start_ix, (cur_ix - start_ix));
-				++num_frame_draw_calls;
+				draw_arrays_wrapper(GL_POINTS, start_ix, (cur_ix - start_ix));
 			}
 			if (e == data.end()) break; // done
 			last_td     = e->td;
