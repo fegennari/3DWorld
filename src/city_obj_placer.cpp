@@ -3026,14 +3026,11 @@ void city_obj_placer_t::next_frame() {
 	if (player_in_basement) {falling_leaves.clear();} // falling leaves not visible
 	else { // update falling leaves
 		float const add_dist(5.0*city_params.road_width), remove_dist(1.5*add_dist);
-		float const gravity(0.00004), terminal_v(0.08); // a fraction of normal gravity
 
 		for (falling_leaf_t &l : falling_leaves) {
 			if (l.pos.z < city_zval) {l.lsize = 0.0; continue;} // remove if reached the ground (but could accumulate for a while?)
 			if (!dist_less_than(l.pos, camera_bs, remove_dist)) {l.lsize = 0.0; continue;} // remove if too far from player
-			l.pos.z += l.vel_z;
-			l.vel_z -= gravity*fticks_stable; // apply gravitational acceleration
-			max_eq(l.vel_z, -terminal_v);
+			l.apply_physics(fticks_stable);
 		}
 		falling_leaves.erase(remove_if(falling_leaves.begin(), falling_leaves.end(), [](falling_leaf_t const &l) {return (l.lsize == 0.0);}), falling_leaves.end());
 	

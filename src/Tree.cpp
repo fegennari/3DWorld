@@ -702,6 +702,7 @@ tree_leaf_ref_t tree::choose_random_leaf(rand_gen_t &rgen) const {
 	if (leaves.empty()) return tree_leaf_ref_t();
 	unsigned const lix(rgen.rand() % leaves.size());
 	tree_leaf_ref_t leaf(leaves[lix], type, td.get_leaf_color(lix));
+	if (enable_rotate_trees()) {rotate_vector3d_multi(plus_z, -get_rot_angle(), leaf.pts, 4);}
 	leaf.translate(tree_center);
 	return leaf;
 }

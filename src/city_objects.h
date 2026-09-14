@@ -732,13 +732,14 @@ private:
 
 struct falling_leaf_t {
 	unsigned tree_type;
-	float lsize, xy_angle, tilt_angle, vel_z=0.0;
+	float lsize, xy_angle, tilt_angle, rot_rate, vel_z=0.0;
 	point pos;
 	vector3d tilt_axis;
 	colorRGBA color;
 
 	falling_leaf_t(point const &pos_, float sz, colorRGBA const &c, unsigned ttype, rand_gen_t &rgen);
 	void draw(draw_state_t &dstate, int &prev_ttype) const;
+	void apply_physics(float timestep);
 };
 
 struct park_path_t : public city_obj_t {

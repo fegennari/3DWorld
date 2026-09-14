@@ -10,6 +10,7 @@ extern bool player_in_walkway, player_in_ww_elevator, enable_hcopter_shadows, ci
 extern int animate2, display_mode, add_city_grass;
 extern float fticks, water_plane_z;
 extern double camera_zh;
+extern vector3d wind;
 extern city_params_t city_params;
 extern object_model_loader_t building_obj_model_loader;
 extern building_params_t global_building_params;
@@ -1145,6 +1146,7 @@ bool clothesline_t::proc_sphere_coll(point &pos_, point const &p_last, float rad
 falling_leaf_t::falling_leaf_t(point const &pos_, float sz, colorRGBA const &c, unsigned ttype, rand_gen_t &rgen) : tree_type(ttype), lsize(sz), pos(pos_), color(c) {
 	xy_angle   = TWO_PI*rgen.rand_float();
 	tilt_angle = TWO_PI*rgen.rand_float();
+	rot_rate   = 0.1*rgen.rand_uniform(0.7, 1.3); // in radians per tick
 	tilt_axis  = rgen.signed_rand_vector_spherical();
 }
 void falling_leaf_t::draw(draw_state_t &dstate, int &prev_ttype) const {
@@ -1154,6 +1156,14 @@ void falling_leaf_t::draw(draw_state_t &dstate, int &prev_ttype) const {
 	prev_ttype = tree_type;
 	select_texture(get_leaf_texture_id(tree_type));
 	draw_tree_leaf(pos, lsize, tree_type, color, xy_angle, tilt_axis, tilt_angle, dstate.qbd);
+}
+void falling_leaf_t::apply_physics(float timestep) {
+	float const gravity(0.00003), terminal_v(0.03); // a fraction of normal gravity
+	pos   += 0.002*timestep*wind; // apply wind velocity; what if this makes leaves clip through buildings?
+	pos.z += vel_z;
+	vel_z -= gravity*timestep; // apply gravitational acceleration
+	max_eq(vel_z, -terminal_v);
+	tilt_angle += rot_rate;
 }
 
 // power poles
