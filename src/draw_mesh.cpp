@@ -189,12 +189,41 @@ void set_landscape_texture_texgen(shader_t &shader) {
 }
 
 
-vao_manager_t mesh_data_vao_mgr;
+class mesh_vbo_draw_t : public vao_manager_t {
+	vector<GLint  > starts;
+	vector<GLsizei> counts;
+public:
+	void draw() {
+		if (starts.empty()) { // calculate on first call
+			starts.resize(MESH_Y_SIZE-1);
+			counts.resize(MESH_Y_SIZE-1);
+			for (int i = 0; i < MESH_Y_SIZE-1; ++i) {starts[i] = 2*i*MESH_X_SIZE; counts[i] = 2*MESH_X_SIZE;}
+		}
+		if (vbo == 0) {
+			vector<vert_norm_comp> data; // vertex and normals
+			data.reserve(2*MESH_X_SIZE*(MESH_Y_SIZE-1));
+
+			for (int i = 0; i < MESH_Y_SIZE-1; ++i) {
+				for (int j = 0; j < MESH_X_SIZE; ++j) {
+					for (unsigned k = 0; k < 2; ++k) {data.emplace_back(get_mesh_xyz_pos(j, i+k), vertex_normals[i+k][j]);}
+				}
+			}
+			create_and_upload(data, 0, 1); // and setup pointers
+			bind_vbo(0); // unbind mesh vbo
+		}
+		enable_vao();
+		glMultiDrawArrays(GL_TRIANGLE_STRIP, starts.data(), counts.data(), starts.size());
+		++num_frame_draw_calls;
+		disable_vao();
+	}
+};
+
+mesh_vbo_draw_t mesh_vbo_draw;
 
 void draw_mesh_vbo(bool shadow_pass) {
 
 	if (clear_landscape_vbo) {
-		mesh_data_vao_mgr.clear();
+		mesh_vbo_draw.clear();
 		clear_landscape_vbo = 0;
 	}
 	//if (shadow_pass && mesh_data_vao_mgr.vbo == 0 && no_sparse_smap_update()) return;
@@ -211,36 +240,17 @@ void draw_mesh_vbo(bool shadow_pass) {
 		s.begin_simple_textured_shader(0.0, !shadow_pass, 1, &color); // lighting + texgen
 	}
 	set_landscape_texture_texgen(s);
-	
-	if (mesh_data_vao_mgr.vbo == 0) {
-		vector<vert_norm_comp> data; // vertex and normals
-		data.reserve(2*MESH_X_SIZE*(MESH_Y_SIZE-1));
-
-		for (int i = 0; i < MESH_Y_SIZE-1; ++i) {
-			for (int j = 0; j < MESH_X_SIZE; ++j) {
-				for (unsigned k = 0; k < 2; ++k) {data.emplace_back(get_mesh_xyz_pos(j, i+k), vertex_normals[i+k][j]);}
-			}
-		}
-		mesh_data_vao_mgr.create_and_upload(data, 0, 1); // and setup pointers
-		bind_vbo(0); // unbind mesh vbo
-	}
-	mesh_data_vao_mgr.enable_vao();
-
-	for (int i = 0; i < MESH_Y_SIZE-1; ++i) { // use glMultiDrawArrays()?
-		draw_arrays_wrapper(GL_TRIANGLE_STRIP, 2*i*MESH_X_SIZE, 2*MESH_X_SIZE);
-	}
-	mesh_data_vao_mgr.disable_vao();
+	mesh_vbo_draw.draw();
 	s.end_shader();
 }
 
 
 void setup_detail_normal_map_prefix(shader_t &s, bool enable) {
-	if (enable) {
-		s.set_prefix("#define USE_BUMP_MAP",    1); // FS
-		s.set_prefix("#define USE_BUMP_MAP_DL", 1); // FS
-		s.set_prefix("#define BUMP_MAP_CUSTOM", 1); // FS
-		s.set_prefix(make_shader_bool_prefix("use_fg_ViewMatrix", 0), 1); // FS - disabled
-	}
+	if (!enable) return;
+	s.set_prefix("#define USE_BUMP_MAP",    1); // FS
+	s.set_prefix("#define USE_BUMP_MAP_DL", 1); // FS
+	s.set_prefix("#define BUMP_MAP_CUSTOM", 1); // FS
+	s.set_prefix(make_shader_bool_prefix("use_fg_ViewMatrix", 0), 1); // FS - disabled
 }
 void setup_detail_normal_map(shader_t &s, float tscale) { // also used for tiled terrain mesh
 	select_texture(ROCK_NORMAL_TEX, 11);
