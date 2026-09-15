@@ -189,9 +189,22 @@ void set_landscape_texture_texgen(shader_t &shader) {
 }
 
 
-class mesh_vbo_draw_t : public vao_manager_t {
+class multi_array_draw_t {
+protected:
 	vector<GLint  > starts;
 	vector<GLsizei> counts;
+	
+	void clear_starts_counts() {
+		starts.clear();
+		counts.clear();
+	}
+	void draw_multi() const {
+		glMultiDrawArrays(GL_TRIANGLE_STRIP, starts.data(), counts.data(), starts.size());
+		++num_frame_draw_calls;
+	}
+};
+
+class mesh_vbo_draw_t : public vao_manager_t, public multi_array_draw_t {
 public:
 	void draw() {
 		if (starts.empty()) { // calculate on first call
@@ -212,8 +225,7 @@ public:
 			bind_vbo(0); // unbind mesh vbo
 		}
 		enable_vao();
-		glMultiDrawArrays(GL_TRIANGLE_STRIP, starts.data(), counts.data(), starts.size());
-		++num_frame_draw_calls;
+		draw_multi();
 		disable_vao();
 	}
 };
@@ -372,7 +384,7 @@ struct mesh_vertex_draw : public mesh_data_store {
 };
 
 
-class mesh_vertex_draw_vbo : public vao_manager_t, public mesh_data_store {
+class mesh_vertex_draw_vbo : public vao_manager_t, public mesh_data_store, public multi_array_draw_t {
 	vector<unsigned> strip_ixs;
 public:
 	mesh_vertex_draw_vbo() {
@@ -382,7 +394,7 @@ public:
 	void begin_draw() {strip_ixs.resize(1, 0); c = 0;}
 	void emit_strip() {strip_ixs.push_back(c);}
 
-	void final_draw() {
+	void final_draw() { // 0.03ms
 		if (!vbo) { // create new vbo
 			data.resize(c); // resize smaller if possible (in cases where mesh_enable reduces the vertex count)
 			create_and_upload(data, 2, 1); // streaming
@@ -392,8 +404,11 @@ public:
 			upload_vector_to_vbo(data);
 		}
 		for (vector<unsigned>::const_iterator i = strip_ixs.begin(); i+1 != strip_ixs.end(); ++i) { // skip last element
-			draw_arrays_wrapper(GL_TRIANGLE_STRIP, *i, (*(i+1) - *i));
+			starts.push_back(*i);
+			counts.push_back(*(i+1) - *i);
 		}
+		draw_multi();
+		clear_starts_counts();
 		post_render();
 	}
 };
