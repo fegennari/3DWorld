@@ -31,7 +31,7 @@ bool clear_landscape_vbo(0), clear_mvd_vbo(0);
 float lt_green_int(1.0), water_xoff(0.0), water_yoff(0.0), wave_time(0.0);
 vector<fp_ratio> uw_mesh_lighting; // for water caustics
 
-extern bool using_lightmap, combined_gu, has_snow, detail_normal_map, use_core_context, underwater, water_is_lava, have_indir_smoke_tex, water_is_lava, fog_enabled;
+extern bool using_lightmap, combined_gu, has_snow, detail_normal_map, underwater, water_is_lava, have_indir_smoke_tex, water_is_lava, fog_enabled;
 extern bool enable_ground_csm;
 extern int num_local_minima, world_mode, xoff, yoff, xoff2, yoff2, ground_effects_level, animate2;
 extern int display_mode, frame_counter, verbose_mode, DISABLE_WATER, read_landscape, disable_inf_terrain, mesh_detail_tex;
@@ -356,18 +356,6 @@ public:
 };
 
 
-struct mesh_vertex_draw : public mesh_data_store {
-	mesh_vertex_draw() {
-		data.resize(2*(MESH_X_SIZE+1));
-		vert_norm_color::set_vbo_arrays(1, data.data());
-	}
-	void emit_strip() {
-		if (c >= 3) {draw_arrays_wrapper(GL_TRIANGLE_STRIP, 0, c);} // at least one triangle
-		c = 0;
-	}
-};
-
-
 class mesh_vertex_draw_vbo : public vao_manager_t, public mesh_data_store, public multi_array_draw_t {
 	vector<unsigned> strip_ixs;
 public:
@@ -392,7 +380,6 @@ public:
 		post_render();
 	}
 };
-
 
 template<typename T> void draw_mesh_mvd_core(T &mvd) {
 
@@ -423,19 +410,11 @@ void draw_mesh_mvd(bool reflection_pass) {
 	s.set_prefix("#define MULT_DETAIL_TEXTURE", 1); // FS
 	setup_mesh_and_water_shader(s, detail_normal_map, 0);
 	set_landscape_texture_texgen(s);
-
-	if (use_core_context) {
-		mvd_vbo.reflection_pass = reflection_pass;
-		if (clear_mvd_vbo) {mvd_vbo.clear(); clear_mvd_vbo = 0;}
-		mvd_vbo.begin_draw();
-		draw_mesh_mvd_core(mvd_vbo);
-		mvd_vbo.final_draw();
-	}
-	else {
-		mesh_vertex_draw mvd;
-		mvd.reflection_pass = reflection_pass;
-		draw_mesh_mvd_core(mvd);
-	}
+	mvd_vbo.reflection_pass = reflection_pass;
+	if (clear_mvd_vbo) {mvd_vbo.clear(); clear_mvd_vbo = 0;}
+	mvd_vbo.begin_draw();
+	draw_mesh_mvd_core(mvd_vbo);
+	mvd_vbo.final_draw();
 	s.end_shader();
 }
 
