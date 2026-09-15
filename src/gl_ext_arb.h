@@ -272,6 +272,17 @@ public:
 
 typedef subdiv_sphere_manager_t<icosphere_drawer_t> icosphere_manager_t;
 
+class multi_array_draw_t {
+protected:
+	vector<GLint  > starts;
+	vector<GLsizei> counts;
+public:
+	void add_range(unsigned start, unsigned end);
+	void clear_starts_counts();
+	void draw() const;
+	void draw_and_clear() {draw(); clear_starts_counts();}
+};
+
 
 class vbo_ring_buffer_t : public vbo_wrap_t {
 	unsigned init_size, size, pos=0;

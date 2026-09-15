@@ -277,7 +277,6 @@ void tree_lod_render_t::render_billboards(shader_t &s, bool render_branches) con
 		pts.clear();
 	}
 	enable_use_temp_vbo = 0; // reset
-	bind_vbo(0); // not needed?
 }
 
 float get_default_tree_depth() {return TREE_DEPTH*tree_depth_scale*(0.5 + 0.5/tree_scale);}

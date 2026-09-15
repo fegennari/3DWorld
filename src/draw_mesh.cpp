@@ -188,25 +188,9 @@ void set_landscape_texture_texgen(shader_t &shader) {
 	}
 }
 
-
-class multi_array_draw_t {
-protected:
-	vector<GLint  > starts;
-	vector<GLsizei> counts;
-	
-	void clear_starts_counts() {
-		starts.clear();
-		counts.clear();
-	}
-	void draw_multi() const {
-		glMultiDrawArrays(GL_TRIANGLE_STRIP, starts.data(), counts.data(), starts.size());
-		++num_frame_draw_calls;
-	}
-};
-
 class mesh_vbo_draw_t : public vao_manager_t, public multi_array_draw_t {
 public:
-	void draw() {
+	void draw_mesh() {
 		if (starts.empty()) { // calculate on first call
 			starts.resize(MESH_Y_SIZE-1);
 			counts.resize(MESH_Y_SIZE-1);
@@ -225,7 +209,7 @@ public:
 			bind_vbo(0); // unbind mesh vbo
 		}
 		enable_vao();
-		draw_multi();
+		draw();
 		disable_vao();
 	}
 };
@@ -252,7 +236,7 @@ void draw_mesh_vbo(bool shadow_pass) {
 		s.begin_simple_textured_shader(0.0, !shadow_pass, 1, &color); // lighting + texgen
 	}
 	set_landscape_texture_texgen(s);
-	mesh_vbo_draw.draw();
+	mesh_vbo_draw.draw_mesh();
 	s.end_shader();
 }
 
@@ -403,12 +387,8 @@ public:
 			pre_render(1);
 			upload_vector_to_vbo(data);
 		}
-		for (vector<unsigned>::const_iterator i = strip_ixs.begin(); i+1 != strip_ixs.end(); ++i) { // skip last element
-			starts.push_back(*i);
-			counts.push_back(*(i+1) - *i);
-		}
-		draw_multi();
-		clear_starts_counts();
+		for (vector<unsigned>::const_iterator i = strip_ixs.begin(); i+1 != strip_ixs.end(); ++i) {add_range(*i, *(i+1));} // skip last element
+		draw_and_clear();
 		post_render();
 	}
 };

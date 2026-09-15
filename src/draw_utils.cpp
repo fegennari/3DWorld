@@ -626,6 +626,22 @@ template<typename T> void subdiv_sphere_manager_t<T>::clear() {
 template class subdiv_sphere_manager_t<icosphere_drawer_t>;
 
 
+void multi_array_draw_t::add_range(unsigned start, unsigned end) {
+	assert(start <= end);
+	if (start == end) return; // empty range
+	starts.push_back(start);
+	counts.push_back(end - start);
+}
+void multi_array_draw_t::clear_starts_counts() {
+	starts.clear();
+	counts.clear();
+}
+void multi_array_draw_t::draw() const {
+	glMultiDrawArrays(GL_TRIANGLE_STRIP, starts.data(), counts.data(), starts.size());
+	++num_frame_draw_calls;
+}
+
+
 template< typename vert_type_t > unsigned vbo_block_manager_t<vert_type_t>::get_offset_for_last_points_added() {
 	if (offsets.empty()) {offsets.push_back(0);} // start at 0
 	unsigned const next_ix(offsets.size() - 1);

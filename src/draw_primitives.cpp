@@ -966,11 +966,12 @@ void draw_rot_torus(point const &center, vector3d const &dir, float ri, float ro
 	assert(ndivi > 2 && ndivo > 2);
 	float const ts(tex_scale_o/ndivo), tt(tex_scale_i/ndivi), ds(TWO_PI/ndivo), cds(cos(ds)), sds(sin(ds));
 	static vector<vert_norm_tc> verts;
-	verts.resize(2*(ndivi+1));
+	static multi_array_draw_t torus_drawer;
 	vector<float> const &sin_cos(gen_torus_sin_cos_vals(ndivi));
 	vector3d vab[2];
 	get_ortho_vectors(dir, vab);
 	float sin_s(0.0), cos_s(1.0);
+	unsigned strip_start(0);
 
 	for (unsigned s = 0; s < ndivo; ++s) { // outer
 		float const st(sin_s), ct(cos_s), st2(st*cds + ct*sds), ct2(ct*cds - st*sds);
@@ -984,11 +985,16 @@ void draw_rot_torus(point const &center, vector3d const &dir, float ri, float ro
 
 			for (unsigned i = 0; i < 2; ++i) {
 				vector3d const delta(pos[1-i]*sp + dir*cp);
-				verts[(t<<1)+i].assign((vpos[1-i] + delta*ri), delta, ts*(s+1-i), tt*t);
+				verts.emplace_back((vpos[1-i] + delta*ri), delta, ts*(s+1-i), tt*t);
 			}
 		} // for t
-		draw_verts(verts, GL_TRIANGLE_STRIP);
+		torus_drawer.add_range(strip_start, verts.size());
+		strip_start = verts.size();
 	} // for s
+	set_ptr_state(verts.data(), verts.size(), 0, 1); // set_array_client_state=1; set enable_use_temp_vbo=1?
+	torus_drawer.draw_and_clear();
+	unset_ptr_state(verts.data());
+	verts.clear();
 }
 
 // in z-plane, always textured
