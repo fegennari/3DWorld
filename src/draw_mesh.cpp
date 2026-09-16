@@ -14,8 +14,6 @@ float const W_TEX_SCALE0     = 1.0;
 float const WATER_WIND_EFF   = 0.0005;
 float const SURF_HEAL_RATE   = 0.005;
 float const MAX_SURFD        = 20.0;
-int   const SHOW_MESH_TIME   = 0;
-int   const SHOW_NORMALS     = 0;
 int   const DEBUG_COLLS      = 0; // 0 = disabled, 1 = lines, 2 = cubes
 int   const DISABLE_TEXTURES = 0;
 
@@ -433,11 +431,8 @@ void display_mesh(bool shadow_pass, bool reflection_pass) { // fast array versio
 		if (lzmin < zmax) {draw_sides_and_bottom(1);} // sun/moon is low on the horizon, so include the mesh sides
 		return;
 	}
-	RESET_TIME;
-
 	if ((display_mode & 0x80) && !water_is_lava && !DISABLE_WATER && zmin < max_water_height && ground_effects_level != 0) {
 		gen_uw_lighting();
-		if (SHOW_MESH_TIME) {PRINT_TIME("Underwater Lighting");}
 	}
 	else {
 		uw_mesh_lighting.clear();
@@ -476,7 +471,6 @@ void display_mesh(bool shadow_pass, bool reflection_pass) { // fast array versio
 		s.end_shader();
 	}
 	if (!reflection_pass) {update_landscape_texture();}
-	if (SHOW_MESH_TIME) {PRINT_TIME("Landscape Texture");}
 
 	if (ground_effects_level == 0 || reflection_pass) { // simpler, more efficient mesh draw
 		draw_mesh_vbo(0);
@@ -484,26 +478,7 @@ void display_mesh(bool shadow_pass, bool reflection_pass) { // fast array versio
 	else { // slower mesh draw with more features (surface damage, underwater lighting and effects)
 		draw_mesh_mvd(reflection_pass);
 	}
-	if (SHOW_MESH_TIME) {PRINT_TIME("Draw");}
 	if (!reflection_pass) {draw_sides_and_bottom(0);} // not generally needed in the reflection pass, since reflective objects should be over the mesh
-
-	if (SHOW_NORMALS) {
-		vector<vert_wrap_t> verts;
-		verts.reserve(2*XY_MULT_SIZE);
-		shader_t s;
-		s.begin_color_only_shader(RED);
-
-		for (int i = 1; i < MESH_Y_SIZE-2; ++i) {
-			for (int j = 1; j < MESH_X_SIZE-1; ++j) {
-				point const pos(get_xval(j), get_yval(i), mesh_height[i][j]);
-				verts.push_back(pos);
-				verts.push_back(pos + 0.1*vertex_normals[i][j]);
-			}
-		}
-		draw_verts(verts, GL_LINES);
-		s.end_shader();
-	}
-	if (SHOW_MESH_TIME) {PRINT_TIME("Final");}
 }
 
 
@@ -692,10 +667,7 @@ void water_renderer::draw() { // modifies color
 	enable_blend();
 	float const pts[4][2] = {{-X_SCENE_SIZE, 0.0}, {X_SCENE_SIZE, 0.0}, {0.0, -Y_SCENE_SIZE}, {0.0, Y_SCENE_SIZE}};
 	vector<pair<float, unsigned> > sides(4);
-
-	for (unsigned i = 0; i < 4; ++i) {
-		sides[i] = make_pair(-distance_to_camera_sq(point(pts[i][0], pts[i][1], water_plane_z)), i);
-	}
+	for (unsigned i = 0; i < 4; ++i) {sides[i] = make_pair(-distance_to_camera_sq(point(pts[i][0], pts[i][1], water_plane_z)), i);}
 	sort(sides.begin(), sides.end()); // largest to smallest distance
 	for (unsigned i = 0; i < 4; ++i) {draw_sides(sides[i].second);} // draw back to front
 	disable_blend();
