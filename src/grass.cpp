@@ -7,7 +7,6 @@
 #include "physics_objects.h"
 #include "textures.h"
 #include "shaders.h"
-#include "draw_utils.h"
 
 
 bool grass_enabled(1), use_grass_tess(0);
@@ -255,7 +254,7 @@ unsigned grass_tile_manager_t::render_block(unsigned block_ix, unsigned lod, flo
 }
 
 
-class grass_manager_dynamic_t : public grass_manager_t {
+class grass_manager_dynamic_t : public grass_manager_t, public multi_array_draw_t {
 	vector<unsigned> mesh_to_grass_map; // maps mesh x,y index to starting index in grass vector
 	vector<int> last_occluder;
 	mutable vector<grass_data_t> vertex_data_buffer;
@@ -634,11 +633,6 @@ public:
 		if (!data_valid) {upload_data(vbo_invalid);}
 	}
 
-	void draw_range(unsigned beg_ix, unsigned end_ix) const {
-		assert(beg_ix <= end_ix && end_ix <= grass.size());
-		if (beg_ix < end_ix) {draw_arrays_wrapper((use_grass_tess ? GL_PATCHES : GL_TRIANGLES), 3*beg_ix, 3*(end_ix - beg_ix));} // nonempty segment
-	}
-
 	static void setup_shaders(shader_t &s, bool distant) { // per-pixel dynamic lighting
 		if (use_grass_tess && !check_for_tess_shader()) {use_grass_tess = 0;} // disable tess - not supported
 		setup_shaders_pre(s);
@@ -701,8 +695,7 @@ public:
 				}
 				else if (!no_clip && !camera_pdu.point_visible_test(mpos)) {
 					float const grass_zmax((has_voxel_grass ? max(mpos.z, czmax) : mpos.z) + grass_length);
-					cube_t const cube(mpos.x-grass_length, mpos.x+DX_VAL+grass_length,
-									  mpos.y-grass_length, mpos.y+DY_VAL+grass_length, z_min_matrix[y][x], grass_zmax);
+					cube_t const cube(mpos.x-grass_length, mpos.x+DX_VAL+grass_length, mpos.y-grass_length, mpos.y+DY_VAL+grass_length, z_min_matrix[y][x], grass_zmax);
 					visible = camera_pdu.cube_visible(cube);
 				}
 				if (visible && dist_less_than(camera, mpos, 1000.0*grass_width)) { // nearby grass
@@ -713,22 +706,23 @@ public:
 					beg_ix = mesh_to_grass_map[ix];
 				}
 				else if (!visible && last_visible) { // end a segment
-					draw_range(beg_ix, mesh_to_grass_map[ix]);
+					add_range(3*beg_ix, 3*mesh_to_grass_map[ix]);
 				}
 				last_visible = visible;
 			}
 		}
-		if (last_visible) {draw_range(beg_ix, (unsigned)grass.size());}
-		end_draw();
+		if (last_visible) {add_range(3*beg_ix, 3*grass.size());}
+		draw_and_clear(use_grass_tess ? GL_PATCHES : GL_TRIANGLES);
 		s.end_shader();
 
 		if (!nearby_ixs.empty()) {
 			setup_shaders(s, 0);
 			begin_draw();
-			for (unsigned ix : nearby_ixs) {draw_range(mesh_to_grass_map[ix], mesh_to_grass_map[ix+1]);}
-			end_draw();
+			for (unsigned ix : nearby_ixs) {add_range(3*mesh_to_grass_map[ix], 3*mesh_to_grass_map[ix+1]);}
+			draw_and_clear(use_grass_tess ? GL_PATCHES : GL_TRIANGLES);
 			s.end_shader();
 		}
+		end_draw();
 	}
 };
 

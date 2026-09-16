@@ -636,8 +636,8 @@ void multi_array_draw_t::clear_starts_counts() {
 	starts.clear();
 	counts.clear();
 }
-void multi_array_draw_t::draw() const {
-	glMultiDrawArrays(GL_TRIANGLE_STRIP, starts.data(), counts.data(), starts.size());
+void multi_array_draw_t::draw(int prim_type) const {
+	glMultiDrawArrays(prim_type, starts.data(), counts.data(), starts.size());
 	++num_frame_draw_calls;
 }
 

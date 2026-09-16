@@ -279,8 +279,8 @@ protected:
 public:
 	void add_range(unsigned start, unsigned end);
 	void clear_starts_counts();
-	void draw() const;
-	void draw_and_clear() {draw(); clear_starts_counts();}
+	void draw(int prim_type=GL_TRIANGLE_STRIP) const;
+	void draw_and_clear(int prim_type=GL_TRIANGLE_STRIP) {draw(prim_type); clear_starts_counts();}
 };
 
 
