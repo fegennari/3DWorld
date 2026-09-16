@@ -815,13 +815,8 @@ void draw_sized_point(dwobject &obj, float radius, float cd_scale, const colorRG
 	}
 	else {
 		int ndiv(int(4.0*sqrt(point_dia)));
-
-		if (is_droplet(type)) {
-			ndiv = min(ndiv/2, N_SPHERE_DIV/2);
-		}
-		else if (type == ROCK || type == SAND || type == DIRT || type == FRAGMENT) {
-			ndiv /= 2;
-		}
+		if (is_droplet(type)) {ndiv = min(ndiv/2, N_SPHERE_DIV/2);}
+		else if (type == ROCK || type == SAND || type == DIRT || type == FRAGMENT) {ndiv /= 2;}
 		ndiv = max(4, min(ndiv, N_SPHERE_DIV));
 	
 		if (ndiv > 3 && tail) { // cone on the tail of the raindrop
@@ -832,7 +827,7 @@ void draw_sized_point(dwobject &obj, float radius, float cd_scale, const colorRG
 		}
 		draw_sphere_vbo(pos, radius, ndiv, do_texture);
 	}
-	if (cull_face) glDisable(GL_CULL_FACE);
+	if (cull_face) {glDisable(GL_CULL_FACE);}
 	fgPopMatrix();
 }
 

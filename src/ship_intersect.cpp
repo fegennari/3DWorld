@@ -562,9 +562,8 @@ void ushadow_polygon::draw(upos_point_type const &pos) const {
 	unsigned ix(0);
 
 	for (unsigned i = 0; i < 2; ++i) { // ends (cull faces?)
-		for (unsigned j = 0; j < npts; ++j) {
-			verts[ix++].v = (p[i][i ? j : (npts-j-1)] - pos);
-		}
+		for (unsigned j = 0; j < npts; ++j) {verts[ix++].v = (p[i][i ? j : (npts-j-1)] - pos);}
+
 		if (npts == 4) { // complete the triangles from the quads
 			verts[ix++].v = (p[i][i ? 0 : 3] - pos);
 			verts[ix++].v = (p[i][i ? 2 : 1] - pos);
@@ -572,9 +571,7 @@ void ushadow_polygon::draw(upos_point_type const &pos) const {
 	}
 	for (unsigned i = 0; i < npts; ++i) { // sides
 		for (unsigned j = 0; j < 2; ++j) {
-			for (unsigned k = 0; k < 2; ++k) {
-				verts[ix++].v = (p[j][(i+(k^j))%npts] - pos);
-			}
+			for (unsigned k = 0; k < 2; ++k) {verts[ix++].v = (p[j][(i+(k^j))%npts] - pos);}
 		}
 		verts[ix++].v = (p[0][i] - pos); // complete the triangles from the quads
 		verts[ix++].v = (p[1][(i+1)%npts] - pos);

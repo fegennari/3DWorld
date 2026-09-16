@@ -232,10 +232,9 @@ void pt_line_drawer::add_textured_line(point const &v1, point const &v2, colorRG
 
 void pt_line_drawer::draw() const {
 	assert(!(lines.size() & 1));
-	if (!points.empty()) {draw_verts(points, GL_POINTS);}
-	if (!lines.empty ()) {draw_verts(lines,  GL_LINES );}
+	draw_verts(points, GL_POINTS);
+	draw_verts(lines,  GL_LINES );
 }
-
 void pt_line_drawer_no_lighting_t::draw() const {
 	assert(!(lines.size() & 1));
 	draw_verts(points, GL_POINTS);

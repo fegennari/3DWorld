@@ -782,8 +782,8 @@ class building_draw_t {
 				assert(!exclude); // not supported in this mode
 				bool const use_texture(!shadow_only && (!quad_verts.empty() || !tri_verts.empty()));
 				if (use_texture) {tex.set_gl(state);} // Note: colors are not disabled here
-				if (!quad_verts.empty()) {draw_quad_verts_as_tris(quad_verts, 0, 1, 1);}
-				if (!tri_verts .empty()) {draw_verts(tri_verts, GL_TRIANGLES, 0, 1);}
+				draw_quad_verts_as_tris(quad_verts, 0, 1, 1);
+				draw_verts(tri_verts, GL_TRIANGLES, 0, 1);
 				if (use_texture) {tex.unset_gl(state);}
 				enable_use_temp_vbo = 0;
 			}
