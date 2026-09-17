@@ -273,18 +273,20 @@ void free_fbo(unsigned &fbo_id) {
 void bind_pbo(unsigned pbo_id) {glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);}
 
 
+void bind_render_buffer(unsigned render_buffer) {
+	glBindRenderbuffer(GL_RENDERBUFFER, render_buffer);
+}
 unsigned create_depth_render_buffer(unsigned xsize, unsigned ysize, bool multisample) {
 	unsigned depthrenderbuffer(0);
 	glGenRenderbuffers(1, &depthrenderbuffer);
 	assert(depthrenderbuffer > 0);
-	glBindRenderbuffer(GL_RENDERBUFFER, depthrenderbuffer);
+	bind_render_buffer(depthrenderbuffer);
 	if (multisample) {glRenderbufferStorageMultisample(GL_RENDERBUFFER, NUM_TEX_MS_SAMPLES, GL_DEPTH_COMPONENT16, xsize, ysize);}
 	else {glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, xsize, ysize);}
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthrenderbuffer);
 	return depthrenderbuffer;
 }
-void disable_and_free_render_buffer(unsigned &render_buffer) {
-	glBindRenderbuffer(GL_RENDERBUFFER, 0);
+void free_render_buffer(unsigned &render_buffer) {
 	if (render_buffer > 0) {glDeleteRenderbuffers(1, &render_buffer);}
 	render_buffer = 0;
 }
@@ -332,18 +334,22 @@ void render_to_texture_t::render(texture_pair_t &tpair, float xsize, float ysize
 	unsigned const tid(tpair.get_tid());
 	unsigned layer(0);
 	enable_fbo(fbo_id, tid, 0, tpair.multisample, 1, &layer, 1); // rebind_tid=1
-	unsigned render_buffer(use_depth_buffer ? create_depth_render_buffer(tsize, tsize, tpair.multisample) : 0);
 
+	if (use_depth_buffer) {
+		if (!render_buffer) {render_buffer = create_depth_render_buffer(tsize, tsize, tpair.multisample);}
+		else {bind_render_buffer(render_buffer);}
+	}
 	for (unsigned d = 0; d < 2; ++d) { // {color, normal}
 		layer = d;
 		if (d == 1) {bind_fbo_texture(fbo_id, tid, 0, tpair.multisample, 1, &layer);} // bind second texture; is_depth_fbo=0, is_array=1
 		set_temp_clear_color(clear_colors[d], use_depth_buffer);
 		draw_geom(d != 0);
 	}
-	if (use_depth_buffer) {disable_and_free_render_buffer(render_buffer);}
+	if (use_depth_buffer) {bind_render_buffer(0);}
 	post_render(); // restore state
 }
 render_to_texture_t::~render_to_texture_t() {
+	free_render_buffer(render_buffer);
 	free_fbo(fbo_id);
 }
 

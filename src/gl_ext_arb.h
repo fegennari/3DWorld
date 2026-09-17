@@ -49,8 +49,9 @@ void bind_fbo(unsigned fbo_id);
 void disable_fbo();
 void free_fbo(unsigned &fbo_id);
 void bind_pbo(unsigned pbo_id);
+void bind_render_buffer(unsigned render_buffer);
 unsigned create_depth_render_buffer(unsigned xsize, unsigned ysize, bool multisample=0);
-void disable_and_free_render_buffer(unsigned &render_buffer);
+void free_render_buffer(unsigned &render_buffer);
 bool gen_mipmaps(unsigned dim=2);
 void enable_instancing_for_shader_loc (int loc);
 void disable_instancing_for_shader_loc(int loc);
@@ -325,7 +326,7 @@ struct texture_pair_t { // color + normal in texture array
 };
 
 class render_to_texture_t {
-	unsigned tsize, fbo_id=0;
+	unsigned tsize, fbo_id=0, render_buffer=0;
 
 	void pre_render(float xsize, float ysize, unsigned nx, unsigned ny, point const &center, vector3d const &view_dir) const;
 	static void post_render();

@@ -2465,7 +2465,7 @@ void tree_cont_t::clear_context() {
 	for (iterator i = begin(); i != end(); ++i) {i->clear_context();}
 }
 void tree_cont_t::check_render_textures() {
-	//timer_t timer("Check Render Textures"); // 8 orients: 806 total, 130 max
+	//timer_t timer("Check Render Textures"); // 8 orients: 397 total, 67 max
 	for (iterator i = begin(); i != end(); ++i) {i->check_render_textures();}
 }
 void tree_cont_t::apply_exp_damage(point const &epos, float damage, float bradius, int type) {
