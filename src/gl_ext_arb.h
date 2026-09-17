@@ -44,7 +44,7 @@ unsigned create_vao();
 void bind_vao(unsigned vao);
 void delete_vao(unsigned vao);
 void create_fbo(unsigned &fbo_id, unsigned depth_tid, bool is_depth_fbo=0, bool multisample=0, bool is_array=0, unsigned *layer=nullptr);
-void enable_fbo(unsigned &fbo_id, unsigned tid,       bool is_depth_fbo=0, bool multisample=0, bool is_array=0, unsigned *layer=nullptr);
+void enable_fbo(unsigned &fbo_id, unsigned tid,       bool is_depth_fbo=0, bool multisample=0, bool is_array=0, unsigned *layer=nullptr, bool rebind_tid=0);
 void bind_fbo(unsigned fbo_id);
 void disable_fbo();
 void free_fbo(unsigned &fbo_id);
@@ -325,13 +325,13 @@ struct texture_pair_t { // color + normal in texture array
 };
 
 class render_to_texture_t {
-	unsigned tsize;
+	unsigned tsize, fbo_id=0;
 
 	void pre_render(float xsize, float ysize, unsigned nx, unsigned ny, point const &center, vector3d const &view_dir) const;
 	static void post_render();
 public:
 	render_to_texture_t(unsigned tsize_) : tsize(tsize_) {}
-	virtual ~render_to_texture_t() {}
+	virtual ~render_to_texture_t();
 	void render(texture_pair_t &tpair, float xsize, float ysize, point const &center, vector3d const &view_dir,
 		colorRGBA const &bkg_color, bool use_depth_buffer);
 	virtual void draw_geom(bool is_normal_pass) = 0;

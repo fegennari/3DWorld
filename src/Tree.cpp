@@ -935,16 +935,14 @@ void tree_data_t::check_render_textures() {
 
 	if (render_textures.empty()) {render_textures.resize(num_tree_bb_orients);}
 
-	for (unsigned orient = 0; orient < num_tree_bb_orients; ++orient) {
-		tree_texture_view_t &rt(render_textures[orient]);
-
-		if (!rt.leaf_tex.is_valid() && !leaves.empty()) {
-			render_tree_leaves_to_texture_t(TREE_BILLBOARD_SIZE).render_tree(*this, rt.leaf_tex, orient);
-		}
-		if (!rt.branch_tex.is_valid() && !all_cylins.empty()) {
-			render_tree_branches_to_texture_t(TREE_BILLBOARD_SIZE).render_tree(*this, rt.branch_tex, orient);
-		}
-	} // for orient
+	if (!render_textures[0].leaf_tex.is_valid() && !leaves.empty()) { // all orients generated together, only need to check first orient
+		render_tree_leaves_to_texture_t rtt(TREE_BILLBOARD_SIZE);
+		for (unsigned orient = 0; orient < num_tree_bb_orients; ++orient) {rtt.render_tree(*this, render_textures[orient].leaf_tex, orient);}
+	}
+	if (!render_textures[0].branch_tex.is_valid() && !all_cylins.empty()) { // all orients generated together, only need to check first orient
+		render_tree_branches_to_texture_t rtt(TREE_BILLBOARD_SIZE);
+		for (unsigned orient = 0; orient < num_tree_bb_orients; ++orient) {rtt.render_tree(*this, render_textures[orient].branch_tex, orient);}
+	}
 }
 
 void tree_data_t::pre_branch_draw(shader_t &s, bool shadow_only) {
@@ -2467,7 +2465,7 @@ void tree_cont_t::clear_context() {
 	for (iterator i = begin(); i != end(); ++i) {i->clear_context();}
 }
 void tree_cont_t::check_render_textures() {
-	//timer_t timer("Check Render Textures"); // 1463 total, 239 max
+	//timer_t timer("Check Render Textures"); // 8 orients: 806 total, 130 max
 	for (iterator i = begin(); i != end(); ++i) {i->check_render_textures();}
 }
 void tree_cont_t::apply_exp_damage(point const &epos, float damage, float bradius, int type) {

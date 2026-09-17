@@ -252,10 +252,15 @@ void create_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo, bool multisam
 }
 
 
-void enable_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo, bool multisample, bool is_array, unsigned *layer) {
-	if (!fbo_id) {create_fbo(fbo_id, tid, is_depth_fbo, multisample, is_array, layer);}
-	assert(fbo_id > 0);
-	bind_fbo(fbo_id); // rendering offscreen
+void enable_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo, bool multisample, bool is_array, unsigned *layer, bool rebind_tid) { // rendering offscreen
+	if (!fbo_id) {
+		create_fbo(fbo_id, tid, is_depth_fbo, multisample, is_array, layer);
+		assert(fbo_id > 0);
+	}
+	else {
+		bind_fbo(fbo_id);
+		if (rebind_tid) {bind_fbo_texture(fbo_id, tid, is_depth_fbo, multisample, is_array, layer);} // still have to bind in case tid changed
+	}
 }
 void bind_fbo(unsigned fbo_id) {glBindFramebuffer(GL_FRAMEBUFFER, fbo_id);}
 void disable_fbo() {glBindFramebuffer(GL_FRAMEBUFFER, 0);}
@@ -325,8 +330,8 @@ void render_to_texture_t::render(texture_pair_t &tpair, float xsize, float ysize
 	tpair.ensure_tid(tsize, 0); // mipmap=0
 	colorRGBA const clear_normal(0.5, 0.5, 0.5, 0.0), clear_colors[2] = {bkg_color, clear_normal};
 	unsigned const tid(tpair.get_tid());
-	unsigned fbo_id(0), layer(0);
-	enable_fbo(fbo_id, tid, 0, tpair.multisample, 1, &layer); // too slow to create and free fbos every time?
+	unsigned layer(0);
+	enable_fbo(fbo_id, tid, 0, tpair.multisample, 1, &layer, 1); // rebind_tid=1
 	unsigned render_buffer(use_depth_buffer ? create_depth_render_buffer(tsize, tsize, tpair.multisample) : 0);
 
 	for (unsigned d = 0; d < 2; ++d) { // {color, normal}
@@ -336,8 +341,10 @@ void render_to_texture_t::render(texture_pair_t &tpair, float xsize, float ysize
 		draw_geom(d != 0);
 	}
 	if (use_depth_buffer) {disable_and_free_render_buffer(render_buffer);}
-	free_fbo(fbo_id);
 	post_render(); // restore state
+}
+render_to_texture_t::~render_to_texture_t() {
+	free_fbo(fbo_id);
 }
 
 
