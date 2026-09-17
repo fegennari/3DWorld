@@ -13,10 +13,9 @@
 #include "gl_ext_arb.h"
 
 
-bool const DEBUG_COLORCODE   = 0;
-bool const DEBUG_COLOR_COLLS = 0;
-bool const SHOW_DRAW_TIME    = 0;
-float const NDIV_SCALE       = 1.6;
+bool const DEBUG_COLORCODE = 0;
+bool const SHOW_DRAW_TIME  = 0;
+float const NDIV_SCALE     = 1.6;
 
 
 // Global Variables
@@ -643,14 +642,6 @@ void draw_group(obj_group &objg, shader_t &s, lt_atten_manager_t &lt_atten_manag
 				((obj.flags & TYPE_FLAG) ? tri_fragments : sphere_fragments).push_back(tid_color_to_ix_t(tid, color2, j)); // if shatterable, use triangle
 				break;
 			default:
-				if (DEBUG_COLOR_COLLS) {
-					int cindex;
-					float const time(TIMESTEP*fticks);
-					point const pos2(pos + obj.velocity*time - point(0.0, 0.0, -base_gravity*GRAVITY*time*time*otype.gravity));
-					s.set_cur_color(check_coll_line(pos, pos2, cindex, -1, 0, 0) ? RED : GREEN);
-					vert_wrap_t const lines[2] = {pos, pos2};
-					draw_verts(lines, 2, GL_LINES);
-				}
 				draw_sized_point(obj, tradius, cd_scale, color2, get_textured_color(tid, color2), do_texture, s, 0);
 			} // switch (type)
 		} // for j

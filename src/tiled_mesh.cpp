@@ -529,7 +529,6 @@ bool tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen, bool no_wait) {
 	radius = 0.5*sqrt((DX_VAL*DX_VAL + DY_VAL*DY_VAL)*size*size + (mzmax - mzmin)*(mzmax - mzmin));
 	ptzmax = dtzmax = mzmin; // no trees yet
 	if (!can_have_trees()) {no_trees = 1;} // mark as no_trees so that trees don't pop when water is disabled later
-	if (DEBUG_TILES) {cout << "new tile coords: " << x1 << " " << y1 << " " << x2 << " " << y2 << endl;}
 	return 1; // results are ready
 }
 

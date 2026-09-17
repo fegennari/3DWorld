@@ -93,7 +93,6 @@ colorRGBA get_avg_leaf_color(unsigned type) {
 }
 
 
-// better place for this?
 struct render_to_texture_shader_t : public render_to_texture_t {
 	shader_t shaders[2]; // color, normal
 

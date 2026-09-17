@@ -14,7 +14,6 @@ float const W_TEX_SCALE0     = 1.0;
 float const WATER_WIND_EFF   = 0.0005;
 float const SURF_HEAL_RATE   = 0.005;
 float const MAX_SURFD        = 20.0;
-int   const DEBUG_COLLS      = 0; // 0 = disabled, 1 = lines, 2 = cubes
 int   const DISABLE_TEXTURES = 0;
 
 
@@ -436,39 +435,6 @@ void display_mesh(bool shadow_pass, bool reflection_pass) { // fast array versio
 	}
 	else {
 		uw_mesh_lighting.clear();
-	}
-	if (DEBUG_COLLS) {
-		shader_t s;
-
-		if (DEBUG_COLLS == 2) {
-			enable_blend();
-			s.begin_color_only_shader(colorRGBA(1.0, 0.0, 0.0, 0.1));
-
-			for (int i = 0; i < MESH_Y_SIZE-1; ++i) {
-				for (int j = 0; j < MESH_X_SIZE; ++j) {
-					if (v_collision_matrix[i][j].zmin < v_collision_matrix[i][j].zmax) {
-						point const p1(get_xval(j+0), get_yval(i+0),v_collision_matrix[i][j].zmin);
-						point const p2(get_xval(j+1), get_yval(i+1),v_collision_matrix[i][j].zmax);
-						draw_cube((p1 + p2)*0.5, (p2.x - p1.x), (p2.y - p1.y), (p2.z - p1.z), 0);
-					}
-				}
-			}
-			disable_blend();
-		}
-		else {
-			ensure_outlined_polygons();
-			s.begin_color_only_shader(BLUE);
-			vector<vert_wrap_t> verts;
-
-			for (int i = 0; i < MESH_Y_SIZE-1; ++i) {			
-				for (int j = 0; j < MESH_X_SIZE; ++j) {
-					for (unsigned d = 0; d < 2; ++d) {verts.emplace_back(point(get_xval(j), get_yval(i+d), max(czmin, v_collision_matrix[i+d][j].zmax)));}
-				}
-				draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);
-			}
-			set_fill_mode();
-		}
-		s.end_shader();
 	}
 	if (!reflection_pass) {update_landscape_texture();}
 

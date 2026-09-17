@@ -39,8 +39,6 @@ unsigned const MAX_RIPPLE_STEPS    = 2;
 unsigned const UPDATE_STEP         = 8; // update water only every nth ripple computation
 int      const EROSION_DIST        = 4;
 float    const EROSION_RATE        = 0.0; //0.01
-bool     const DEBUG_WATER_TIME    = 0; // DEBUGGING
-bool     const DEBUG_RIPPLE_TIME   = 0;
 bool     const NO_ICE_RIPPLES      = 0;
 bool     const USE_SEA_FOAM        = 1;
 int      const UPDATE_UW_LANDSCAPE = 2;
@@ -411,7 +409,6 @@ public:
 
 void draw_water(bool no_update, bool draw_fast) {
 
-	RESET_TIME;
 	int wsi(0), last_water(2), last_draw(0), lc0(landscape_changed);
 	colorRGBA color(WHITE);
 	static float tdx(0.0), tdy(0.0);
@@ -420,7 +417,6 @@ void draw_water(bool no_update, bool draw_fast) {
 	if (!no_update) {
 		process_water_springs();
 		add_waves();
-		if (DEBUG_WATER_TIME) {PRINT_TIME("0 Add Waves");}
 	}
 	if (DISABLE_WATER) return;
 	bool const use_foam(USE_SEA_FOAM && !water_is_lava);
@@ -436,12 +432,10 @@ void draw_water(bool no_update, bool draw_fast) {
 		tdy -= WATER_WIND_EFF2*wind.y*fticks;
 	}
 	float const tx_val(tx_scale*xoff2*DX_VAL + tdx), ty_val(ty_scale*yoff2*DX_VAL + tdy);
-	if (DEBUG_WATER_TIME) {PRINT_TIME("1 Init");}
 
 	// draw exterior water (oceans)
 	if (!enable_clip_plane_z || water_plane_z > clip_plane_z) { // outside water
 		if (camera.z >= water_plane_z) {draw_water_sides(s, 1);}
-		if (DEBUG_WATER_TIME) {PRINT_TIME("2.1 Draw Water Sides");}
 		enable_blend();
 		select_water_ice_texture(s, color);
 		setup_texgen(tx_scale, ty_scale, tx_val, ty_val, 0.0, s, 0);
@@ -466,7 +460,6 @@ void draw_water(bool no_update, bool draw_fast) {
 		wsdraw.draw();
 		wsdraw.clear();
 		if (use_foam) {s.add_uniform_float("detail_tex_scale", 0.0);}
-		if (DEBUG_WATER_TIME) {PRINT_TIME("2.2 Water Draw Fixed");}
 		if (camera.z < water_plane_z) {draw_water_sides(s, 1);}
 	}
 	static rand_gen_t rgen;
@@ -481,7 +474,6 @@ void draw_water(bool no_update, bool draw_fast) {
 				modify_grass_at(get_mesh_xyz_pos(j, i), HALF_DXY, 0, 0, 0, 1); // check underwater
 			}
 		}
-		if (DEBUG_WATER_TIME) {PRINT_TIME("3 Grass Update");}
 	}
 	select_water_ice_texture(s, color);
 	setup_texgen(tx_scale, ty_scale, tx_val, ty_val, 0.0, s, 0);
@@ -489,7 +481,6 @@ void draw_water(bool no_update, bool draw_fast) {
 	
 	if (!no_update) {
 		update_valleys_and_draw_spillover(); // draws spillover sections using the same shader
-		if (DEBUG_WATER_TIME) {PRINT_TIME("4 Water Valleys Update");}
 		assert(fticks != 0.0);
 
 		if (animate2) { // call the function that computes the ripple effect
@@ -503,7 +494,6 @@ void draw_water(bool no_update, bool draw_fast) {
 			for (unsigned i = 0; i < num_steps; ++i) {compute_ripples();}
 			calc_water_normals();
 		}
-		if (DEBUG_WATER_TIME) {PRINT_TIME("5 Water Ripple Update");}
 	}
 	unsigned nin(0);
 	int xin[4] = {}, yin[4] = {}, last_wsi(-1);
@@ -612,7 +602,6 @@ void draw_water(bool no_update, bool draw_fast) {
 		if (!lc0 && rgen.rand()%5 != 0) {landscape_changed = 0;} // reset, only update landscape 20% of the time
 		first_water_run = 0;
 	}
-	if (DEBUG_WATER_TIME) {PRINT_TIME("6 Water Draw");}
 }
 
 
@@ -651,9 +640,8 @@ inline void update_water_edges(int i, int j) {
 void compute_ripples() {
 
 	if (DISABLE_WATER) return;
-	static unsigned dtime1(0), dtime2(0), counter(0);
+	static unsigned counter(0);
 	bool const update_iter((counter%UPDATE_STEP) == 0);
-	RESET_TIME;
 
 	if (temperature > W_FREEZE_POINT && (start_ripple || first_water_run)) {
 		float const tstep(max(fticks, 0.25f)); // ensure some min amount of damping to prevent unstable ripples when the framerate is very high
@@ -739,7 +727,6 @@ void compute_ripples() {
 				fix_fp_mag(acc);
 			} // for j
 		} // for i
-		if (DEBUG_RIPPLE_TIME) dtime1 += GET_DELTA_TIME;
 		
 		for (int i = 0; i < MESH_Y_SIZE; ++i) {
 			for (int j = 0; j < MESH_X_SIZE; ++j) {
@@ -779,7 +766,6 @@ void compute_ripples() {
 				}
 			} // for j
 		} // for i
-		if (DEBUG_RIPPLE_TIME) dtime2 += GET_DELTA_TIME;
 	}
 	else { // no ripple
 		matrix_clear_2d(ripples);
@@ -795,11 +781,6 @@ void compute_ripples() {
 		}
 	} // ripple
 	++counter;
-
-	if (DEBUG_RIPPLE_TIME && (counter%20) == 0) {
-		cout << "times = " << dtime1 << ", " << dtime2 << endl; // cumulative
-		dtime1 = dtime2 = 0;
-	}
 }
 
 

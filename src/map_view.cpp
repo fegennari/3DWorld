@@ -264,8 +264,6 @@ void draw_overhead_map() {
 						}
 						if (over_mesh && czmin < czmax) { // check cobjs
 							// Note: as an optimization, can skip the cobj test if no cobjs at this pos, but it makes little difference and will miss dynamic objects
-							//int const xpos(get_xpos(xval)), ypos(get_ypos(yval));
-							//if (point_outside_mesh(xpos, ypos) || v_collision_matrix[ypos][xpos].zmin == v_collision_matrix[ypos][xpos].zmax) {}
 							point p2(xval, yval, max(mh, czmin));
 							float t;
 							int cindex0(-1);

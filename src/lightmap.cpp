@@ -1200,7 +1200,6 @@ void add_dynamic_lights_ground(float &dlight_add_thresh) {
 					float const px(get_xval(x << DL_GRID_BS)), py(get_yval(y << DL_GRID_BS));
 					if (!pdu.cube_visible_for_light_cone(cube_t(px-grid_dx, px+grid_dx, py-grid_dy, py+grid_dy, z1, z2))) continue; // tile not in spotlight cylinder
 				}
-				//if (DL_GRID_BS == 0 && bcube.z1() > v_collision_matrix[y << DL_GRID_BS][x << DL_GRID_BS].zmax) continue; // should be legal, but doesn't seem to help
 				ldynamic[offset + x].add_light(ix, ldynamic_enabled[offset + x]); // could do flow clipping here?
 			} // for x
 		} // for y
