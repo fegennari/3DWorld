@@ -58,7 +58,7 @@ tree_placer_t tree_placer;
 
 
 extern bool has_snow, has_dl_sources, gen_tree_roots, tt_lightning_enabled, tree_indir_lighting, begin_motion, enable_grass_fire, rotate_trees, enable_reduce_leaves;
-extern bool tree_bindless_textures, enable_use_temp_vbo;
+extern bool tree_bindless_textures, enable_use_temp_vbo, comp_billboard_textures;
 extern int num_trees, do_zoom, display_mode, animate2, iticks, draw_model, frame_counter;
 extern int xoff2, yoff2, rand_gen_index, leaf_color_changed, scrolling, dx_scroll, dy_scroll, window_width, window_height;
 extern unsigned smoke_tid;
@@ -907,7 +907,7 @@ void tree_data_t::on_leaf_color_change() {
 
 unsigned tree_data_t::get_gpu_mem() const {
 	unsigned mem(branch_manager.gpu_mem + (leaf_vbo ? get_leaf_data_mem() : 0));
-	unsigned const bbsz(TREE_BILLBOARD_SIZE*TREE_BILLBOARD_SIZE*8); // 8 bytes per pixel
+	unsigned const bbsz(TREE_BILLBOARD_SIZE*TREE_BILLBOARD_SIZE*(comp_billboard_textures ? 2 : 8)); // 8 bytes per pixel (2 if compressed)
 
 	for (tree_texture_view_t const &rt : render_textures) {
 		if (rt.leaf_tex.is_valid  ()) {mem += bbsz;}
@@ -2461,7 +2461,7 @@ void tree_cont_t::clear_context() {
 	for (iterator i = begin(); i != end(); ++i) {i->clear_context();}
 }
 void tree_cont_t::check_render_textures() {
-	//timer_t timer("Check Render Textures"); // 8 orients: 397 total, 67 max | 609/98 compressed
+	//timer_t timer("Check Render Textures"); // 8 orients: 397 total, 67 max | 550/103 compressed
 	render_tree_leaves_to_texture_t   rtl(TREE_BILLBOARD_SIZE);
 	render_tree_branches_to_texture_t rtb(TREE_BILLBOARD_SIZE);
 	for (iterator i = begin(); i != end(); ++i) {i->check_render_textures(rtl, rtb);}

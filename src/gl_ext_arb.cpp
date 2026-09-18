@@ -5,9 +5,10 @@
 #include "gl_ext_arb.h"
 #include "function_registry.h"
 #include "inlines.h" // for render_to_texture_t::render() stuff
+#include "shaders.h"
 
 
-extern bool use_core_context;
+extern bool use_core_context, comp_billboard_textures;
 
 
 void init_glew() {
@@ -325,13 +326,41 @@ void set_temp_clear_color(colorRGBA const &clear_color, bool clear_depth, bool c
 	glClearColor_rgba(orig_clear_color);
 }
 
+
+class billboard_compressor_t {
+	unsigned ssbo=0; // for compression staging
+	size_t const comp_bytes = 64 * 64 * 2 * 16; // 64x64 blocks * 2 slices * 16 bytes
+	shader_t comp_shader; // not stored as a compute shader type; only using this for loading the shader and linking/setting the program
+public:
+	void do_compress(unsigned uncomp_tex, unsigned comp_tex) {
+		if (!ssbo) { // create once
+			glCreateBuffers(1, &ssbo);
+			glNamedBufferStorage(ssbo, comp_bytes, NULL, GL_DYNAMIC_STORAGE_BIT);
+			comp_shader.set_comp_shader("billboard_texture_compress");
+			comp_shader.begin_shader();
+		}
+		comp_shader.make_current();
+		bind_texture_tu(uncomp_tex, 0);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssbo);
+		glDispatchCompute(8, 8, 2); // 64 / 8 = 8 groups for X/Y, 2 layers for Z
+		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT); // sync memory writes
+		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, ssbo); // transfer directly from SSBO into the final compressed texture array
+		glCompressedTextureSubImage3D(comp_tex, 0, 0, 0, 0, 256, 256, 2, GL_COMPRESSED_RGBA_S3TC_DXT5_EXT, comp_bytes, 0);
+		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+		comp_shader.disable();
+	}
+};
+
+billboard_compressor_t billboard_compressor;
+
 void render_to_texture_t::render(texture_pair_t &tpair, float xsize, float ysize, point const &center, vector3d const &view_dir,
 	colorRGBA const &bkg_color, bool use_depth_buffer)
 {
 	pre_render(xsize, ysize, 1, 1, center, view_dir); // setup matrices, etc.
-	tpair.ensure_tid(tsize, 0); // mipmap=0
+	texture_pair_t &target_tp(comp_billboard_textures ? temp_tp : tpair);
+	target_tp.ensure_tid(tsize, 0); // mipmap=0
 	colorRGBA const clear_normal(0.5, 0.5, 0.5, 0.0), clear_colors[2] = {bkg_color, clear_normal};
-	unsigned const tid(tpair.get_tid());
+	unsigned const tid(target_tp.get_tid());
 	unsigned layer(0);
 	enable_fbo(fbo_id, tid, 0, tpair.multisample, 1, &layer, 1); // rebind_tid=1
 
@@ -347,8 +376,19 @@ void render_to_texture_t::render(texture_pair_t &tpair, float xsize, float ysize
 	}
 	if (use_depth_buffer) {bind_render_buffer(0);}
 	post_render(); // restore state
+
+	if (comp_billboard_textures) { // compress the texture
+		assert(!tpair.multisample); // not supported
+		assert(tsize == 256); // compute shader is hard-coded to this value
+		unsigned comp_tid(0);
+		setup_texture(comp_tid, 0, 0, 0, 0, 0, 0, 1.0, 1, tpair.multisample); // is_array=1
+		glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_COMPRESSED_RGBA_S3TC_DXT5_EXT, tsize, tsize, 2);
+		billboard_compressor.do_compress(tid, comp_tid);
+		tpair.set_tid(comp_tid);
+	}
 }
 render_to_texture_t::~render_to_texture_t() {
+	temp_tp.free_context();
 	free_render_buffer(render_buffer);
 	free_fbo(fbo_id);
 }

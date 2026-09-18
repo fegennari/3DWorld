@@ -1,0 +1,128 @@
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 2) in; // 2 layers
+
+layout(binding = 0) uniform sampler2DArray u_CombinedArray; 
+
+layout(std430, binding = 1) buffer BlockBuffer { 
+    uint packedData[]; 
+};
+
+uint packRGB565(vec3 rgb) {
+    uint r = uint(clamp(rgb.r * 31.0, 0.0, 31.0));
+    uint g = uint(clamp(rgb.g * 63.0, 0.0, 63.0));
+    uint b = uint(clamp(rgb.b * 31.0, 0.0, 31.0));
+    return (r << 11) | (g << 5) | b;
+}
+
+void main() {
+    ivec3 blockCoord = ivec3(gl_GlobalInvocationID.xyz);
+    if (blockCoord.x >= 64 || blockCoord.y >= 64) return; // Boundary safeguard
+    // Calculate top-left pixel coordinates of the 4x4 target block
+    ivec3 pixelCoord = ivec3(blockCoord.x * 4, blockCoord.y * 4, blockCoord.z);
+    int layer = blockCoord.z;
+    // --- GATHER 4x4 BLOCK SAMPLES ---
+    vec4 blockTexels[16];
+    float minA = 1.0; float maxA = 0.0;
+    vec3 minRGB = vec3(1.0); vec3 maxRGB = vec3(0.0);
+
+    for(int i = 0; i < 16; ++i) {
+        ivec3 offset = ivec3(i % 4, i / 4, 0);
+        vec4 texel = texelFetch(u_CombinedArray, pixelCoord + offset, 0);
+        blockTexels[i] = texel;
+        // Track bounding metrics for endpoints
+        minRGB = min(minRGB, texel.rgb);
+        maxRGB = max(maxRGB, texel.rgb);
+        minA = min(minA, texel.a);
+        maxA = max(maxA, texel.a);
+    }
+    // --- COMPRESS ALPHA BLOCK (High-Quality 48-bit Evaluation) ---
+    uint a0 = uint(clamp(maxA * 255.0, 0.0, 255.0));
+    uint a1 = uint(clamp(minA * 255.0, 0.0, 255.0));
+    
+    // Fallback optimization if alpha is entirely solid/constant in this block
+    if (a0 == a1) {
+        a1 = 0; 
+    }
+    // Calculate the interpolation steps for the 8-alpha algorithm
+    float alphaSteps[8];
+    alphaSteps[0] = float(a0);
+    alphaSteps[1] = float(a1);
+    for (int i = 0; i < 6; ++i) {
+        alphaSteps[2 + i] = (((6 - i) * alphaSteps[0] + (1 + i) * alphaSteps[1]) / 7.0);
+    }
+    // Evaluate the closest 3-bit index match for every pixel inside the block
+    uint alphaIndices[16];
+    for (int i = 0; i < 16; ++i) {
+        float alphaVal = blockTexels[i].a * 255.0;
+        float minDiff = 100000.0;
+        uint bestIndex = 0;
+        
+        for (uint step = 0; step < 8; ++step) {
+            float diff = abs(alphaVal - alphaSteps[step]);
+            if (diff < minDiff) {
+                minDiff = diff;
+                bestIndex = step;
+            }
+        }
+        alphaIndices[i] = bestIndex;
+    }
+    // Pack the 16 separate 3-bit arrays into the low 16 bits and high 32 bits
+    uint alphaIndicesLow16 = 0;
+    alphaIndicesLow16 |= (alphaIndices[0] << 0);
+    alphaIndicesLow16 |= (alphaIndices[1] << 3);
+    alphaIndicesLow16 |= (alphaIndices[2] << 6);
+    alphaIndicesLow16 |= (alphaIndices[3] << 9);
+    alphaIndicesLow16 |= (alphaIndices[4] << 12);
+    alphaIndicesLow16 |= (alphaIndices[5] & 0x3) << 15; // First 2 bits of pixel 5
+    uint alphaIndicesHigh32 = 0;
+    alphaIndicesHigh32 |= (alphaIndices[5] >> 2); // Remaining 1 bit of pixel 5
+    alphaIndicesHigh32 |= (alphaIndices[6] << 1);
+    alphaIndicesHigh32 |= (alphaIndices[7] << 4);
+    alphaIndicesHigh32 |= (alphaIndices[8] << 7);
+    alphaIndicesHigh32 |= (alphaIndices[9] << 10);
+    alphaIndicesHigh32 |= (alphaIndices[10] << 13);
+    alphaIndicesHigh32 |= (alphaIndices[11] << 16);
+    alphaIndicesHigh32 |= (alphaIndices[12] << 19);
+    alphaIndicesHigh32 |= (alphaIndices[13] << 22);
+    alphaIndicesHigh32 |= (alphaIndices[14] << 25);
+    alphaIndicesHigh32 |= (alphaIndices[15] << 28);
+
+    // --- COMPRESS COLOR BLOCK (BC1/DXT1 standard engine) ---
+    uint c0 = packRGB565(maxRGB);
+    uint c1 = packRGB565(minRGB);
+
+    // If endpoints match, swap order slightly to handle basic transparency mode flags correctly
+    if (c0 < c1) {
+        uint temp = c0; c0 = c1; c1 = temp;
+        vec3 tempRGB = maxRGB; maxRGB = minRGB; minRGB = tempRGB;
+    }
+    // Interpolate BC1 color options
+    vec3 colorSteps[4];
+    colorSteps[0] = maxRGB;
+    colorSteps[1] = minRGB;
+    colorSteps[2] = (2.0 * colorSteps[0] + colorSteps[1]) / 3.0;
+    colorSteps[3] = (colorSteps[0] + 2.0 * colorSteps[1]) / 3.0;
+
+    // Evaluate the closest 2-bit color index match for every pixel
+    uint colorIndices = 0;
+    for (int i = 0; i < 16; ++i) {
+        vec3 pixelRGB = blockTexels[i].rgb;
+        float minDiff = 100000.0;
+        uint bestIndex = 0;
+
+        for (uint step = 0; step < 4; ++step) {
+            float diff = dot(pixelRGB - colorSteps[step], pixelRGB - colorSteps[step]);
+            if (diff < minDiff) {
+                minDiff = diff;
+                bestIndex = step;
+            }
+        }
+        colorIndices |= (bestIndex << (i * 2));
+    }
+    // 64x64 blocks per layer = 4,096 blocks.
+    uint blockIndex = (layer * 4096) + (blockCoord.y * 64) + blockCoord.x;
+    uint wordOffset = blockIndex * 4; // 16 bytes = 4 x 32-bit uints
+    packedData[wordOffset + 0] = (alphaIndicesLow16 << 16) | (a1 << 8) | a0;
+    packedData[wordOffset + 1] = alphaIndicesHigh32; 
+    packedData[wordOffset + 2] = (c1 << 16) | c0;
+    packedData[wordOffset + 3] = colorIndices;
+}

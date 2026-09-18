@@ -1124,6 +1124,7 @@
     <None Include="shaders\atmosphere.frag" />
     <None Include="shaders\atmosphere.vert" />
     <None Include="shaders\bcc_noise.part.frag" />
+    <None Include="shaders\billboard_texture_compress.comp" />
     <None Include="shaders\black_body_burn.part.frag" />
     <None Include="shaders\building_water.frag" />
     <None Include="shaders\building_water.vert" />

@@ -320,6 +320,7 @@ struct texture_pair_t { // color + normal in texture array
 	texture_pair_t(bool multisample_=0) : multisample(multisample_) {}
 	bool is_valid() const {return t.is_bound();}
 	unsigned get_tid() const {return t.tid;}
+	void set_tid(unsigned tid) {assert(!t.handle); t.tid = tid;} // for compression; can't be boound/resident
 	void free_context() {t.gl_delete();}
 	void bind_texture() const {t.bind_gl(0);} // tu_id=0
 	void ensure_tid(unsigned tsize, bool mipmap);
@@ -327,6 +328,7 @@ struct texture_pair_t { // color + normal in texture array
 
 class render_to_texture_t {
 	unsigned tsize, fbo_id=0, render_buffer=0;
+	texture_pair_t temp_tp;
 
 	void pre_render(float xsize, float ysize, unsigned nx, unsigned ny, point const &center, vector3d const &view_dir) const;
 	static void post_render();

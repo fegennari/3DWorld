@@ -1617,6 +1617,9 @@
     <None Include="shaders\trippy_waves.frag">
       <Filter>Shaders\frag\Fullscreen</Filter>
     </None>
+    <None Include="shaders\billboard_texture_compress.comp">
+      <Filter>Shaders\compute</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Script1.rc">
