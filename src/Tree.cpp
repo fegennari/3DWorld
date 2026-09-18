@@ -931,17 +931,13 @@ void tree::shift_tree(vector3d const &vd) {
 	if (tree_fire) {tree_fire->shift(vd);}
 }
 
-void tree_data_t::check_render_textures() {
+void tree_data_t::check_render_textures(render_tree_leaves_to_texture_t &rtl, render_tree_branches_to_texture_t &rtb) {
 
 	if (render_textures.empty()) {render_textures.resize(num_tree_bb_orients);}
 
-	if (!render_textures[0].leaf_tex.is_valid() && !leaves.empty()) { // all orients generated together, only need to check first orient
-		render_tree_leaves_to_texture_t rtt(TREE_BILLBOARD_SIZE);
-		for (unsigned orient = 0; orient < num_tree_bb_orients; ++orient) {rtt.render_tree(*this, render_textures[orient].leaf_tex, orient);}
-	}
-	if (!render_textures[0].branch_tex.is_valid() && !all_cylins.empty()) { // all orients generated together, only need to check first orient
-		render_tree_branches_to_texture_t rtt(TREE_BILLBOARD_SIZE);
-		for (unsigned orient = 0; orient < num_tree_bb_orients; ++orient) {rtt.render_tree(*this, render_textures[orient].branch_tex, orient);}
+	for (unsigned orient = 0; orient < num_tree_bb_orients; ++orient) {
+		if (!render_textures[orient].leaf_tex  .is_valid() && !leaves    .empty()) {rtl.render_tree(*this, render_textures[orient].leaf_tex,   orient);}
+		if (!render_textures[orient].branch_tex.is_valid() && !all_cylins.empty()) {rtb.render_tree(*this, render_textures[orient].branch_tex, orient);}
 	}
 }
 
@@ -2465,8 +2461,10 @@ void tree_cont_t::clear_context() {
 	for (iterator i = begin(); i != end(); ++i) {i->clear_context();}
 }
 void tree_cont_t::check_render_textures() {
-	//timer_t timer("Check Render Textures"); // 8 orients: 397 total, 67 max
-	for (iterator i = begin(); i != end(); ++i) {i->check_render_textures();}
+	//timer_t timer("Check Render Textures"); // 8 orients: 397 total, 67 max | 609/98 compressed
+	render_tree_leaves_to_texture_t   rtl(TREE_BILLBOARD_SIZE);
+	render_tree_branches_to_texture_t rtb(TREE_BILLBOARD_SIZE);
+	for (iterator i = begin(); i != end(); ++i) {i->check_render_textures(rtl, rtb);}
 }
 void tree_cont_t::apply_exp_damage(point const &epos, float damage, float bradius, int type) {
 	blastr const br(0, ETYPE_FIRE, NO_SOURCE, bradius, damage, epos, plus_z, YELLOW, RED);

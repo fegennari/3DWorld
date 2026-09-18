@@ -15,6 +15,8 @@ class tree_data_t;
 class cobj_bvh_tree;
 class tree;
 class tile_t;
+struct render_tree_leaves_to_texture_t;
+struct render_tree_branches_to_texture_t;
 
 // small tree classes
 enum {TREE_CLASS_NONE=0, TREE_CLASS_PINE, TREE_CLASS_DECID, TREE_CLASS_PALM, TREE_CLASS_DETAILED, NUM_TREE_CLASSES};
@@ -219,7 +221,7 @@ public:
 	texture_pair_t const &get_render_leaf_texture  (unsigned orient=0) const {return get_render_texture(orient).leaf_tex  ;}
 	texture_pair_t const &get_render_branch_texture(unsigned orient=0) const {return get_render_texture(orient).branch_tex;}
 	bool leaf_draw_setup(bool no_leaf_reset);
-	void check_render_textures();
+	void check_render_textures(render_tree_leaves_to_texture_t &rtl, render_tree_branches_to_texture_t &rtb);
 	void update_normal_for_leaf(unsigned i);
 	void reset_leaf_pos_norm();
 	void alloc_leaf_data() {leaf_data.resize(4*leaves.size());}
@@ -335,7 +337,7 @@ public:
 	bool get_no_delete()      const {return no_delete;}
 	void set_no_delete(bool no_delete_) {no_delete = no_delete_;}
 	bool operator<(tree const &t) const {return ((type != t.type) ? (type < t.type) : (tree_data < t.tree_data));}
-	void check_render_textures() {tdata().check_render_textures();}
+	void check_render_textures(render_tree_leaves_to_texture_t &rtl, render_tree_branches_to_texture_t &rtb) {tdata().check_render_textures(rtl, rtb);}
 	tree_leaf_ref_t choose_random_leaf(rand_gen_t &rgen) const;
 	bool spraypaint_leaves(point const &pos, float radius, colorRGBA const &color);
 	void blast_damage(blastr const *const blast_radius);
