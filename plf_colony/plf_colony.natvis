@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+
+	<!-- plf::colony<element_type, allocator_type, priority> -->
+	<Type Name="plf::colony&lt;*,*,*&gt;">
+		<DisplayString>{{ size={total_size} }}</DisplayString>
+		<Expand>
+			<Item Name="size" ExcludeView="simple">total_size</Item>
+			<Item Name="capacity" ExcludeView="simple">total_capacity</Item>
+
+			<!-- see colony_iterator::operator++ for item iteration -->
+			<CustomListItems MaxItemsPerView="100">
+				<Variable Name="group_pointer" InitialValue="begin_iterator.group_pointer" />
+				<Variable Name="element_pointer" InitialValue="begin_iterator.element_pointer" />
+				<Variable Name="skipfield_pointer" InitialValue="begin_iterator.skipfield_pointer" />
+				<Variable Name="skip" InitialValue="0" />
+
+				<Size>total_size</Size>
+				<Loop>
+					<Break Condition="element_pointer == end_iterator.element_pointer" />
+
+					<Item>*($T1*)element_pointer</Item>
+					<Exec>skip = *(++skipfield_pointer)</Exec>
+					<Exec>element_pointer += skip + 1</Exec>
+
+					<If Condition="element_pointer == aligned_pointer_type(*&amp; group_pointer->skipfield) &amp;&amp; group_pointer->next_group != nullptr">
+						<Exec>group_pointer = group_pointer->next_group</Exec>
+						<Exec>skipfield_pointer = group_pointer->skipfield</Exec>
+						<Exec>skip = *skipfield_pointer</Exec>
+						<Exec>element_pointer = aligned_pointer_type(*&amp; group_pointer->elements) + skip</Exec>
+					</If>
+					
+					<Exec>skipfield_pointer += skip</Exec>
+				</Loop>
+			</CustomListItems>
+
+		</Expand>
+	</Type>
+
+	<!-- colony_iterator<is_const> -->
+	<Type Name="plf::colony &lt;*,*,*&gt; :: colony_iterator &lt;*&gt;">
+		<DisplayString>{($T1*)element_pointer}</DisplayString>
+		<Expand>
+			<Item Name="[ptr]">($T1*)element_pointer</Item>
+		</Expand>
+	</Type>
+
+</AutoVisualizer>

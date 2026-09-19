@@ -420,7 +420,7 @@ void rgeom_mat_t::upload_draw_and_clear(tid_nm_pair_dstate_t &state) { // Note: 
 void building_materials_t::clear() {
 	invalidate();
 	for (rgeom_mat_t &m : *this) {m.clear();}
-	deque<rgeom_mat_t>::clear();
+	plf::colony<rgeom_mat_t>::clear();
 }
 unsigned building_materials_t::count_all_verts(bool shadow_only, bool reflect_only) const {
 	unsigned num_verts(0);
@@ -441,9 +441,9 @@ rgeom_mat_t &building_materials_t::get_material(tid_nm_pair_t const &tex) {
 		if (m.get_tot_vert_capacity() == 0) {rgeom_alloc.alloc_safe(m);} // existing but empty entry, allocate capacity from the allocator free list
 		return m;
 	}
-	emplace_back(tex); // not found, add a new material
-	rgeom_alloc.alloc_safe(back());
-	return back();
+	auto it(emplace(tex)); // not found, add a new material
+	rgeom_alloc.alloc_safe(*it);
+	return *it;
 }
 void building_materials_t::create_vbos(building_t const &building) { // up to ~100 materials and ~2M verts
 	for (rgeom_mat_t &m : *this) {m.create_vbo(building);}

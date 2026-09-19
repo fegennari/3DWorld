@@ -8,6 +8,7 @@
 #include "draw_utils.h" // for quad_batch_draw
 #include "pedestrians.h"
 #include "building_animals.h"
+#include "../plf_colony/plf_colony.h"
 
 
 class light_source;
@@ -420,7 +421,7 @@ public:
 	void upload_draw_and_clear(tid_nm_pair_dstate_t &state);
 }; // rgeom_mat_t
 
-struct building_materials_t : public deque<rgeom_mat_t> {
+struct building_materials_t : public plf::colony<rgeom_mat_t> {
 	bool valid=0;
 	void clear();
 	void invalidate() {valid = 0;}
