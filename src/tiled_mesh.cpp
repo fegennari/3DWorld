@@ -3125,6 +3125,7 @@ void tile_draw_t::billboard_tree_shader_setup(shader_t &s) {
 	if (tree_bindless_textures) { // vert, frag, and geom
 		s.set_prefixes("#extension GL_ARB_bindless_texture : require", 7); // must be at the top for AMD cards
 		s.set_prefixes("#define USE_BINDLESS_TEXTURES", 7);
+		//s.set_prefix("#extension GL_NV_gpu_shader5 : enable", 1); // FS
 	}
 	shared_shader_lighting_setup(s, 1);
 	s.begin_shader();

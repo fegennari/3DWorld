@@ -240,36 +240,35 @@ void tree_lod_render_t::render_billboards(shader_t &s, bool render_branches) con
 		static vector<vert_tree_bb_t> pts; // reused across frames
 
 		for (entry_t const &e : data) {
-			assert(e.td);
-			texture_pair_t const &tp(render_branches ? e.td->get_render_branch_texture(e.orient) : e.td->get_render_leaf_texture(e.orient));
-			float const br_x(render_branches ? e.td->br_x : e.td->lr_x), br_z(render_branches ? e.td->br_z : e.td->lr_z);
+			tree_data_t const &td(tree_data_manager[e.get_tid()]);
+			texture_pair_t const &tp(render_branches ? td.get_render_branch_texture(e.get_orient()) : td.get_render_leaf_texture(e.get_orient()));
+			float const br_x(render_branches ? td.br_x : td.lr_x), br_z(render_branches ? td.br_z : td.lr_z);
 			pts.emplace_back(vert_tc_color(e.pos, br_x, br_z, e.cw.c), tp.t.get_bindless_handle());
 		}
 		draw_and_clear_verts(pts, GL_POINTS);
 	}
 	else {
 		static vector<vert_tc_color> pts; // reused across frames
-		tree_data_t const *last_td(nullptr);
-		unsigned last_orient(0);
+		unsigned last_tid(0), last_orient(0);
 
 		for (entry_t const &e : data) { // combine all verts into a single dynamic VBO
-			assert(e.td);
-			pts.emplace_back(e.pos, (render_branches ? e.td->br_x : e.td->lr_x), (render_branches ? e.td->br_z : e.td->lr_z), e.cw.c);
+			tree_data_t const &td(tree_data_manager[e.get_tid()]);
+			pts.emplace_back(e.pos, (render_branches ? td.br_x : td.lr_x), (render_branches ? td.br_z : td.lr_z), e.cw.c);
 		}
 		set_ptr_state(pts.data(), pts.size(), 0, 1); // set_array_client_state=1
 		unsigned start_ix(0), cur_ix(0);
 
 		for (auto e = data.begin(); ; ++e, ++cur_ix) {
-			if (e != data.end() && e->td == last_td && e->orient == last_orient) continue; // same batch
+			if (e != data.end() && e->get_tid() == last_tid && e->get_orient() == last_orient) continue; // same batch
 			
-			if (last_td) {
-				assert(start_ix < cur_ix);
-				(render_branches ? last_td->get_render_branch_texture(last_orient) : last_td->get_render_leaf_texture(last_orient)).bind_texture();
+			if (start_ix < cur_ix) {
+				tree_data_t const &td(tree_data_manager[last_tid]);
+				(render_branches ? td.get_render_branch_texture(last_orient) : td.get_render_leaf_texture(last_orient)).bind_texture();
 				draw_arrays_wrapper(GL_POINTS, start_ix, (cur_ix - start_ix));
 			}
 			if (e == data.end()) break; // done
-			last_td     = e->td;
-			last_orient = e->orient;
+			last_tid    = e->get_tid();
+			last_orient = e->get_orient();
 			start_ix    = cur_ix;
 		} // for i
 		unset_ptr_state(pts.data());
@@ -1030,7 +1029,7 @@ void tree::draw_branches_top(shader_t &s, tree_lod_render_t &lod_renderer, bool 
 
 		if (td.get_render_branch_texture().is_valid() && size_scale < lod_start) {
 			geom_opacity = ((lod_denom == 0.0) ? 0.0 : CLIP_TO_01((size_scale - lod_end)/lod_denom));
-			lod_renderer.add_branches(&td, draw_pos, tree_camera_dir_to_orient(draw_pos, *this), (1.0 - geom_opacity), bcolor);
+			lod_renderer.add_branches(tree_data_manager.get_ix_for_ptr(tree_data), tree_camera_dir_to_orient(draw_pos, *this), draw_pos, (1.0 - geom_opacity), bcolor);
 		}
 		if (geom_opacity == 0.0) return;
 		s.set_uniform_float(lod_renderer.branch_opacity_loc, geom_opacity);
@@ -1083,7 +1082,8 @@ void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool sh
 
 		if (td.get_render_leaf_texture().is_valid() && size_scale < lod_start) {
 			geom_opacity = ((lod_denom == 0.0) ? 0.0 : CLIP_TO_01((size_scale - lod_end)/lod_denom));
-			lod_renderer.add_leaves(&td, (draw_pos + vector3d(0.0, 0.0, (td.lr_z_cent - td.sphere_center_zoff))), tree_camera_dir_to_orient(draw_pos, *this), (1.0 - geom_opacity));
+			lod_renderer.add_leaves(tree_data_manager.get_ix_for_ptr(tree_data), tree_camera_dir_to_orient(draw_pos, *this),
+				(draw_pos + vector3d(0.0, 0.0, (td.lr_z_cent - td.sphere_center_zoff))), (1.0 - geom_opacity));
 		}
 		if (geom_opacity == 0.0) return;
 		s.set_uniform_float(lod_renderer.leaf_opacity_loc, geom_opacity);
@@ -2164,7 +2164,7 @@ void tree_cont_t::add_new_tree(rand_gen_t &rgen, int &ttype) {
 
 	push_back(tree());
 	if (shared_tree_data.empty()) return; // no fixed ID
-	int tree_id(-1);
+	unsigned tree_id(0);
 
 	if (ttype >= 0) {
 		unsigned const num_per_type(max(1U, (unsigned)shared_tree_data.size()/NUM_TREE_TYPES));
@@ -2174,8 +2174,9 @@ void tree_cont_t::add_new_tree(rand_gen_t &rgen, int &ttype) {
 		tree_id = (rgen.rseed2 % shared_tree_data.size());
 		ttype   = tree_id % NUM_TREE_TYPES;
 	}
-	if (shared_tree_data[tree_id].is_created()) {ttype = shared_tree_data[tree_id].get_tree_type();} // in case there weren't enough generated to get the requested type
-	if (tree_id >= 0) {back().bind_to_td(&shared_tree_data[tree_id]);}
+	auto &td(shared_tree_data[tree_id]);
+	if (td.is_created()) {ttype = td.get_tree_type();} // in case there weren't enough generated to get the requested type
+	back().bind_to_td(&td);
 }
 
 bool tree_placer_t::have_small_trees() const {return (world_mode == WMODE_INF_TERRAIN && !tree_placer.blocks   .empty());}
@@ -2411,6 +2412,12 @@ size_t tree_data_manager_t::get_gpu_mem() const {
 	for (const_iterator i = begin(); i != end(); ++i) {mem += i->get_gpu_mem();}
 	return mem;
 }
+unsigned tree_data_manager_t::get_ix_for_ptr(tree_data_t const *td) const {
+	assert(!empty() && td >= data()); // must be in our range
+	unsigned const ix(td - data());
+	assert(ix < size());
+	return ix;
+}
 
 
 size_t tree_cont_t::get_gpu_mem() const {
@@ -2461,6 +2468,7 @@ void tree_cont_t::clear_context() {
 	for (iterator i = begin(); i != end(); ++i) {i->clear_context();}
 }
 void tree_cont_t::check_render_textures() {
+	assert(max_unique_trees > 0); // must use instanced trees for tiled terrain mode
 	//timer_t timer("Check Render Textures"); // 8 orients: 397 total, 67 max | 550/103 compressed
 	render_tree_leaves_to_texture_t   rtl(TREE_BILLBOARD_SIZE);
 	render_tree_branches_to_texture_t rtb(TREE_BILLBOARD_SIZE);

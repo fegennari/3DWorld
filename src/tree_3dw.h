@@ -24,14 +24,15 @@ enum {TREE_CLASS_NONE=0, TREE_CLASS_PINE, TREE_CLASS_DECID, TREE_CLASS_PALM, TRE
 
 class tree_lod_render_t {
 	struct entry_t {
-		tree_data_t const *td=nullptr;
+		unsigned tido=0; // 24 ID bits + 8 orient bits
 		point pos;
 		color_wrapper cw;
-		unsigned orient=0;
 
 		entry_t() {}
-		entry_t(tree_data_t const *td_, point const &pos_, unsigned o, colorRGBA const &color) : td(td_), pos(pos_), orient(o) {assert(td); cw.set_c4(color);}
-		bool operator<(entry_t const &e) const {return ((td == e.td) ? (orient < e.orient) : (td < e.td));} // comp tree data pointers then orient
+		entry_t(unsigned tid, unsigned orient, point const &pos_, colorRGBA const &color) : tido((tid<<8) + orient), pos(pos_) {cw.set_c4(color);}
+		unsigned get_tid   () const {return (tido >> 8  );}
+		unsigned get_orient() const {return (tido & 0xFF);}
+		bool operator<(entry_t const &e) const {return (tido < e.tido);} // comp tree ID then orient
 	};
 	vector<entry_t> leaf_vect, branch_vect;
 	bool enabled;
@@ -46,11 +47,11 @@ public:
 	bool empty()        const {return (!has_leaves() && !has_branches());}
 	void clear() {leaf_vect.clear(); branch_vect.clear();}
 
-	void add_leaves(tree_data_t const *td, point const &pos, unsigned orient, float opacity) {
-		leaf_vect.emplace_back(td, pos, orient, colorRGBA(1, 1, 1, opacity));
+	void add_leaves(unsigned tid, unsigned orient, point const &pos, float opacity) {
+		leaf_vect.emplace_back(tid, orient, pos, colorRGBA(1, 1, 1, opacity));
 	}
-	void add_branches(tree_data_t const *td, point const &pos, unsigned orient, float opacity, colorRGBA const &bcolor) {
-		branch_vect.emplace_back(td, pos, orient, colorRGBA(bcolor, opacity));
+	void add_branches(unsigned tid, unsigned orient, point const &pos, float opacity, colorRGBA const &bcolor) {
+		branch_vect.emplace_back(tid, orient, pos, colorRGBA(bcolor, opacity));
 	}
 	void finalize();
 	void render_billboards(shader_t &s, bool render_branches) const;
@@ -360,6 +361,7 @@ public:
 	void clear_context();
 	void on_leaf_color_change();
 	size_t get_gpu_mem() const;
+	unsigned get_ix_for_ptr(tree_data_t const *td) const;
 };
 
 
