@@ -1446,6 +1446,7 @@ void keyboard2(int key, int x, int y) { // handling of special keys
 		show_bool_option_change("Smoke Dynamic Lights", smoke_dlights);
 		break;
 	case GLUT_KEY_F11: // temporary toggle of core context mode
+		if (init_core_context) break; // can't switch core context mode off if a core context was created
 		use_core_context ^= 1;
 		show_bool_option_change("Core Context", use_core_context);
 		break;
