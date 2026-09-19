@@ -35,6 +35,8 @@ extern point cur_camera_pos_xlate;
 extern colorRGBA cur_fog_color;
 extern gl_light_params_t gl_light_params[MAX_SHADER_LIGHTS];
 
+void exit_openal();
+
 
 void set_one_texture(shader_t &s, unsigned tid, unsigned tu_id, const char *const name) {
 	assert(tid);
@@ -692,6 +694,7 @@ unsigned shader_t::get_shader(string const &name, unsigned type) const {
 		if (failed) {
 			if (fullscreen || !yes_no_query("Retry?")) { // don't query the user when maximized
 				cerr << "Exiting." << endl;
+				exit_openal(); // to quiet the warning
 				exit(1);
 			}
 			for (set<string>::const_iterator i = all_fns.begin(); i != all_fns.end(); ++i) {
