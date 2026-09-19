@@ -3122,7 +3122,10 @@ void tile_draw_t::draw_decid_tree_bl(shader_t &s, tree_lod_render_t &lod_rendere
 }
 
 void tile_draw_t::billboard_tree_shader_setup(shader_t &s) {
-	if (tree_bindless_textures) {s.set_prefixes("#define USE_BINDLESS_TEXTURES", 7);} // vert, frag, and geom
+	if (tree_bindless_textures) { // vert, frag, and geom
+		s.set_prefixes("#extension GL_ARB_bindless_texture : require", 7); // must be at the top for AMD cards
+		s.set_prefixes("#define USE_BINDLESS_TEXTURES", 7);
+	}
 	shared_shader_lighting_setup(s, 1);
 	s.begin_shader();
 	setup_tt_fog_post(s);

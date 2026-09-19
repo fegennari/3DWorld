@@ -4,7 +4,6 @@ in vec4 eye_space_pos;
 in vec2 tc;
 
 #ifdef USE_BINDLESS_TEXTURES
-#extension GL_ARB_bindless_texture : require
 in flat sampler2DArray color_normal_tex;
 #else
 uniform sampler2DArray color_normal_tex;

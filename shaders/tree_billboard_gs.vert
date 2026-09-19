@@ -1,5 +1,4 @@
 #ifdef USE_BINDLESS_TEXTURES
-#extension GL_ARB_bindless_texture : require
 layout (location = 4) in sampler2DArray tex_handle; // 64-bit handle passed as two 32-bit uints
 #endif
 

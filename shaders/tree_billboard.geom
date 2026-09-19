@@ -8,7 +8,6 @@ in vec4 vertex_vs[1];
 in vec4 color_vs[1];
 in vec2 delta_vs[1];
 #ifdef USE_BINDLESS_TEXTURES
-#extension GL_ARB_bindless_texture : require
 in flat sampler2DArray color_normal_tex_vs[1];
 #endif
 
