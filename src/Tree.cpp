@@ -222,7 +222,7 @@ struct vert_tree_bb_t : public vert_tc_color {
 		cur_shader->set_tcoord_ptr(stride, ptr_add(vbo_ptr_offset, sizeof(point)), 0);
 		cur_shader->set_color4_ptr(stride, ptr_add(vbo_ptr_offset, sizeof(vert_tc_t)), 1);
 		if (set_state) {glEnableVertexAttribArray(4);} // location must match the shader
-		glVertexAttribLPointer(4, 1, GL_UNSIGNED_INT64_ARB, stride, ptr_add(vbo_ptr_offset, offsetof(vert_tree_bb_t, handle)));
+		glVertexAttribLPointer(4, 1, GL_UNSIGNED_INT64_ARB, stride, ptr_add(vbo_ptr_offset, sizeof(vert_tc_color)));
 	}
 	static void unset_attrs() {glDisableVertexAttribArray(4);}
 };
@@ -382,7 +382,7 @@ tree_leaf_ref_t tree_cont_t::choose_tree_leaf_in_area(point const &pos, float di
 		if (dist_less_than(pos, at(i).get_center(), dist)) {cands.push_back(i);}
 	}
 	if (cands.empty()) return tree_leaf_ref_t();
-	if (cands.size() < 60 && cands.size() < (rgen.rand() % 60)) return tree_leaf_ref_t(); // limit to one leaf per tree per second at 60 FPS
+	if (cands.size() < 60 && cands.size() < unsigned(rgen.rand() % 60)) return tree_leaf_ref_t(); // limit to one leaf per tree per second at 60 FPS
 	return at(cands[rgen.rand() % cands.size()]).choose_random_leaf(rgen);
 }
 
