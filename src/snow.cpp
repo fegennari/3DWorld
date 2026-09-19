@@ -128,9 +128,7 @@ public:
 	unsigned get_pos() const {return pos;}
 
 	~strip_block_alloc() {
-		for (vector<strip_entry *>::iterator i = blocks.begin(); i != blocks.end(); ++i) {
-			delete [] *i;
-		}
+		for (vector<strip_entry *>::iterator i = blocks.begin(); i != blocks.end(); ++i) {delete [] *i;}
 	}
 	strip_entry *alloc(unsigned sz) {
 		assert(sz <= 2*BLOCK_SZ); // could use larger block size or singles vector
