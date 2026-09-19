@@ -21,10 +21,11 @@ extern vector<us_weapon> us_weapons;
 // what about objects created this frame that aren't sorted?
 unsigned binary_search_pos(vector<cached_obj> const &objs, point const &pos) { // returns the index before
 
+	if (objs.empty()) return 0;
 	unsigned const size(objs.size());
-	unsigned start, end;
+	unsigned start=0, end=size;
 
-	for (start = 0, end = size; ((end - start) > 1);) {
+	while ((end - start) > 1) {
 		unsigned const mid((start + end) >> 1);
 		assert(start <= end && mid < size);
 		if (pos.x > objs[mid].pos.x) {start = mid;} else {end = mid;}
