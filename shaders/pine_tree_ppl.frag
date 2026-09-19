@@ -15,6 +15,6 @@ void main() {
 #ifndef NO_NOISE
 	check_noise_and_maybe_discard(min_noise, max_noise);
 #endif
-	vec3 color   = do_shadowed_lighting(vec4(0.0), epos, normal, gl_Color, 1.0, 1.0);
+	vec3 color   = do_shadowed_lighting(vec4(0.0), epos, normal, gl_Color, 1.0, 1.0, true);
 	fg_FragColor = apply_fog_scaled(vec4(texel.rgb*color*color_scale.rgb, 1.0), world_space_zval);
 }

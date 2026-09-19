@@ -124,7 +124,7 @@ void main() {
 	// Note: when drawing the mesh we use two passes, one with shadow maps enabled and one without
 	// for water we only have one pass, and the shadow map texture may not be bound/valid in all cases,
 	// but we know that it's valid when smap_scale > 0.0, so we can/must use this test to control the shadow map texture lookup
-	lighting.rgb += do_shadowed_lighting(vec4(0.0), epos, light_norm, gl_Color, ascale, dscale)*(is_lava ? 0.5 : 1.0); // Note: vertex parameter is unused
+	lighting.rgb += do_shadowed_lighting(vec4(0.0), epos, light_norm, gl_Color, ascale, dscale, true)*(is_lava ? 0.5 : 1.0); // Note: vertex parameter is unused
 	
 #ifdef TESS_MODE
 	float subsurf_scatter = max(0.55*(1.0 - cos_view_angle)*wave_dz, 0.0);

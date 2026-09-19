@@ -8,7 +8,7 @@ float calc_light_scale(in vec3 vertex, in vec4 light_pos) {
 }
 #endif
 
-vec3 do_shadowed_lighting(in vec4 vertex, in vec4 epos, in vec3 eye_norm_in, in vec4 ad_color, in float ambient_scale, in float diffuse_scale, bool apply_cloud_shadows=true) {
+vec3 do_shadowed_lighting(in vec4 vertex, in vec4 epos, in vec3 eye_norm_in, in vec4 ad_color, in float ambient_scale, in float diffuse_scale, bool apply_cloud_shadows) {
 
 	vec3 color = vec3(0.0);
 	float smap_scale = 0.0;
