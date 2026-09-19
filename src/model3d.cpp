@@ -31,7 +31,7 @@ unsigned const BONE_WEIGHTS_LOC  = 5;
 bool model_calc_tan_vect(1); // slower and more memory but sometimes better quality/smoother transitions
 
 extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shader_effects, texture_alpha_in_red_comp, use_model3d_tex_mipmaps, enable_model3d_bump_maps;
-extern bool two_sided_lighting, have_indir_smoke_tex, use_core_context, model3d_wn_normal, invert_model_nmap_bscale, use_z_prepass, all_model3d_ref_update;
+extern bool two_sided_lighting, have_indir_smoke_tex, model3d_wn_normal, invert_model_nmap_bscale, use_z_prepass, all_model3d_ref_update;
 extern bool use_interior_cube_map_refl, enable_model3d_custom_mipmaps, enable_tt_model_indir, no_subdiv_model, auto_calc_tt_model_zvals, use_model_lod_blocks;
 extern bool flatten_tt_mesh_under_models, no_store_model_textures_in_memory, disable_model_textures, allow_model3d_quads, merge_model_objects, invert_model3d_faces;
 extern unsigned shadow_map_sz, reflection_tid;
@@ -766,7 +766,6 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 		}
 	}
 	assert(!indices.empty()); // now always using indexed drawing
-	int prim_type(GL_TRIANGLES);
 	unsigned ixn(1), ixd(1), end_ix(indices.size());
 
 	if (!is_shadow_pass && !lod_blocks.empty()) { // block LOD
@@ -779,13 +778,9 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 			assert(end_ix <= indices.size());
 		}
 	}
-	if (npts == 4 && prev_ucc != use_core_context) { // need to rebuild VBOs on core context mode change
-		this->clear_vbos();
-		prev_ucc = use_core_context;
-	}
 	assert(!has_bones() || npts == 3); // bones only supported for triangle data
 
-	if (use_core_context && npts == 4) {
+	if (npts == 4) { // convert quads to triangles
 		if (!this->ivbo || !this->is_vao_setup(is_shadow_pass)) { // have to setup IVBO once (okay to redo for shadow pass), and VAO for both passes
 			vector<unsigned> tixs;
 			convert_quad_ixs_to_tri_ixs(indices, tixs);
@@ -793,21 +788,18 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 		}
 		ixn = 6; ixd = 4; // convert quads to 2 triangles
 	}
-	else {
-		if (npts == 4) {prim_type = GL_QUADS;}
-		if (has_bones()) {setup_bones(shader, is_shadow_pass);}
-		else {this->create_and_upload(*this, indices, is_shadow_pass, 0, 1);} // dynamic_level=0, setup_pointers=1
-	}
+	else if (has_bones()) {setup_bones(shader, is_shadow_pass);}
+	else {this->create_and_upload(*this, indices, is_shadow_pass, 0, 1);} // dynamic_level=0, setup_pointers=1
 	this->pre_render(is_shadow_pass);
 	check_mvm_update();
 	
 	if (is_shadow_pass || blocks.empty() || no_vfc || camera_pdu.sphere_completely_visible_test(bsphere.pos, bsphere.radius)) { // draw the entire range
-		draw_indexed_tri_verts(size(), (ixn*end_ix/ixd), prim_type);
+		draw_indexed_tri_verts(size(), (ixn*end_ix/ixd), GL_TRIANGLES);
 	}
 	else { // draw each block independently
 		// could use glDrawElementsIndirect(), but the draw calls don't seem to add any significant overhead for the current set of models
 		for (auto i = blocks.begin(); i != blocks.end(); ++i) {
-			if (camera_pdu.cube_visible(i->bcube)) {draw_indexed_tri_verts(size(), (ixn*i->num/ixd), prim_type, (void *)((ixn*i->start_ix/ixd)*sizeof(unsigned)));}
+			if (camera_pdu.cube_visible(i->bcube)) {draw_indexed_tri_verts(size(), (ixn*i->num/ixd), GL_TRIANGLES, (void *)((ixn*i->start_ix/ixd)*sizeof(unsigned)));}
 		}
 	}
 	this->post_render();

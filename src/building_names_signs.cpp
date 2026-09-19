@@ -936,7 +936,7 @@ class store_texture_manager_t { // simplified version of model3d texture_manager
 		for (auto &v : verts) {swap(v.v.y, v.v.z);} // swap Y with Z
 		enable_blend();
 		text_drawer::bind_font_texture();
-		draw_vect_quads(verts);
+		draw_quad_verts_as_tris(verts);
 		disable_blend();
 		s.end_shader();
 		// restore state and cleanup

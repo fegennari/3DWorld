@@ -943,14 +943,8 @@ template <typename T> void draw_quad_verts_as_tris(T const *const verts, unsigne
 template <typename T> void draw_quad_verts_as_tris(vector<T> const &verts, unsigned start_ix=0, unsigned num_instances=1, bool set_array_client_state=1) {
 	if (!verts.empty()) {draw_quad_verts_as_tris(verts.data(), verts.size(), start_ix, num_instances, set_array_client_state);}
 }
-
 template <typename T> void draw_quad_verts_as_tris_and_clear(vector<T> &verts) {
 	draw_quad_verts_as_tris(verts); verts.clear();
-}
-
-extern bool use_core_context;
-template<typename T> void draw_vect_quads(T const &verts) {
-	if (use_core_context) {draw_quad_verts_as_tris(verts);} else {draw_verts(verts, GL_QUADS);}
 }
 
 

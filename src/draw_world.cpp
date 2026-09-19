@@ -42,7 +42,7 @@ pt_line_drawer bubble_pld;
 extern bool have_sun, using_lightmap, has_dl_sources, has_spotlights, has_line_lights, smoke_exists, two_sided_lighting, tree_indir_lighting;
 extern bool group_back_face_cull, have_indir_smoke_tex, combined_gu, enable_depth_clamp, dynamic_smap_bias, volume_lighting, dl_smap_enabled, underwater;
 extern bool enable_gamma_correct, smoke_dlights, enable_clip_plane_z, enable_cube_map_bump_maps, enable_tt_model_indir, fast_transparent_spheres, disable_dlights;
-extern bool enable_dlight_bcubes, enable_ground_csm;
+extern bool enable_dlight_bcubes, enable_ground_csm, use_core_context;
 extern int is_cloudy, iticks, frame_counter, display_mode, show_fog, use_smoke_for_fog, num_groups, xoff, yoff;
 extern int window_width, window_height, game_mode, draw_model, camera_mode, DISABLE_WATER, animate2, camera_coll_id, stats_display_mode;
 extern unsigned smoke_tid, dl_tid, create_voxel_landscape, enabled_lights, reflection_tid, scene_smap_vbo_invalid, sky_zval_tid, skybox_tid;

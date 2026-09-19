@@ -693,7 +693,7 @@ template< typename vert_type_t > void vbo_block_manager_t<vert_type_t>::render_r
 	unsigned const count(offsets[eix] - offsets[six]);
 	check_mvm_update();
 
-	if (use_core_context && prim_type == GL_QUADS) { // handle quads => triangles conversion
+	if (prim_type == GL_QUADS) { // handle quads => triangles conversion
 		draw_quads_as_tris(count, offsets[six], num_instances);
 	}
 	else {

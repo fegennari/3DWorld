@@ -296,7 +296,7 @@ public:
 	mesh_bone_data_t bone_data;
 	bool has_bones() const {return !bone_data.vertex_to_bones.empty();}
 private:
-	bool need_normalize=0, optimized=0, prev_ucc=0;
+	bool need_normalize=0, optimized=0;
 	float avg_area_per_tri=0.0, amin=0.0, amax=0.0;
 
 	struct geom_block_t {
