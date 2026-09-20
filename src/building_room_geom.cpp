@@ -7914,6 +7914,30 @@ void building_room_geom_t::add_food_tray(room_object_t const &c) {
 	mat.add_round_rect_to_verts(c,        corner_radius, color, 0, 0, 0, 1, 0.5); // draw both sides with smaller corner radius at the bottom
 }
 
+class rand_vec3_gen_t {
+	static unsigned const TABLE_SIZE=1024;
+	vert_norm_comp entries[TABLE_SIZE];
+	bool created=0;
+
+	void create_table() {
+		rand_gen_t rgen;
+
+		for (unsigned i = 0; i < TABLE_SIZE; ++i) {
+			entries[i].v = rgen.signed_rand_vector_spherical();
+			entries[i].set_norm(entries[i].v.get_norm());
+		}
+		created = 1;
+	}
+public:
+	void apply_to_vert(vert_norm_comp &vn, float scale, rand_gen_t &rgen) {
+		if (!created) {create_table();}
+		vert_norm_comp const &e(entries[rgen.rand() % TABLE_SIZE]);
+		vn.v += scale*e.v;
+		vn.set_norm(e.n);
+	}
+};
+rand_vec3_gen_t rand_vec3_gen;
+
 void building_room_geom_t::add_trash(room_object_t const &c) {
 	// add a ball of wrinkled paper; could be based on obj_id
 	rgeom_mat_t &mat(get_untextured_material(1, 0, 1, 0, 0, 1)); // shadowed, small; no_reflect=1
@@ -7922,13 +7946,9 @@ void building_room_geom_t::add_trash(room_object_t const &c) {
 	// add some random variation to each sphere vertex to crumple the paper;
 	// this would be better with face normals than vertex normals, but we don't support that here
 	point const center(c.get_cube_center());
-	float const radius(c.get_radius());
+	float const radius(c.get_radius()), rscale(0.2*radius);
 	rand_gen_t rgen(c.create_rgen());
-
-	for (auto i = mat.itri_verts.begin()+verts_start; i != mat.itri_verts.end(); ++i) {
-		i->v += rgen.signed_rand_vector(0.2*radius); // should be good enough, and faster than signed_rand_vector_spherical()
-		i->set_norm((i->v - center).get_norm());
-	}
+	for (auto i = mat.itri_verts.begin()+verts_start; i != mat.itri_verts.end(); ++i) {rand_vec3_gen.apply_to_vert(*i, rscale, rgen);}
 }
 
 void building_room_geom_t::add_spider_web(room_object_t const &c) {
