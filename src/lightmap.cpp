@@ -10,6 +10,7 @@
 
 using std::cerr;
 
+unsigned const MAX_DLIGHTS   = 1024;
 float const DZ_VAL_SCALE     = 2.0;
 float const DARKNESS_THRESH  = 0.1;
 float const DEF_SKY_GLOBAL_LT= 0.25; // when ray tracing is not used
@@ -835,19 +836,18 @@ void upload_dlights_textures(cube_t const &bounds, float &dlight_add_thresh) { /
 	bool const cur_dlights_empty(dl_sources.empty());
 	if (cur_dlights_empty && last_dlights_empty && dl_tid != 0 && elem_tid != 0 && gb_tid != 0) return; // no updates
 	last_dlights_empty = cur_dlights_empty;
-	//highres_timer_t timer("Dlight Texture Upload"); // 0.083ms
+	//highres_timer_t timer("Dlight Texture Upload"); // 0.06ms start, 0.17 mall
 
 	// step 1: the light sources themselves
-	unsigned const max_dlights           = 1024;
 	unsigned const base_floats_per_light = 12; // XYZ pos, radius, RGBA color, XYZ dir/pos2, beamwidth
 	unsigned const max_floats_per_light  = base_floats_per_light + 1; // add one for shadow map index
 	//unsigned const max_floats_per_light      = base_floats_per_light + dl_smap_enabled;
 	unsigned const ysz((max_floats_per_light+3)/4), stride(4*ysz); // round up to nearest multiple of 4
 	static vector<float> dl_data;
-	dl_data.resize(max_dlights*stride, 0.0); // 16k floats / 64KB data
+	dl_data.resize(MAX_DLIGHTS*stride, 0.0); // 16k floats / 64KB data
 	float *dl_data_ptr(dl_data.data());
-	if (dl_sources.size() > max_dlights) {cerr << "Warning: Exceeded max lights of " << max_dlights << endl;}
-	unsigned const ndl(min(max_dlights, (unsigned)dl_sources.size()));
+	assert(dl_sources.size() <= MAX_DLIGHTS);
+	unsigned const ndl(dl_sources.size());
 	float const radius_scale(1.0/(0.5*bounds.dx())); // bounds x radius inverted
 	vector3d const poff(bounds.get_llc()), psize(bounds.get_urc() - poff);
 	vector3d const pscale(1.0/psize.x, 1.0/psize.y, 1.0/psize.z);
@@ -866,7 +866,7 @@ void upload_dlights_textures(cube_t const &bounds, float &dlight_add_thresh) { /
 	} // for i
 	if (dl_tid == 0) {
 		setup_2d_texture(dl_tid);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, ysz, max_dlights, 0, GL_RGBA, GL_FLOAT, dl_data_ptr);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, ysz, MAX_DLIGHTS, 0, GL_RGBA, GL_FLOAT, dl_data_ptr);
 	}
 	else {
 		bind_2d_texture(dl_tid);
@@ -877,7 +877,7 @@ void upload_dlights_textures(cube_t const &bounds, float &dlight_add_thresh) { /
 	// step 1b: optionally setup dlights bcubes texture
 	if (enable_dlight_bcubes) {
 		static vector<float> dl_bc_data;
-		dl_bc_data.resize(6*max_dlights, 0.0); // we need 2 RGB values to store 6 bcube floats; 6k floats / 24KB data
+		dl_bc_data.resize(6*MAX_DLIGHTS, 0.0); // we need 2 RGB values to store 6 bcube floats; 6k floats / 24KB data
 		float *bc_data_ptr(dl_bc_data.data());
 
 		for (unsigned i = 0; i < ndl; ++i) {
@@ -890,7 +890,7 @@ void upload_dlights_textures(cube_t const &bounds, float &dlight_add_thresh) { /
 		}
 		if (dl_bc_tid == 0) {
 			setup_2d_texture(dl_bc_tid);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16, 2, max_dlights, 0, GL_RGB, GL_FLOAT, bc_data_ptr);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16, 2, MAX_DLIGHTS, 0, GL_RGB, GL_FLOAT, bc_data_ptr);
 		}
 		else {
 			bind_2d_texture(dl_bc_tid);
@@ -921,11 +921,8 @@ void upload_dlights_textures(cube_t const &bounds, float &dlight_add_thresh) { /
 			if (num_ixs == 0) continue; // no lights for this grid
 			unsigned short const *const ixs(dlsc.get_src_ixs());
 			assert(num_ixs < 256);
-			num_ixs = min(num_ixs, unsigned(max_gb_entries - elem_data.size())); // enforce max_gb_entries limit
-			
-			for (unsigned i = 0; i < num_ixs; ++i) {
-				if (ixs[i] < ndl) {elem_data.push_back((unsigned short)ixs[i]);} // if dlight index is too high, skip
-			}
+			min_eq(num_ixs, unsigned(max_gb_entries - elem_data.size())); // enforce max_gb_entries limit
+			elem_data.insert(elem_data.end(), ixs, ixs+num_ixs);
 			unsigned const num_ix(elem_data.size() - gb_data[gb_ix]);
 			assert(num_ix < (1<<8));
 			gb_data[gb_ix] += (num_ix << 24); // 8 high bits = num_ix
@@ -959,7 +956,6 @@ void upload_dlights_textures(cube_t const &bounds, float &dlight_add_thresh) { /
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, gbx, gby, GL_RED_INTEGER, GL_UNSIGNED_INT, gb_data.data());
 	}
 	check_gl_error(440);
-	//cout << "ndl: " << ndl << ", elix: " << elem_data.size() << ", gb_sz: " << gb_data.size() << endl;
 }
 
 
@@ -1120,9 +1116,7 @@ void clear_dynamic_lights() {
 	dl_sources.clear();
 }
 
-
 void calc_spotlight_pdu(light_source const &ls, pos_dir_up &pdu) {
-
 	if (ls.is_line_light() || !ls.is_very_directional()) return; // not a spotlight
 	cylinder_3dw const cylin(ls.calc_bounding_cylin(0.0, 1)); // clip_to_scene_bcube=1
 	vector3d const dir(cylin.p2 - cylin.p1);
@@ -1131,6 +1125,13 @@ void calc_spotlight_pdu(light_source const &ls, pos_dir_up &pdu) {
 	pdu = pos_dir_up(cylin.p1, dir/len, plus_z, tan(cylin.r2/len), 0.0, ls.get_radius(), 1.0, 1);
 }
 
+
+void clamp_dlights_to_max() {
+	if (dl_sources.size() <= MAX_DLIGHTS) return;
+	static bool had_warning(0);
+	if (!had_warning) {cerr << "Warning: Exceeded max lights of " << MAX_DLIGHTS << endl; had_warning = 1;}
+	dl_sources.resize(MAX_DLIGHTS);
+}
 
 void add_dynamic_lights_ground(float &dlight_add_thresh) {
 
@@ -1153,6 +1154,7 @@ void add_dynamic_lights_ground(float &dlight_add_thresh) {
 	}
 	// Note: do we want to sort by y/x position to minimize cache misses?
 	stable_sort(dl_sources.begin(), dl_sources.end(), std::greater<light_source>()); // sort by largest to smallest radius
+	clamp_dlights_to_max(); // after priority sort
 	unsigned const ndl((unsigned)dl_sources.size()), gbx(get_grid_xsize()), gby(get_grid_ysize());
 	has_dl_sources     = (ndl > 0);
 	dlight_add_thresh *= 0.99f;
@@ -1210,8 +1212,9 @@ void add_dynamic_lights_city(cube_t const &scene_bcube, float &dlight_add_thresh
 
 	if (disable_dlights) {dl_sources.clear(); return;}
 	assert(DL_GRID_BS == 0); // not supported
+	clamp_dlights_to_max(); // should already be clamped, but check just in case
 	unsigned const ndl((unsigned)dl_sources.size()), gbx(MESH_X_SIZE), gby(MESH_Y_SIZE);
-	has_dl_sources     = (ndl > 0);
+	has_dl_sources = (ndl > 0);
 	if (!has_dl_sources) return; // nothing else to do
 	dlight_add_thresh *= 0.99;
 	if (!scene_bcube.is_strictly_normalized()) {cerr << "Invalid scene_bcube: " << scene_bcube.str() << endl;}
