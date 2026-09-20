@@ -371,7 +371,7 @@ class tree_cont_t : public vector<tree> {
 	vector<pair<float, unsigned>> sorted;
 	vector<tree *> to_update_leaves;
 	cube_t all_bcube;
-	bool generated=0;
+	bool generated=0, render_textures_done=0;
 public:
 	tree_cont_t(tree_data_manager_t &tds) : shared_tree_data(tds) {}
 	bool was_generated() const {return generated;}

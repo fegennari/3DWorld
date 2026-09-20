@@ -2468,11 +2468,13 @@ void tree_cont_t::clear_context() {
 	for (iterator i = begin(); i != end(); ++i) {i->clear_context();}
 }
 void tree_cont_t::check_render_textures() {
+	if (render_textures_done) return;
 	assert(max_unique_trees > 0); // must use instanced trees for tiled terrain mode
-	//timer_t timer("Check Render Textures"); // 8 orients: 397 total, 67 max | 550/103 compressed
+	//timer_t timer("Check Render Textures"); // 8 orients: 351 total, 66 max | 280/51 compressed
 	render_tree_leaves_to_texture_t   rtl(TREE_BILLBOARD_SIZE);
 	render_tree_branches_to_texture_t rtb(TREE_BILLBOARD_SIZE);
 	for (iterator i = begin(); i != end(); ++i) {i->check_render_textures(rtl, rtb);}
+	render_textures_done = 1;
 }
 void tree_cont_t::apply_exp_damage(point const &epos, float damage, float bradius, int type) {
 	blastr const br(0, ETYPE_FIRE, NO_SOURCE, bradius, damage, epos, plus_z, YELLOW, RED);
