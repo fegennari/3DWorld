@@ -1116,7 +1116,7 @@ void dls_cell::add_light_range(unsigned six, unsigned eix, unsigned char &enable
 void clear_dynamic_lights() {
 	//if (!animate2) return;
 	if (dl_sources.empty()) return; // only clear if light pos/size has changed?
-	for (auto i = ldynamic_enabled.begin(); i != ldynamic_enabled.end(); ++i) {*i = 0;} // 0.015ms
+	ldynamic_enabled.assign(ldynamic_enabled.size(), 0);
 	dl_sources.clear();
 }
 
@@ -1232,10 +1232,12 @@ void add_dynamic_lights_city(cube_t const &scene_bcube, float &dlight_add_thresh
 			if (ls2.get_pos().x != lpos.x || ls2.get_pos().y != lpos.y || ls2.get_radius() != ls.get_radius() || ls2.get_dir() != ls.get_dir()) break;
 		}
 		int const xcent((lpos.x - scene_llc.x)*grid_dx_inv + 0.5f), ycent((lpos.y - scene_llc.y)*grid_dy_inv + 0.5f);
+		int const radius(max(1, round_fp(ls.get_radius()*max(grid_dx_inv, grid_dy_inv))) + 2), rsq(radius*radius);
 		cube_t bcube(ls.calc_bcube(0, sqrt_dlight_add_thresh, 0, falloff)); // padded below
 
 		if (ls.is_very_directional() && (ls.get_dir().x != 0.0 || ls.get_dir().y != 0.0)) {
 			bcube.expand_by(vector3d(grid_dx, grid_dy, 0.0)); // add one grid unit for spotlights not pointed up/down
+			if (ls.has_custom_bcube()) {bcube.intersect_with_cube(ls.get_custom_bcube());} // re-clip
 		}
 		int bnds[2][2] = {};
 
@@ -1243,8 +1245,6 @@ void add_dynamic_lights_city(cube_t const &scene_bcube, float &dlight_add_thresh
 			bnds[0][e] = max(0, min((int)gbx-1, int((bcube.d[0][e] - scene_llc.x)*grid_dx_inv)));
 			bnds[1][e] = max(0, min((int)gby-1, int((bcube.d[1][e] - scene_llc.y)*grid_dy_inv)));
 		}
-		int const radius(max(1, round_fp(ls.get_radius()*max(grid_dx_inv, grid_dy_inv))) + 2), rsq(radius*radius);
-
 		if (ix - start_ix == 1) { // single light case
 			for (int y = bnds[1][0]; y <= bnds[1][1]; ++y) { // add lights to ldynamic
 				int const cmp_val(rsq - (y-ycent)*(y-ycent)), offset(y*gbx);
