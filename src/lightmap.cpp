@@ -214,7 +214,7 @@ void lmap_manager_t::add_light_path(point p, vector3d const &step, unsigned nste
 }
 
 void lmap_manager_t::reset_all(lmcell const &init_lmcell) {
-	for (lmcell &c : vldata_alloc) {c = init_lmcell;}
+	vldata_alloc.assign(vldata_alloc.size(), init_lmcell);
 }
 
 template<typename T> void lmap_manager_t::alloc(unsigned nbins, unsigned xsize, unsigned ysize, unsigned zsize, T **nonempty_bins, lmcell const &init_lmcell) {
