@@ -629,24 +629,18 @@ public:
 	}
 	unsigned size() const {return ldynamic.size();}
 	void clear() {ldynamic_enabled.assign(ldynamic_enabled.size(), 0);}
+	void add_light(unsigned gix, unsigned ix) {ldynamic[gix].add_light(ix, ldynamic_enabled[gix]);}
+	void add_light_range(unsigned gix, unsigned six, unsigned eix) {ldynamic[gix].add_light_range(six, eix, ldynamic_enabled[gix]);}
+	bool can_skip_light(unsigned gix, unsigned ix) const {return (ldynamic_enabled[gix] && !ldynamic[gix].check_add_light(ix));}
 
-	void add_light(unsigned gix, unsigned ix) {
-		ldynamic[gix].add_light(ix, ldynamic_enabled[gix]);
-	}
-	bool check_add_light(unsigned gix, unsigned ix) const {
-		return (ldynamic_enabled[gix] && !ldynamic[gix].check_add_light(ix));
-	}
-	void add_light_range(unsigned gix, unsigned six, unsigned eix) {
-		ldynamic[gix].add_light_range(six, eix, ldynamic_enabled[gix]);
-	}
 	bool add_to_gb_list(unsigned gix, unsigned max_gb_entries, vector<uint16_t> &elem_data) const {
 		if (!ldynamic_enabled[gix]) return 0; // no lights for this grid
 		dls_cell const &dlsc(ldynamic[gix]);
 		unsigned num_ixs(dlsc.size());
 		if (num_ixs == 0) return 0; // no lights for this grid
-		uint16_t const *const ixs(dlsc.get_src_ixs());
 		assert(num_ixs < 256);
 		min_eq(num_ixs, unsigned(max_gb_entries - elem_data.size())); // enforce max_gb_entries limit
+		uint16_t const *const ixs(dlsc.get_src_ixs());
 		elem_data.insert(elem_data.end(), ixs, ixs+num_ixs);
 		return 1;
 	}
@@ -1146,7 +1140,6 @@ void add_line_light(point const &p1, point const &p2, colorRGBA const &color, fl
 
 
 void clear_dynamic_lights() {
-	//if (!animate2) return;
 	if (dl_sources.empty()) return; // only clear if light pos/size has changed?
 	dlight_manager.clear();
 	dl_sources.clear();
@@ -1209,7 +1202,7 @@ void add_dynamic_lights_ground(float &dlight_add_thresh) {
 		int const xcent(get_xpos(lpos.x) >> DL_GRID_BS), ycent(get_ypos(lpos.y) >> DL_GRID_BS);
 		
 		if (!line_light && xcent >= 0 && ycent >= 0 && xcent < (int)gbx && ycent < (int)gby) {
-			if (dlight_manager.check_add_light((ycent*gbx + xcent), ix)) continue; // merged into existing light, skip
+			if (dlight_manager.can_skip_light((ycent*gbx + xcent), ix)) continue; // merged into existing light, skip
 		}
 		cube_t bcube;
 		int bnds[3][2];
@@ -1310,7 +1303,6 @@ bool is_visible_to_any_dir_light(point const &pos, float radius, int cobj, int s
 	}
 	return 0;
 }
-
 bool is_in_darkness(point const &pos, float radius, int cobj) { // used for AI
 	colorRGBA c(WHITE);
 	get_indir_light(c, pos); // this is faster so do it first
