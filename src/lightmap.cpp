@@ -579,10 +579,14 @@ void calc_flow_profile(r_profile flow_prof[3], int i, int j, bool proc_cobjs, fl
 	} // for v
 }
 
+
+unsigned get_grid_xsize() {return max((MESH_X_SIZE >> DL_GRID_BS), 1);}
+unsigned get_grid_ysize() {return max((MESH_Y_SIZE >> DL_GRID_BS), 1);}
+
 unsigned const MAX_LSRC = 255; // max of 255 lights per bin
 
 class dls_cell {
-	unsigned short lsrc[MAX_LSRC+1]={};
+	uint16_t lsrc[MAX_LSRC+1]={};
 	unsigned sz=0;
 public:
 	void clear() {sz = 0;}
@@ -612,20 +616,48 @@ public:
 	size_t size() const {return sz;}
 	bool empty()  const {return (sz == 0);}
 	unsigned get(unsigned i) const {return lsrc[i];} // no bounds checking
-	unsigned short const *get_src_ixs() const {return lsrc;}
+	uint16_t const *get_src_ixs() const {return lsrc;}
 };
 
-vector<dls_cell> ldynamic;
-vector<unsigned char> ldynamic_enabled;
+class dlight_manager_t {
+	vector<dls_cell> ldynamic;
+	vector<unsigned char> ldynamic_enabled;
+public:
+	void init() {
+		ldynamic.resize(get_grid_xsize()*get_grid_ysize());
+		ldynamic_enabled.resize(ldynamic.size(), 0);
+	}
+	unsigned size() const {return ldynamic.size();}
+	void clear() {ldynamic_enabled.assign(ldynamic_enabled.size(), 0);}
+
+	void add_light(unsigned gix, unsigned ix) {
+		ldynamic[gix].add_light(ix, ldynamic_enabled[gix]);
+	}
+	bool check_add_light(unsigned gix, unsigned ix) const {
+		return (ldynamic_enabled[gix] && !ldynamic[gix].check_add_light(ix));
+	}
+	void add_light_range(unsigned gix, unsigned six, unsigned eix) {
+		ldynamic[gix].add_light_range(six, eix, ldynamic_enabled[gix]);
+	}
+	bool add_to_gb_list(unsigned gix, unsigned max_gb_entries, vector<uint16_t> &elem_data) const {
+		if (!ldynamic_enabled[gix]) return 0; // no lights for this grid
+		dls_cell const &dlsc(ldynamic[gix]);
+		unsigned num_ixs(dlsc.size());
+		if (num_ixs == 0) return 0; // no lights for this grid
+		uint16_t const *const ixs(dlsc.get_src_ixs());
+		assert(num_ixs < 256);
+		min_eq(num_ixs, unsigned(max_gb_entries - elem_data.size())); // enforce max_gb_entries limit
+		elem_data.insert(elem_data.end(), ixs, ixs+num_ixs);
+		return 1;
+	}
+};
+dlight_manager_t dlight_manager;
+
 
 cube_t get_scene_bounds_bcube() { // for use with indir lighting
 	return cube_t(-X_SCENE_SIZE, X_SCENE_SIZE, -Y_SCENE_SIZE, Y_SCENE_SIZE, get_zval_min(), get_zval_max());
 }
-float    calc_czspan   () {return max(0.0f, ((czmax + lm_dz_adj) - czmin0 + TOLER));}
-unsigned get_grid_xsize() {return max((MESH_X_SIZE >> DL_GRID_BS), 1);}
-unsigned get_grid_ysize() {return max((MESH_Y_SIZE >> DL_GRID_BS), 1);}
-unsigned get_ldynamic_ix(unsigned x, unsigned y) {return (y >> DL_GRID_BS)*get_grid_xsize() + (x >> DL_GRID_BS);}
-
+float calc_czspan() {return max(0.0f, ((czmax + lm_dz_adj) - czmin0 + TOLER));}
 
 void build_lightmap(bool verbose) {
 
@@ -648,11 +680,7 @@ void build_lightmap(bool verbose) {
 	DZ_VAL_INV2 = 1.0/DZ_VAL2;
 	czmin0      = czmin;//max(czmin, zbottom);
 	assert(lm_dz_adj >= 0.0);
-
-	if (!disable_dlights) {
-		ldynamic.resize(get_grid_xsize()*get_grid_ysize());
-		ldynamic_enabled.resize(ldynamic.size(), 0);
-	}
+	if (!disable_dlights) {dlight_manager.init();}
 	if (world_mode != WMODE_GROUND || MESH_Z_SIZE == 0) return;
 
 	RESET_TIME;
@@ -939,12 +967,12 @@ void upload_dlights_textures(cube_t const &bounds, float &dlight_add_thresh) { /
 	// step 2: grid bag entries
 	static unsigned num_warnings(0);
 	static vector<unsigned> gb_data;
-	static vector<unsigned short> elem_data;
+	static vector<uint16_t> elem_data;
 	unsigned const elem_tex_x = (1<<8); // must agree with value in shader
 	unsigned const elem_tex_y = (1<<12); // larger = slower, but more lights/higher quality; 1<<10 is too low for building malls
 	unsigned const max_gb_entries(elem_tex_x*elem_tex_y), gbx(get_grid_xsize()), gby(get_grid_ysize()), num_grids(gbx*gby);
 	assert(max_gb_entries <= (1<<24)); // gb_data low bits allocation
-	assert(num_grids <= ldynamic_enabled.size() && num_grids <= ldynamic.size());
+	assert(num_grids <= dlight_manager.size());
 	elem_data.clear();
 	gb_data.resize(num_grids, 0);
 
@@ -952,14 +980,7 @@ void upload_dlights_textures(cube_t const &bounds, float &dlight_add_thresh) { /
 		for (unsigned x = 0; x < gbx; ++x) {
 			unsigned const gb_ix(x + y*gbx); // {start, end, unused}
 			gb_data[gb_ix] = elem_data.size(); // 24 low bits = start_ix
-			if (!ldynamic_enabled[gb_ix]) continue; // no lights for this grid
-			dls_cell const &dlsc(ldynamic[gb_ix]);
-			unsigned num_ixs(dlsc.size());
-			if (num_ixs == 0) continue; // no lights for this grid
-			unsigned short const *const ixs(dlsc.get_src_ixs());
-			assert(num_ixs < 256);
-			min_eq(num_ixs, unsigned(max_gb_entries - elem_data.size())); // enforce max_gb_entries limit
-			elem_data.insert(elem_data.end(), ixs, ixs+num_ixs);
+			if (!dlight_manager.add_to_gb_list(gb_ix, max_gb_entries, elem_data)) continue;
 			unsigned const num_ix(elem_data.size() - gb_data[gb_ix]);
 			assert(num_ix < (1<<8));
 			gb_data[gb_ix] += (num_ix << 24); // 8 high bits = num_ix
@@ -1127,7 +1148,7 @@ void add_line_light(point const &p1, point const &p2, colorRGBA const &color, fl
 void clear_dynamic_lights() {
 	//if (!animate2) return;
 	if (dl_sources.empty()) return; // only clear if light pos/size has changed?
-	ldynamic_enabled.assign(ldynamic_enabled.size(), 0);
+	dlight_manager.clear();
 	dl_sources.clear();
 }
 
@@ -1154,8 +1175,7 @@ void add_dynamic_lights_ground(float &dlight_add_thresh) {
 	sync_flashlight();
 	if (!animate2) return;
 	if (disable_dlights) {dl_sources.clear(); return;}
-	assert(!ldynamic.empty());
-	assert(ldynamic_enabled.size() == ldynamic.size());
+	assert(dlight_manager.size() > 0); // must have been inited
 	clear_dynamic_lights();
 	dl_sources.swap(dl_sources2);
 	dl_smap_enabled = 0;
@@ -1189,8 +1209,7 @@ void add_dynamic_lights_ground(float &dlight_add_thresh) {
 		int const xcent(get_xpos(lpos.x) >> DL_GRID_BS), ycent(get_ypos(lpos.y) >> DL_GRID_BS);
 		
 		if (!line_light && xcent >= 0 && ycent >= 0 && xcent < (int)gbx && ycent < (int)gby) {
-			unsigned const gb_ix(ycent*gbx + xcent);
-			if (ldynamic_enabled[gb_ix] && !ldynamic[gb_ix].check_add_light(ix)) continue; // merged into existing light, skip
+			if (dlight_manager.check_add_light((ycent*gbx + xcent), ix)) continue; // merged into existing light, skip
 		}
 		cube_t bcube;
 		int bnds[3][2];
@@ -1217,7 +1236,7 @@ void add_dynamic_lights_ground(float &dlight_add_thresh) {
 					float const px(get_xval(x << DL_GRID_BS)), py(get_yval(y << DL_GRID_BS));
 					if (!pdu.cube_visible_for_light_cone(cube_t(px-grid_dx, px+grid_dx, py-grid_dy, py+grid_dy, z1, z2))) continue; // tile not in spotlight cylinder
 				}
-				ldynamic[offset + x].add_light(ix, ldynamic_enabled[offset + x]); // could do flow clipping here?
+				dlight_manager.add_light((offset + x), ix);
 			} // for x
 		} // for y
 	} // for ix (light index)
@@ -1268,7 +1287,7 @@ void add_dynamic_lights_city(cube_t const &scene_bcube, float &dlight_add_thresh
 				int const cmp_val(rsq - (y-ycent)*(y-ycent)), offset(y*gbx);
 
 				for (int x = bnds[0][0]; x <= bnds[0][1]; ++x) {
-					if ((x-xcent)*(x-xcent) <= cmp_val) {ldynamic[offset + x].add_light(start_ix, ldynamic_enabled[offset + x]);}
+					if ((x-xcent)*(x-xcent) <= cmp_val) {dlight_manager.add_light((offset + x), start_ix);}
 				}
 			} // for y
 		}
@@ -1277,7 +1296,7 @@ void add_dynamic_lights_city(cube_t const &scene_bcube, float &dlight_add_thresh
 				int const cmp_val(rsq - (y-ycent)*(y-ycent)), offset(y*gbx);
 
 				for (int x = bnds[0][0]; x <= bnds[0][1]; ++x) {
-					if ((x-xcent)*(x-xcent) <= cmp_val) {ldynamic[offset + x].add_light_range(start_ix, ix, ldynamic_enabled[offset + x]);}
+					if ((x-xcent)*(x-xcent) <= cmp_val) {dlight_manager.add_light_range((offset + x), start_ix, ix);}
 				}
 			} // for y
 		}
