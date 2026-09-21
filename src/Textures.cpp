@@ -257,11 +257,10 @@ void load_textures() {
 	load_texture_names();
 
 #pragma omp parallel for schedule(dynamic)
-	for (int i = 0; i < (int)textures.size(); ++i) {
-		//cout << "."; cout.flush();
+	for (int i = 0; i < (int)textures.size(); ++i) { // parallel step
 		if (!is_tex_disabled(i)) {textures[i].load(i, 0, 0, 1);} // ignore word alignment here, since resizing isn't thread safe
 	}
-	for (int i = 0; i < (int)textures.size(); ++i) {
+	for (int i = 0; i < (int)textures.size(); ++i) { // serial step (uses OpenGL)
 		if (!is_tex_disabled(i)) {textures[i].fix_word_alignment();}
 	}
 	textures[BULLET_D_TEX].merge_in_alpha_channel(textures[BULLET_A_TEX]);

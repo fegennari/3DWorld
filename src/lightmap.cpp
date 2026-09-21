@@ -161,7 +161,7 @@ void r_profile::clear_within(float const c[2]) {
 // *** MAIN LIGHTING CODE ***
 
 void reset_cobj_counters() {
-	for (unsigned i = 0; i < (unsigned)coll_objects.size(); ++i) {coll_objects[i].counter = -1;}
+	for (unsigned i = 0; i < coll_objects.size(); ++i) {coll_objects[i].counter = -1;}
 }
 
 
@@ -265,10 +265,7 @@ void lmap_manager_t::copy_data(lmap_manager_t const &src, float blend_weight) {
 		for (unsigned j = 0; j < lm_xsize; ++j) {
 			if (!vlmap[i][j]) {assert(!src.vlmap[i][j]); continue;}
 			assert(src.vlmap[i][j]);
-			
-			for (unsigned z = 0; z < lm_zsize; ++z) {
-				vlmap[i][j][z].mix_lighting_with(src.vlmap[i][j][z], blend_weight);
-			}
+			for (unsigned z = 0; z < lm_zsize; ++z) {vlmap[i][j][z].mix_lighting_with(src.vlmap[i][j][z], blend_weight);}
 		}
 	}
 }
@@ -486,7 +483,7 @@ bool has_fixed_cobjs(int x, int y) {
 	vector<int> const &cvals(v_collision_matrix[y][x].cvals);
 
 	for (int i : cvals) {
-		if (coll_objects[i].fixed && coll_objects[i].status == COLL_STATIC) {return 1;}
+		if (coll_objects[i].fixed && coll_objects[i].status == COLL_STATIC) return 1;
 	}
 	return 0;
 }
@@ -563,11 +560,8 @@ void calc_flow_profile(r_profile flow_prof[3], int i, int j, bool proc_cobjs, fl
 				if (cobj.d[1][0] >= bb[1][1] || cobj.d[1][1]     <= bb[1][0]) continue;
 				if (cobj.d[2][0] >= bb[2][1] || cobj_z[c2].first <= bb[2][0]) continue;
 				float const cztop(cobj.d[2][1]);
-				cobj.d[2][1] = cobj_z[c2].first;
-						
-				for (unsigned d = 0; d < 3; ++d) { // critical path
-					flow_prof[d].add_rect(cobj.d, (d+1)%3, (d+2)%3, 1.0);
-				}
+				cobj.d[2][1] = cobj_z[c2].first;			
+				for (unsigned d = 0; d < 3; ++d) {flow_prof[d].add_rect(cobj.d, (d+1)%3, (d+2)%3, 1.0);} // critical path
 				cobj.d[2][1] = cztop; // restore original value
 			} // for c2
 			for (unsigned e = 0; e < 3; ++e) {
@@ -1016,7 +1010,7 @@ void setup_and_bind_shadow_matrix_ubo();
 void setup_dlight_shadow_maps(shader_t &s) {
 	bool arr_tex_set(0); // required to only bind texture arrays once
 	setup_and_bind_shadow_matrix_ubo();
-	for (auto i = dl_sources.begin(); i != dl_sources.end(); ++i) {i->setup_and_bind_smap_texture(s, arr_tex_set);}
+	for (light_source &ls : dl_sources) {ls.setup_and_bind_smap_texture(s, arr_tex_set);}
 	ubo_wrap_t::post_render(); // unbind the UBO
 }
 
@@ -1174,7 +1168,6 @@ void add_dynamic_lights_ground(float &dlight_add_thresh) {
 	dl_smap_enabled = 0;
 
 	for (auto i = light_sources_d.begin(); i != light_sources_d.end(); ++i) {
-		// Note: more efficient to do VFC here, but won't apply to get_indir_light() (or is_in_darkness())
 		if (!i->is_enabled() || !i->is_visible()) continue;
 		i->check_shadow_map();
 		dl_sources.push_back(*i);

@@ -1166,7 +1166,7 @@ void tree_data_t::ensure_branch_vbo() {
 	assert(num_branch_quads == 0 && num_unique_pts == 0);
 	num_branch_quads = 0;
 
-	for (unsigned i = 0; i < (unsigned)all_cylins.size(); ++i) { // determine required data size
+	for (unsigned i = 0; i < all_cylins.size(); ++i) { // determine required data size
 		bool const prev_connect(i > 0 && all_cylins[i].can_merge(all_cylins[i-1]));
 		unsigned const ndiv(all_cylins[i].get_num_div());
 		num_branch_quads += ndiv;
@@ -1199,7 +1199,7 @@ void tree_data_t::update_normal_for_leaf(unsigned i) {
 }
 
 void tree_data_t::reset_leaf_pos_norm() {
-	for (unsigned i = 0; i < (unsigned)leaves.size(); i++) { // process leaf points - reset to default positions and normals
+	for (unsigned i = 0; i < leaves.size(); i++) { // process leaf points - reset to default positions and normals
 		UNROLL_4X(leaf_data[i_+(i<<2)].v = leaves[i].pts[i_];)
 		update_normal_for_leaf(i);
 	}
