@@ -274,33 +274,12 @@ public:
 };
 
 
-unsigned const MAX_LSRC = 255; // max of 255 lights per bin
-
-class dls_cell {
-	unsigned short lsrc[MAX_LSRC+1]={};
-	unsigned sz=0;
-public:
-	void clear() {sz = 0;}
-	
-	void add_light(unsigned ix, unsigned char &enabled_flag) {
-		if (!enabled_flag) {sz = 0; enabled_flag = 1;} // clear if marked as disabled, then enable
-		if (sz < MAX_LSRC) {lsrc[sz++] = ix;}
-	}
-	void add_light_range(unsigned six, unsigned eix, unsigned char &enabled_flag);
-	bool check_add_light(unsigned ix) const;
-	size_t size() const {return sz;}
-	bool empty()  const {return (sz == 0);}
-	unsigned get(unsigned i) const {return lsrc[i];} // no bounds checking
-	unsigned short const *get_src_ixs() const {return lsrc;}
-};
-
 struct cube_light_src {
 	cube_t bounds;
 	colorRGB color=BLACK;
 	float intensity=0.0;
 	unsigned num_rays=0, disabled_edges=0;
 };
-
 
 struct cube_light_src_vect : public vector<cube_light_src> {
 	bool ray_intersects_any(point const &start_pt, point const &end_pt) const;

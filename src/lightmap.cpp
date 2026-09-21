@@ -25,8 +25,6 @@ unsigned dl_tid(0), elem_tid(0), gb_tid(0), dl_bc_tid(0), DL_GRID_BS(0), flashli
 float DZ_VAL2(0.0), DZ_VAL_INV2(0.0);
 float czmin0(0.0), lm_dz_adj(0.0);
 cube_t dlight_bcube;
-vector<dls_cell> ldynamic;
-vector<unsigned char> ldynamic_enabled;
 vector<light_source> light_sources_a, dl_sources, dl_sources2; // static ambient, static diffuse, dynamic {cur frame, next frame}
 vector<light_source_trig> light_sources_d;
 lmap_manager_t lmap_manager;
@@ -581,6 +579,45 @@ void calc_flow_profile(r_profile flow_prof[3], int i, int j, bool proc_cobjs, fl
 	} // for v
 }
 
+unsigned const MAX_LSRC = 255; // max of 255 lights per bin
+
+class dls_cell {
+	unsigned short lsrc[MAX_LSRC+1]={};
+	unsigned sz=0;
+public:
+	void clear() {sz = 0;}
+
+	void add_light(unsigned ix, unsigned char &enabled_flag) {
+		if (!enabled_flag) {sz = 0; enabled_flag = 1;} // clear if marked as disabled, then enable
+		if (sz < MAX_LSRC) {lsrc[sz++] = ix;}
+	}
+	bool check_add_light(unsigned ix) const {
+		if (empty()) return 1;
+		assert(ix < dl_sources.size());
+		light_source const &ls(dl_sources[ix]);
+
+		for (unsigned i = 0; i < sz; ++i) {
+			unsigned const ix2(lsrc[i]);
+			assert(ix2 < dl_sources.size());
+			assert(ix2 != ix);
+			if (ls.try_merge_into(dl_sources[ix2])) return 0;
+		}
+		return 1;
+	}
+	void add_light_range(unsigned six, unsigned eix, unsigned char &enabled_flag) {
+		if (!enabled_flag) {sz = 0; enabled_flag = 1;} // clear if marked as disabled, then enable
+		min_eq(eix, MAX_LSRC-sz+six);
+		for (unsigned ix = six; ix < eix; ++ix) {lsrc[sz++] = ix;}
+	}
+	size_t size() const {return sz;}
+	bool empty()  const {return (sz == 0);}
+	unsigned get(unsigned i) const {return lsrc[i];} // no bounds checking
+	unsigned short const *get_src_ixs() const {return lsrc;}
+};
+
+vector<dls_cell> ldynamic;
+vector<unsigned char> ldynamic_enabled;
+
 cube_t get_scene_bounds_bcube() { // for use with indir lighting
 	return cube_t(-X_SCENE_SIZE, X_SCENE_SIZE, -Y_SCENE_SIZE, Y_SCENE_SIZE, get_zval_min(), get_zval_max());
 }
@@ -1087,28 +1124,6 @@ void add_line_light(point const &p1, point const &p2, colorRGBA const &color, fl
 }
 
 
-bool dls_cell::check_add_light(unsigned ix) const {
-
-	if (empty()) return 1;
-	assert(ix < dl_sources.size());
-	light_source const &ls(dl_sources[ix]);
-
-	for (unsigned i = 0; i < sz; ++i) {
-		unsigned const ix2(lsrc[i]);
-		assert(ix2 < dl_sources.size());
-		assert(ix2 != ix);
-		if (ls.try_merge_into(dl_sources[ix2])) return 0;
-	}
-	return 1;
-}
-
-void dls_cell::add_light_range(unsigned six, unsigned eix, unsigned char &enabled_flag) {
-	if (!enabled_flag) {sz = 0; enabled_flag = 1;} // clear if marked as disabled, then enable
-	min_eq(eix, MAX_LSRC-sz+six);
-	for (unsigned ix = six; ix < eix; ++ix) {lsrc[sz++] = ix;}
-}
-
-
 void clear_dynamic_lights() {
 	//if (!animate2) return;
 	if (dl_sources.empty()) return; // only clear if light pos/size has changed?
@@ -1301,52 +1316,35 @@ void get_indir_light(colorRGBA &a, point const &p) { // used for particle clouds
 			cscale *= val;
 		}
 		if (!dl_sources.empty() && dlight_bcube.contains_pt(p)) {
-			unsigned const gb_ix(get_ldynamic_ix(x, y));
-
-			if (ldynamic_enabled[gb_ix]) {
-				dls_cell const &ldv(ldynamic[gb_ix]);
-
-				for (unsigned l = 0; l < (unsigned)ldv.size(); ++l) {
-					unsigned const ls_ix(ldv.get(l));
-					assert(ls_ix < dl_sources.size());
-					light_source const &lsrc(dl_sources[ls_ix]);
-					point lpos;
-					float color_scale(lsrc.get_intensity_at(p, lpos));
-					if (color_scale < CTHRESH) continue;
-					if (lsrc.is_directional()) {color_scale *= lsrc.get_dir_intensity(lpos - p);}
-					cscale += lsrc.get_color()*color_scale;
-				} // for l
-			}
+			for (light_source const &ls : dl_sources) {
+				if (!ls.is_line_light() && !dist_less_than(ls.get_pos(), p, ls.get_radius())) continue; // too far
+				point lpos;
+				float color_scale(ls.get_intensity_at(p, lpos));
+				if (color_scale < CTHRESH) continue;
+				if (ls.is_directional()) {color_scale *= ls.get_dir_intensity(lpos - p);}
+				cscale += ls.get_color()*color_scale;	
+			} // for ls
 		}
 	}
 	UNROLL_3X(a[i_] *= min(1.0f, cscale[i_]);)
 }
 
-bool is_any_dlight_visible(point const &p) {
+bool is_any_dlight_visible(point const &p) { // slow, but only used for platforms
 	
-	int const x(get_xpos_round_down(p.x)), y(get_ypos_round_down(p.y));
-	if (point_outside_mesh(x, y)) return 0; // outside the mesh range
-	if (dl_sources.empty() || !dlight_bcube.contains_pt(p)) return 0;
-	unsigned const gb_ix(get_ldynamic_ix(x, y));
-	if (!ldynamic_enabled[gb_ix]) return 0;
-	dls_cell const &ldv(ldynamic[gb_ix]);
-
-	for (unsigned l = 0; l < (unsigned)ldv.size(); ++l) {
-		unsigned const ls_ix(ldv.get(l));
-		assert(ls_ix < dl_sources.size());
-		light_source const &lsrc(dl_sources[ls_ix]);
+	for (light_source const &ls : dl_sources) {
+		if (!ls.is_line_light() && !dist_less_than(ls.get_pos(), p, ls.get_radius())) continue; // too far
 		point lpos;
-		float const color_scale(lsrc.get_intensity_at(p, lpos));
+		float const color_scale(ls.get_intensity_at(p, lpos));
 		if (color_scale < CTHRESH) continue;
-		if (lsrc.is_directional() && color_scale*lsrc.get_dir_intensity(lpos - p) < CTHRESH) continue;
+		if (ls.is_directional() && color_scale*ls.get_dir_intensity(lpos - p) < CTHRESH) continue;
 		int index(-1); // unused
-		
-		if (lsrc.smap_enabled()) {
-			lpos += (p - lpos).get_norm()*(1.01*lsrc.get_near_clip());
+
+		if (ls.smap_enabled()) {
+			lpos += (p - lpos).get_norm()*(1.01*ls.get_near_clip());
 			if (!coll_pt_vis_test(p, lpos, 0.0, index, -1, 0, 3)) continue; // no cobj, skip_dynamic=0, use shadow alpha
 		}
 		return 1; // found
-	} // for l
+	} // for ls
 	return 0;
 }
 
