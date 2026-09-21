@@ -68,13 +68,12 @@ public:
 	}
 	void alloc(rgeom_storage_t &s) { // attempt to use free_list entry to reuse existing capacity
 		if (free_list.empty()) return; // no pre-alloc
-		//cout << TXT(free_list.size()) << TXT(free_list.back().get_tot_vert_capacity()) << endl; // total mem usage is 913/1045
 
 		// try to find a free list element with the same tex so that we balance out material memory usage/capacity better
-		for (unsigned i = 0; i < free_list.size(); ++i) {
-			if (!free_list[i].tex.is_compatible(s.tex)) continue;
-			s.swap_vectors(free_list[i]); // transfer existing capacity from free list
-			free_list[i].swap(free_list.back());
+		for (auto &f : free_list) {
+			if (!f.tex.is_compatible(s.tex)) continue;
+			s.swap_vectors(f); // transfer existing capacity from free list
+			f.swap(free_list.back());
 			free_list.pop_back();
 			return; // done
 		}
@@ -82,7 +81,7 @@ public:
 	void free(rgeom_storage_t &s) {
 		s.clear(); // in case the caller didn't clear it
 		if (s.get_mem_usage() == 0) return; // no memory allocated, no point in adding to the free list
-		free_list.push_back(rgeom_storage_t(s.tex)); // record tex of incoming element
+		free_list.emplace_back(s.tex); // record tex of incoming element
 		s.swap_vectors(free_list.back()); // transfer existing capacity to free list; clear capacity from s
 	}
 	size_t get_mem_usage() const {

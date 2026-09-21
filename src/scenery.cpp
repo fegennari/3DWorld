@@ -176,7 +176,6 @@ public:
 	}
 };
 
-
 void rock_shape3d::gen_rock(unsigned nverts, float size, int rand_seed, int type) {
 
 	set_rand2_state(rand_seed, 10423232);
@@ -234,7 +233,7 @@ void rock_shape3d::gen_rock(unsigned nverts, float size, int rand_seed, int type
 				assert(face < faces.size());
 				faces[face].v[0] = cv; // start a new face
 				faces[face].v[1] = imin;
-				edges.push_back(edge(face++, (d != 0)));
+				edges.emplace_back(face++, (d != 0));
 			}
 			while (!edges.empty()) {
 				edge e(edges.back());
@@ -267,7 +266,7 @@ void rock_shape3d::gen_rock(unsigned nverts, float size, int rand_seed, int type
 					faces[face].v[0] = v[d]; // start a new face
 					faces[face].v[1] = v[2];
 					float const dp(dot_product((points[v[!d]] - points[v[d]]), (points[v[d]] - points[v[2]])));
-					edges.push_back(edge(face++, (dp > 0.0)));
+					edges.emplace_back(face++, (dp > 0.0));
 				}
 			} // while
 		} // for cv

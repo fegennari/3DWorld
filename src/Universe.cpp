@@ -1343,7 +1343,7 @@ bool ugalaxy::gen_system_loc(vector<point> const &placed) {
 			}
 		}
 		if (bad_pos) continue;
-		unsigned in_cluster((unsigned)clusters.size());
+		unsigned in_cluster(clusters.size());
 		float dmin(0.0);
 
 		for (unsigned c = 0; c < clusters.size(); ++c) {
@@ -1356,7 +1356,7 @@ bool ugalaxy::gen_system_loc(vector<point> const &placed) {
 		}
 		if (in_cluster == clusters.size()) { // create initial clusters with fixed radius around a starting point
 			float const cluster_size(0.1*radius + 0.3*p2p_dist(pos2, pos));
-			clusters.push_back(system_cluster(cluster_size, pos2));
+			clusters.emplace_back(cluster_size, pos2);
 			clusters.back().systems.reserve(MAX_SYSTEMS_PER_GALAXY/10);
 		}
 		assert(in_cluster < clusters.size());
