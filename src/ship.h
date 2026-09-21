@@ -8,12 +8,10 @@
 #include "function_registry.h"
 #include "explosion.h" // for NUM_EXP_LIGHTS
 #include "string"
-#include "deque"
 #include <iostream>
 #include <fstream>
 
 using std::string;
-using std::deque;
 using std::ifstream;
 using std::cerr;
 

@@ -14,7 +14,7 @@
 
 
 triangle_vntc cur_triangle;
-deque<triangle_vntc> triangles;
+vector<triangle_vntc> triangles;
 deque<vert_norm_tc> added_pts;
 bool mode_valid(0), self_int(0), has_tess_error(0);
 int mode(0);

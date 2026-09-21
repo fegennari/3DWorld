@@ -212,7 +212,7 @@ void rock_shape3d::gen_rock(unsigned nverts, float size, int rand_seed, int type
 		assert(nverts <= 64);
 		uint64_t used(0);
 		edge_seen_set edges_seen(nverts);
-		deque<edge> edges; // incomplete faces
+		vector<edge> edges; // incomplete faces
 
 		for (unsigned cv = 0; cv < nverts; ++cv) { // is this outer loop necessary?
 			if (used & (1ULL<<cv)) continue; // finished with this vertex
