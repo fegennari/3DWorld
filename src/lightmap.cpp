@@ -1245,7 +1245,7 @@ void add_dynamic_lights_city(cube_t const &scene_bcube, float &dlight_add_thresh
 	if (!has_dl_sources) return; // nothing else to do
 	dlight_add_thresh *= 0.99;
 	if (!scene_bcube.is_strictly_normalized()) {cerr << "Invalid scene_bcube: " << scene_bcube.str() << endl;}
-	//highres_timer_t timer("Dynamic Light Add"); // 0.18ms start, 0.37ms in office building
+	//highres_timer_t timer("Dynamic Light Add"); // 0.11ms start, 0.35ms in mall
 	assert(scene_bcube.dx() > 0.0 && scene_bcube.dy() > 0.0);
 	point const scene_llc(scene_bcube.get_llc()); // Note: zval ignored
 	vector3d const scene_sz(scene_bcube.get_size()); // Note: zval ignored

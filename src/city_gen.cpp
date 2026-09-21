@@ -3548,6 +3548,7 @@ bool city_lights_manager_t::begin_lights_setup(vector3d const &xlate, float ligh
 }
 
 void city_lights_manager_t::finalize_lights(vector<light_source> &lights) { // Note: lights is always dl_sources and not passed into calls below
+	//highres_timer_t timer("dlights_city"); // start: 0.17, retail: 0.09, backrooms: 0.26, mall: 0.55
 	add_dynamic_lights_city(lights_bcube, dlight_add_thresh, CITY_LIGHT_FALLOFF);
 	upload_dlights_textures(lights_bcube, dlight_add_thresh);
 	prev_had_lights = !lights.empty();

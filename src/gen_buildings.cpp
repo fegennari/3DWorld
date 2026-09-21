@@ -470,6 +470,9 @@ struct building_lights_manager_t : public city_lights_manager_t {
 			setup_shadow_maps(dl_sources, (camera_pdu.pos - xlate), global_building_params.max_shadow_maps, sec_camera_mode);
 			sec_camera_shadow_mode = 0; // restore
 		}
+		// sort by pos x then y to maximize stacking
+		sort(dl_sources.begin(), dl_sources.end(),
+			[](light_source const &a, light_source const &b) {return ((a.get_pos().y == b.get_pos().y) ? (a.get_pos().x < b.get_pos().x) : (a.get_pos().y < b.get_pos().y));});
 		finalize_lights(dl_sources);
 	}
 	void add_player_candle_light(vector3d const &xlate) {
