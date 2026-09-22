@@ -4245,6 +4245,14 @@ cube_t get_whiteboard_marker_ledge(room_object_t const &c) {
 	ledge.d[c.dim][ c.dir] += (c.dir ? 1.5 : -1.5)*c.get_depth(); // extrude outward
 	return ledge;
 }
+colorRGBA get_abstract_art_seed_color(room_object_t const &c) {
+	rand_gen_t rgen(c.create_rgen());
+	rgen.rseed1 += 1000*c.x1(); // mix it up some more
+	rgen.rseed2 += 1000*c.y1();
+	rgen.rand_mix();
+	return colorRGBA(rgen.rand_float(), rgen.rand_float(), rgen.rand_float()); // sets abstract art random seed
+}
+
 void building_room_geom_t::add_picture(room_object_t const &c) { // also whiteboards; not affected by room color
 	bool const whiteboard(c.type == TYPE_WBOARD); // or blackboard
 	int picture_tid(WHITE_TEX);
@@ -4264,11 +4272,7 @@ void building_room_geom_t::add_picture(room_object_t const &c) { // also whitebo
 		if (user_tid >= 0) {picture_tid = (unsigned)user_tid;} // if user texture is valid, use that instead
 		else if (is_abstract_art) {
 			picture_tid = ABST_ART_TEXTURE_ID;
-			rand_gen_t rgen(c.create_rgen());
-			rgen.rseed1 += 1000*c.x1(); // mix it up some more
-			rgen.rseed2 += 1000*c.y1();
-			rgen.rand_mix();
-			color = colorRGBA(rgen.rand_float(), rgen.rand_float(), rgen.rand_float()); // sets abstract art random seed
+			color       = get_abstract_art_seed_color(c);
 		}
 		else {picture_tid = c.get_picture_tid();}
 		num_pic_tids = get_num_screenshot_tids(); // record on VBO creation so that we know to regenerate when a new picture is taken
@@ -6559,10 +6563,10 @@ cube_t get_tv_screen(room_object_t const &c) {
 	screen.z2() -= 0.04*c.dz();
 	return screen;
 }
-void add_tv_or_monitor_screen(room_object_t const &c, rgeom_mat_t &mat, std::string const &onscreen_text="", rgeom_mat_t *text_mat=nullptr) {
+void add_tv_or_monitor_screen(room_object_t const &c, rgeom_mat_t &mat, colorRGBA const &color=WHITE, std::string const &onscreen_text="", rgeom_mat_t *text_mat=nullptr) {
 	cube_t const screen(get_tv_screen(c));
 	bool const miry(!(c.dim ^ c.dir));
-	mat.add_cube_to_verts(screen, WHITE, c.get_llc(), get_face_mask(c.dim, c.dir), !c.dim, miry); // draw outward face
+	mat.add_cube_to_verts(screen, color, c.get_llc(), get_face_mask(c.dim, c.dir), !c.dim, miry); // draw outward face
 
 	if (text_mat != nullptr && !onscreen_text.empty()) { // onscreen text is drawn the same as book titles
 		float const width(screen.get_sz_dim(!c.dim)), height(screen.dz()), text_width(min(0.5, 0.02*(onscreen_text.size() + 2)));
@@ -6589,8 +6593,13 @@ void building_room_geom_t::add_tv_picture(room_object_t const &c) {
 	if (!c.is_tv_monitor_on() || c.is_active()) return; // skip if turned off or active security monitor (not drawn here)
 	tid_nm_pair_t tex(get_tv_or_monitor_tid(c), 0.0); // unshadowed
 	tex.emissive = 1.0;
-	if (c.is_broken2()) {tex.tscale_x = 8.0/c.get_width(); tex.tscale_y = 4.0/c.get_height();}
-	add_tv_or_monitor_screen(c, get_material(tex));
+	colorRGBA color(WHITE);
+	if (c.is_broken2()) {tex.tscale_x = 8.0/c.get_width(); tex.tscale_y = 4.0/c.get_height();} // static pattern
+	else if (c.shape == SHAPE_SHORT && ((c.room_id + c.obj_id/2) & 1)) { // screen saver
+		tex.tid = ABST_ART_TEXTURE_ID;
+		color   = get_abstract_art_seed_color(c);
+	}
+	add_tv_or_monitor_screen(c, get_material(tex), color);
 }
 
 void building_room_geom_t::add_cup_liquid(room_object_t const &c) {

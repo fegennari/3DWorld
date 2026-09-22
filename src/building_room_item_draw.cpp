@@ -44,7 +44,7 @@ int get_toilet_paper_nm_id();
 int get_box_tid();
 int get_box_nm_tid();
 void setup_monitor_screen_draw(room_object_t &monitor, rgeom_mat_t &mat, std::string &onscreen_text);
-void add_tv_or_monitor_screen(room_object_t const &c, rgeom_mat_t &mat, std::string const &onscreen_text, rgeom_mat_t *text_mat);
+void add_tv_or_monitor_screen(room_object_t const &c, rgeom_mat_t &mat, colorRGBA const &color, std::string const &onscreen_text, rgeom_mat_t *text_mat);
 void get_shower_head_pos_dir(room_object_t const &c, point &head_pos, vector3d &head_dir);
 bool check_clock_time();
 bool have_fish_model();
@@ -2142,7 +2142,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			if (player_in_building && type == TYPE_MONITOR && obj.is_tv_monitor_on() && obj.is_active()) {
 				onscreen_text.clear();
 				setup_monitor_screen_draw(obj, monitor_screens_mat, onscreen_text);
-				add_tv_or_monitor_screen (obj, monitor_screens_mat, onscreen_text, &onscreen_text_mat);
+				add_tv_or_monitor_screen (obj, monitor_screens_mat, WHITE, onscreen_text, &onscreen_text_mat);
 				s.set_color_e(WHITE); // emissive
 				tid_nm_pair_dstate_t screen_state(s, 1), text_state(s, 0); // no_set_texture=1/0
 				monitor_screens_mat.upload_draw_and_clear(screen_state);

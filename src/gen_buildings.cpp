@@ -30,7 +30,7 @@ int player_in_basement(0); // 0=no, 1=below ground level, 2=in basement and not 
 int player_in_closet  (0); // uses flags RO_FLAG_IN_CLOSET (player in closet), RO_FLAG_LIT (closet light is on), RO_FLAG_OPEN (closet door is open)
 int player_in_water   (0); // 0=no, 1=standing in water, 2=head underwater
 int player_in_attic   (0); // 0=no, 1=attic with windows, 2=windowless attic
-float building_bcube_expand(0.0), building_ambient_scale(0.0);
+float building_bcube_expand(0.0), building_ambient_scale(0.0), abstract_art_time_offset(0.0), abstract_art_delta_sign(1.0);
 point player_candle_pos;
 vector3d cur_camera_pos_xlate;
 cube_t building_occluder;
@@ -121,31 +121,34 @@ void tid_nm_pair_t::set_specular_color(colorRGB const &color, float mag, float s
 	shininess = (unsigned char)max(1, min(255, round_fp(shine)));
 }
 void tid_nm_pair_t::set_gl(tid_nm_pair_dstate_t &state) const {
-	// Note: normal map bind must be done first because it will bind to TU=0 on first load, which will overwrite the bound diffuse texture
-	bool const has_normal_map(get_nm_tid() != FLAT_NMAP_TEX);
-	if (has_normal_map) {select_texture_nmap(get_nm_tid());} // else we set bump_map_mag=0.0
-	state.set_for_shader(has_normal_map ? 1.0 : 0.0); // enable or disable normal map (only ~25% of calls have a normal map)
+	float const e_val(get_emissive_val());
 
+	if (tid == ABST_ART_TEXTURE_ID) {
+		if (abstract_art_shader.is_setup()) {abstract_art_shader.make_current();}
+		else {setup_building_draw_shader(abstract_art_shader, 0.0, 1, 0, 3);} // enable_indir=1, force_tsl=0, use_texgen=3 (abstract art)
+		abstract_art_shader.add_uniform_float("animate_cycle", ((e_val > 0.0) ? abstract_art_time_offset : 0.0)); // emissive materials (TVs and computer monitors) are animated
+		select_no_texture(); // probably not needed, but just to be safe
+		bind_default_flat_normal_map(); // for some reason, this one is needed
+		if (e_val > 0.0) {abstract_art_shader.add_uniform_float("emissive_scale", e_val);} // enable emissive
+		return;
+	}
 	if (state.no_set_texture) {} // nothing to do
 	else if (tid == FONT_TEXTURE_ID) {text_drawer::bind_font_texture();}
 	else if (tid == REFLECTION_TEXTURE_ID) {
 		if (bind_reflection_shader()) return;
 	}
-	else if (tid == ABST_ART_TEXTURE_ID) {
-		if (abstract_art_shader.is_setup()) {abstract_art_shader.make_current();}
-		else {setup_building_draw_shader(abstract_art_shader, 0.0, 1, 0, 3);} // enable_indir=1, force_tsl=0, use_texgen=3 (abstract art)
-		select_no_texture(); // probably not needed, but just to be safe
-		bind_default_flat_normal_map(); // for some reason, this one is needed
-	}
 	else if (tid == NO_SHADOW_WHITE_TEX || tid == SHADOW_ONLY_TEX) {select_no_texture();}
 	else {select_texture(tid);}
+	// Note: normal map bind must be done first because it will bind to TU=0 on first load, which will overwrite the bound diffuse texture
+	bool const has_normal_map(get_nm_tid() != FLAT_NMAP_TEX);
+	if (has_normal_map) {select_texture_nmap(get_nm_tid());} // else we set bump_map_mag=0.0
+	state.set_for_shader(has_normal_map ? 1.0 : 0.0); // enable or disable normal map (only ~25% of calls have a normal map)
 	
 	if (tid == PS_NOISE_TEX) {
 		static rand_gen_t static_rgen;
 		state.s.add_uniform_float("tex_offset_s", static_rgen.rand_float());
 		state.s.add_uniform_float("tex_offset_t", static_rgen.rand_float());
 	}
-	float const e_val(get_emissive_val());
 	if (e_val      > 0.0) {state.s.add_uniform_float("emissive_scale", e_val);} // enable emissive
 	if (shininess  > 0  ) {state.s.set_specular_color(spec_color.get_c3(), shininess);} // colored specular
 	if (metalness  > 0.0) {state.s.set_metalness (metalness );}
@@ -156,15 +159,19 @@ void tid_nm_pair_t::set_gl(tid_nm_pair_dstate_t &state) const {
 }
 void tid_nm_pair_t::unset_gl(tid_nm_pair_dstate_t &state) const {
 	if (tid == REFLECTION_TEXTURE_ID && room_mirror_ref_tid != 0) {state.s.make_current(); return;}
-	if (tid == ABST_ART_TEXTURE_ID) {state.s.make_current(); return;}
+	float const e_val(get_emissive_val());
 	
 	if (tid == PS_NOISE_TEX) { // restore
 		state.s.add_uniform_float("tex_offset_s", 0.0);
 		state.s.add_uniform_float("tex_offset_t", 0.0);
 	}
+	if (tid == ABST_ART_TEXTURE_ID) {
+		if (e_val > 0.0) {abstract_art_shader.add_uniform_float("emissive_scale", 0.0);} // disable emissive
+		state.s.make_current();
+		return;
+	}
 	bool const has_normal_map(get_nm_tid() != FLAT_NMAP_TEX);
 	if (has_normal_map) {bind_default_flat_normal_map();} // reset back to flat normal map
-	float const e_val(get_emissive_val());
 	if (e_val      > 0.0) {state.s.add_uniform_float("emissive_scale", 0.0);} // disable emissive
 	if (shininess  > 0  ) {state.s.clear_specular();} // clear specular
 	if (metalness  > 0.0) {state.s.set_metalness (0.0);} // clear metalness
@@ -4517,6 +4524,8 @@ public:
 				player_in_attic    = this_frame_player_in_attic;
 				player_in_water    = this_frame_player_in_water;
 				building_has_open_ext_door = !ext_door_draw.empty();
+				abstract_art_time_offset  += 0.1*abstract_art_delta_sign*fticks/TICKS_PER_SECOND; // 10s cycle time
+				if (abstract_art_time_offset > 1.0 || abstract_art_time_offset < 0.0) {abstract_art_delta_sign = -abstract_art_delta_sign;} // keep in the [0.0, 1.0] range
 			}
 			reset_interior_lighting_and_end_shader(s);
 			reflection_shader  .clear();
