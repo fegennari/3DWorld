@@ -622,7 +622,7 @@ bool can_hide_under(room_object_t const &c, cube_t &hide_area) {
 
 template<bool xy_only> class dir_gen_t {
 	vector<vector3d> dirs;
-	unsigned dir_ix;
+	unsigned dir_ix=0;
 
 	void gen_dirs() {
 		rand_gen_t rgen;
@@ -630,8 +630,6 @@ template<bool xy_only> class dir_gen_t {
 		for (auto &dir : dirs) {dir = (xy_only ? rgen.signed_rand_vector_spherical_xy_norm() : rgen.signed_rand_vector_spherical_norm());}
 	}
 public:
-	dir_gen_t() : dir_ix(0) {}
-
 	vector3d const &gen_dir() {
 		if (dirs.empty()) {gen_dirs();}
 		vector3d const &dir(dirs[dir_ix++]);
@@ -1198,8 +1196,8 @@ class obj_avoid_t {
 	point const &p_last;
 	float radius;
 public:
-	bool had_coll;
-	obj_avoid_t(point &pos_, point const &p_last_, float radius_) : pos(pos_), p_last(p_last_), radius(radius_), had_coll(0) {}
+	bool had_coll=0;
+	obj_avoid_t(point &pos_, point const &p_last_, float radius_) : pos(pos_), p_last(p_last_), radius(radius_) {}
 	void register_avoid_cube(cube_t const &c) {had_coll |= sphere_cube_int_update_pos(pos, radius, c, p_last);}
 };
 

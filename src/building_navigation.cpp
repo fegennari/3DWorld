@@ -243,8 +243,7 @@ bool cube_nav_grid::find_path(point const &p1, point const &p2, ai_path_t &path)
 	return 0; // failed - no path from room1 to room2
 }
 
-class building_cube_nav_grid : public cube_nav_grid { // for backrooms
-public:
+struct building_cube_nav_grid : public cube_nav_grid { // for backrooms
 	void build_for_building(cube_t const &bcube_, vect_cube_t const &blockers, vect_door_stack_t const &door_stacks,
 		vector<stairwell_t> const &stairwells, float stairs_extend, float radius_)
 	{

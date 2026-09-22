@@ -646,21 +646,18 @@ public:
 		gen_sound_thread_safe_at_player(SOUND_CLICK, 0.5);
 	}
 	void hide_phone() {is_on = 0;}
-}; // phone_manager_t
-
+};
 phone_manager_t phone_manager;
 
 bool phone_is_ringing() {return phone_manager.is_phone_ringing();}
 
 struct tape_manager_t {
-	bool in_use;
-	float last_toggle_time;
+	bool in_use=0;
+	float last_toggle_time=0.0;
 	vector<point> points;
 	point last_pos;
 	room_object_t tape;
-	building_t *cur_building;
-
-	tape_manager_t() : in_use(0), last_toggle_time(0.0), cur_building(nullptr) {}
+	building_t *cur_building=nullptr;
 
 	void toggle_use(room_object_t const &tape_, building_t *building) {
 		if ((tfticks - last_toggle_time) < 0.5*TICKS_PER_SECOND) return; // don't toggle too many times per frame
@@ -676,7 +673,6 @@ struct tape_manager_t {
 		in_use = 0;
 	}
 };
-
 tape_manager_t tape_manager;
 
 vector<vending_info_t> vend_types;
@@ -3467,11 +3463,9 @@ void building_t::add_broken_glass_decal(point const &pos, float radius, rand_gen
 
 class sound_tracker_t {
 	point pos;
-	float volume;
-	int cur_frame;
+	float volume=0.0;
+	int cur_frame=0;
 public:
-	sound_tracker_t() : volume(0.0), cur_frame(0) {}
-
 	void register_sound(point const &pos_, float volume_) {
 		if (cur_frame == frame_counter && volume_ < volume) return; // not the loudest sound this frame
 		pos = pos_; volume = volume_; cur_frame = frame_counter;

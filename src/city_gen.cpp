@@ -2493,7 +2493,7 @@ class city_road_gen_t : public road_gen_base_t {
 	cube_t cities_bcube;
 	road_draw_state_t dstate;
 	rand_gen_t rgen;
-	bool have_plot_dividers;
+	bool have_plot_dividers=0;
 
 	static float rgen_uniform(float val1, float val2, rand_gen_t &rgen) {return (val1 + (val2 - val1)*rgen.rand_float());}
 
@@ -2526,7 +2526,6 @@ class city_road_gen_t : public road_gen_base_t {
 	road_network_t const &get_city_by_ix(unsigned ix) const {assert(ix < road_networks.size()); return road_networks[ix];}
 
 public:
-	city_road_gen_t() : have_plot_dividers(0) {}
 	bool empty() const {return road_networks.empty();}
 	bool has_tunnels() const {return global_rn.has_tunnels();}
 	bool point_in_tunnel(point const &pos) const {return global_rn.point_in_tunnel(pos);}
@@ -3600,10 +3599,9 @@ class city_gen_t : public city_plot_gen_t, public city_lights_manager_t {
 	city_road_gen_t road_gen;
 	car_manager_t car_manager;
 	ped_manager_t ped_manager;
-	unsigned prev_city_lights_setup_frame;
-
+	unsigned prev_city_lights_setup_frame=-1;
 public:
-	city_gen_t() : car_manager(road_gen), ped_manager(road_gen, car_manager), prev_city_lights_setup_frame(-1) {}
+	city_gen_t() : car_manager(road_gen), ped_manager(road_gen, car_manager) {}
 
 	bool gen_city(city_params_t const &params, cube_t &cities_bcube) {
 		unsigned x1(0), y1(0), x2(0), y2(0);
@@ -3875,7 +3873,7 @@ class model_bcube_checker_t {
 	vect_cube_t model_bcubes;
 	cube_t all_bcube;
 	vector3d max_sz;
-	bool is_valid = 0;
+	bool is_valid=0;
 
 	struct bcube_by_y2 {
 		bool operator()(cube_t const &a, cube_t const &b) const {return (a.y2() < b.y2());}

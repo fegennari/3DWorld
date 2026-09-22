@@ -314,7 +314,7 @@ class texture_id_mapper_t {
 	vector<unsigned> tid_to_slot_ix;
 	vector<int> tid_to_nm_tid;
 	set<unsigned> ext_wall_tids, roof_tids;
-	unsigned next_slot_ix;
+	unsigned next_slot_ix=1; // slots start at 1; slot 0 is for untextured
 
 	void register_tid(int tid) {
 		if (tid < 0) return; // not allocated
@@ -330,8 +330,6 @@ class texture_id_mapper_t {
 		}
 	}
 public:
-	texture_id_mapper_t() : next_slot_ix(1) {} // slots start at 1; slot 0 is for untextured
-
 	void init() {
 		if (!tid_to_slot_ix.empty()) return; // already inited
 		// register all textures that will be used here, before we get into the OMP parallel block
@@ -734,7 +732,6 @@ void add_tquad_to_verts(building_geom_t const &bg, tquad_with_ix_t const &tquad,
 	verts.push_back(vert);
 
 class building_draw_t {
-
 	static vbo_cache_t vbo_cache; // shared across all bdraws/tiles/blocks/buildings
 
 	class draw_block_t {
