@@ -675,6 +675,35 @@ struct tape_manager_t {
 };
 tape_manager_t tape_manager;
 
+class lava_manager_t {
+	double lava_start_ticks=0.0, lava_end_ticks=0.0;
+public:
+	bool is_countdown_stage() const {return (lava_start_ticks > 0.0 && tfticks < lava_start_ticks);}
+	bool is_floor_lava     () const {return (lava_end_ticks   > 0.0 && tfticks < lava_end_ticks  );}
+
+	void start_floor_is_lava() {
+		cout << "start lava" << endl;
+		if (is_floor_lava() || is_countdown_stage()) return; // finish the current cycle first
+		lava_start_ticks = tfticks + 5.0*TICKS_PER_SECOND; // 5s delay
+	}
+	void next_frame() {
+		if (is_countdown_stage()) { // show countdown timer
+			double const time_rem_secs((lava_start_ticks - tfticks)/TICKS_PER_SECOND);
+			string const msg("Floor is Lava in " + std::to_string(round_fp(time_rem_secs)) + "s");
+			print_text_onscreen(msg, RED, 1.25, 1, 20);
+		}
+		else if (lava_start_ticks > 0.0) { // start lava
+			print_text_onscreen("The Floor is Lava!", RED, 1.25, 2.0*TICKS_PER_SECOND, 20);
+			lava_start_ticks = 0.0;
+			lava_end_ticks   = tfticks + 10.0*TICKS_PER_SECOND; // 10s lava
+		}
+		else if (lava_end_ticks > 0 && tfticks > lava_end_ticks) { // end lava
+			lava_end_ticks = 0.0;
+		}
+	}
+};
+lava_manager_t lava_manager;
+
 vector<vending_info_t> vend_types;
 
 vending_info_t const &get_vending_type(unsigned vtype) {
@@ -945,6 +974,7 @@ public:
 			rooms_stolen_from.insert(obj.room_id); // only if was_expanded?
 		}
 		if (type == TYPE_PAPER && value >= 500.0) {register_achievement("Top Secret Document");}
+		if (type == TYPE_LAVALAMP) {lava_manager.start_floor_is_lava();}
 		
 		if ((type == TYPE_TCAN && !obj.was_expanded() && !obj.is_recycle_bin()) || // skip trashcans on shelves and recycling bins
 			type == TYPE_TOILET || type == TYPE_URINAL || (type == TYPE_RAT && obj.is_broken()))
@@ -1369,6 +1399,7 @@ public:
 		}
 		show_stats();
 		phone_manager.next_frame(); // even if not in gameplay mode?
+		lava_manager .next_frame();
 		float const fticks_clamped(min(fticks, 0.25f*TICKS_PER_SECOND)); // limit to 250ms so that the player doesn't die when un-paused
 		float const elapsed_ticks(animate2 ? fticks_clamped : 0.0), elapsed_secs(elapsed_ticks/TICKS_PER_SECOND); // no time elapsed when time is paused
 		
