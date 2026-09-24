@@ -4249,6 +4249,7 @@ colorRGBA get_abstract_art_seed_color(room_object_t const &c) {
 	rand_gen_t rgen(c.create_rgen());
 	rgen.rseed1 += 1000*c.x1(); // mix it up some more
 	rgen.rseed2 += 1000*c.y1();
+	rgen.rseed2 += 1000*c.z1(); // needed for stacked security monitors
 	rgen.rand_mix();
 	return colorRGBA(rgen.rand_float(), rgen.rand_float(), rgen.rand_float()); // sets abstract art random seed
 }
