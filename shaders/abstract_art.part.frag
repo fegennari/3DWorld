@@ -1,4 +1,6 @@
 
+uniform float animate_cycle=0.0;
+
 vec3 colorize(float val) {
 	float a = 5*val, b = 7*val, c = 11*val;
 	return vec3((a - int(a)), (b - int(b)), (c - int(c)));
@@ -49,7 +51,7 @@ vec4 vortex(vec2 p, float seed) {
         //Iterate radius
         i+=.05;
     //Tanh tonemap: shadertoy.com/view/ms3BD7
-    return tanh(O/1e2);
+    return vec4(tanh(O.xyz/1e2), 1.0); // alpha=1.0
 }
 
 // https://www.shadertoy.com/view/WtjyzR
@@ -80,13 +82,14 @@ vec4 colorful(vec2 pos, float seed) {
 }
 
 vec4 gen_abstract_art(vec2 tc, vec3 seed) {
-	// seed.r selects the fractal/mode, seed.g selects the location, and seed.b selects the zoom level
+	// seed.r selects the fractal/mode, seed.g selects the location/zoom level, and seed.b selects the center
 	int mode = int(5.99*seed.r);
+	float time_offset = seed.g + animate_cycle;
 	vec2 pos = 2.0*tc - vec2(1.0); // [-1.0, 1.0]
-	if (mode == 3) {return gen_ZzArt(pos, seed.g);}
-	if (mode == 4) {return vortex   (pos, seed.g);}
-	if (mode == 5) {return colorful (pos, seed.g);}
-	int cix  = min(4, int(4.0*seed.g));
+	if (mode == 3) {return gen_ZzArt(pos, time_offset);}
+	if (mode == 4) {return vortex   (pos, time_offset);}
+	if (mode == 5) {return colorful (pos, time_offset);}
+	int cix  = min(4, int(4.0*seed.b));
 	pos.y    = -pos.y; // invert Y
 	vec2 c; // center of window
 
@@ -102,7 +105,7 @@ vec4 gen_abstract_art(vec2 tc, vec3 seed) {
 		vec2 centers[4] = {vec2(-1.57535, -0.00717238), vec2(0.807586, -1.40662), vec2(-0.676457, -1.10419), vec2(0.810333, -1.40356)};
 		c = centers[cix];
 	}
-	c       += (0.001 + 0.009*seed.b)*pos;
+	c       += (0.001 + 0.009*time_offset)*pos;
 	vec2 z   = vec2(0.0, 0.0);
 	uint val = 0;
 
