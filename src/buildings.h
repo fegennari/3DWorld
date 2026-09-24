@@ -2168,6 +2168,7 @@ public:
 	void update_pet_birds    (point const &camera_bs, unsigned building_ix);
 	void update_insects      (point const &camera_bs, unsigned building_ix);
 	void shoot_gun_at_animals(point const &p1, point const &p2);
+	void kill_animals_in_area(cube_t const &area);
 	void get_objs_at_or_below_ground_floor(vect_room_object_t &ret, bool for_spider) const;
 	bool begin_fish_draw() const;
 	void rat_bite_player(point const &pos, float damage, rand_gen_t &rgen);
@@ -2244,6 +2245,7 @@ public:
 	bool cube_intersects_basement_or_extb_room(cube_t const &c, bool check_tunnel_pipes=0) const;
 	bool point_in_courtyard(point const &pos_bs) const;
 	bool point_on_basement_stairs(point const &pos_bs) const;
+	bool is_over_uncovered_floor(point const &pos_bs) const;
 	bool is_cube_visible_through_extb_door(point const &viewer, cube_t const &c) const;
 	bool are_points_in_room_reachable(point const &p1, point const &p2, unsigned room_id) const;
 	float get_bcube_z1_inc_ext_basement() const {return (has_ext_basement() ? min(bcube.z1(), interior->basement_ext_bcube.z1()) : bcube.z1());}

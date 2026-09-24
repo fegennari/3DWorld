@@ -50,6 +50,7 @@ struct rat_t : public building_animal_t {
 	cube_t get_bcube () const {return get_cube_height_radius(pos, radius, height);} // used for collision detection and VFC; bounding cube across rotations
 	cube_t get_bcube_with_dir() const; // used for model drawing; must be correct aspect ratio
 	bool is_facing_dest() const;
+	void kill() {dead = 1; speed = 0.0;}
 };
 
 struct spider_t : public building_animal_t {
@@ -75,6 +76,7 @@ struct spider_t : public building_animal_t {
 	void jump(float vel);
 	bool is_jumping() const {return (jump_vel_z != 0.0);}
 	void end_jump  ();
+	void squish    () {squished = 1; speed = 0.0;}
 };
 
 struct snake_t : public building_animal_t {

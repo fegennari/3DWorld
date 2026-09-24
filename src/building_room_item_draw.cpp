@@ -53,6 +53,7 @@ void end_fish_draw(shader_t &s, bool inc_pools_and_fb);
 void calc_cur_ambient_diffuse();
 void reset_interior_lighting_and_end_shader(shader_t &s);
 bool has_cars_enabled();
+bool has_lava_on_floor();
 
 bool has_key_3d_model      () {return building_obj_model_loader.is_model_valid(OBJ_MODEL_KEY);}
 bool has_office_chair_model() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_OFFICE_CHAIR);}
@@ -1500,6 +1501,28 @@ public:
 
 lava_lamp_draw_t lava_lamp_draw;
 
+class lava_draw_t {
+	rgeom_mat_t lava_mat;
+	point llc;
+public:
+	lava_draw_t() : lava_mat(tid_nm_pair_t(LAVA_TEX)) {
+		lava_mat.tex.emissive = 1.0;
+	}
+	void set_building(cube_t const &bcube, float tscale) {
+		llc = bcube.get_llc();
+		lava_mat.tex.tscale_x = lava_mat.tex.tscale_y = tscale;
+	}
+	void add_lava(cube_t const &lava) {
+		lava_mat.add_cube_to_verts(lava, YELLOW, llc, ~EF_Z2); // top only
+	}
+	void draw_and_clear(shader_t &s) {
+		tid_nm_pair_dstate_t state(s);
+		lava_mat.upload_draw_and_clear(state);
+	}
+};
+
+lava_draw_t lava_draw;
+
 int room_object_t::get_model_id() const { // Note: first 8 bits is model ID, last 8 bits is sub-model ID
 	assert(type >= TYPE_TOILET);
 	if (type == TYPE_MONITOR)    return OBJ_MODEL_TV        ; // monitor has same model as TV
@@ -2333,6 +2356,20 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	if (!shadow_only && !reflection_pass) {water_sound_manager.finalize();}
 	water_draw.draw_and_clear(s);
 
+	if (player_in_building_or_doorway && !shadow_only && has_lava_on_floor()) { // draw lava on the floor
+		unsigned const floor_ix(building.get_floor_for_zval(camera_bs.z)); // lava lamps are only in houses, so we don't need to deal with variable floor spacing (malls, factories, etc.)
+		float const lava_z1(building.get_bcube_z1_inc_ext_basement() + floor_ix*floor_spacing);
+		//float const lava_z2(lava_z1 + building.get_fc_thickness() + 2.0*building.get_flooring_thick()); // above rugs and flooring
+		float const lava_z2(lava_z1 + building.get_fc_thickness() + 0.5*building.get_rug_thickness()); // under rugs and flooring
+		cube_t lava(building.bcube);
+		set_cube_zvals(lava, lava_z1, lava_z2);
+		lava_draw.set_building(building.bcube, 2.0/obj_scale);
+		
+		for (cube_t const &c : building.interior->floors) {
+			if (c.intersects(lava)) {lava_draw.add_lava(c);}
+		}
+		lava_draw.draw_and_clear(s);
+	}
 	if (player_in_building && !shadow_only && player_held_object.is_valid() && &building == player_building) {
 		// draw the item the player is holding; actual_player_pos should be the correct position for reflections
 		point const obj_pos(get_player_held_object_pos(reflection_pass ? actual_player_pos : camera_bs));

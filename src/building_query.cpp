@@ -3339,6 +3339,26 @@ bool building_t::point_on_basement_stairs(point const &pos_bs) const {
 	return 0;
 }
 
+bool building_t::is_over_uncovered_floor(point const &pos_bs) const { // for floor is lava
+	assert(interior);
+	unsigned const floor_ix(get_floor_for_zval(pos_bs.z)); // lava lamps are only in houses, so we don't need to deal with variable floor spacing (malls, factories, etc.)
+	cube_t c; c.set_from_sphere(pos_bs, get_floor_thickness());
+
+	for (cube_t const &f : interior->floors) {
+		if (!f.intersects(c)) continue;
+		if (!has_room_geom()) return 1; // nothing to block the lava
+		bool on_obj(0);
+		auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
+
+		for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
+			if (!i->intersects(c)) continue;
+			if (i->type == TYPE_RUG || i->type == TYPE_FLOORING) {on_obj = 1; break;}
+		}
+		if (!on_obj) return 1;
+	} // for c
+	return 0;
+}
+
 bool building_t::is_obj_above_ramp(cube_t const &c) const {
 	assert(interior);
 	if (!has_pg_ramp()) return 0;

@@ -19,8 +19,8 @@ float const OBJ_ELASTICITY = 0.8;
 extern bool tt_fire_button_down, flashlight_on, use_last_pickup_object, city_action_key, can_do_building_action, toggle_room_light, player_wait_respawn;
 extern bool building_alarm_active, player_in_mall;
 extern int player_in_closet, camera_surf_collide, can_pickup_bldg_obj, building_action_key, animate2, frame_counter, player_in_elevator, player_in_attic, player_in_basement;
-extern float fticks, CAMERA_RADIUS, office_chair_rot_rate;
-extern double tfticks;
+extern float fticks, CAMERA_RADIUS, office_chair_rot_rate, dist_to_fire_sq;
+extern double tfticks, camera_zh;
 extern building_dest_t cur_player_building_loc;
 extern building_t const *player_building;
 
@@ -41,6 +41,7 @@ colorRGBA get_glow_color(float stime, bool fade);
 void play_hum_sound(point const &pos, float gain, float pitch);
 bool ceiling_fan_is_on(room_object_t &obj, vect_room_object_t const &objs);
 bool object_has_something_on_it(room_object_t const &obj, vect_room_object_t const &objs, vect_room_object_t::const_iterator objs_end);
+bool has_lava_on_floor();
 
 // Note: pos is in camera space
 void gen_sound_thread_safe(unsigned id, point const &pos, float gain, float pitch, float gain_scale, bool skip_if_already_playing) {
@@ -1921,6 +1922,15 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 			interior->room_geom->particle_manager.get_closest_particle(camera_rot, player_radius, player_z1, player_z2, PART_EFFECT_STEAM))
 		{
 			player_take_damage(0.002); // very small amount of steam damage; only for extended basements (not prison showers)
+		}
+		if (has_lava_on_floor()) {
+			dist_to_fire_sq = 0.1; // enables fire sound at max volume
+			point const feet_pos(camera_rot - get_player_eye_height()*plus_z);
+			if (is_over_uncovered_floor(feet_pos)) {player_take_damage(0.01);} // lava damage
+			float const z_kill_range(get_floor_thickness());
+			cube_t kill_area(bcube);
+			set_cube_zvals(kill_area, feet_pos.z-z_kill_range, feet_pos.z+z_kill_range);
+			kill_animals_in_area(kill_area);
 		}
 		if (!player_room_no_power && player_room_ix >= 0 /*&& !is_house*/) { // check for sounds; should this be for office buildings only?
 			room_t const &room(get_room(player_room_ix));

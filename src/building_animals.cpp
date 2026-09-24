@@ -83,8 +83,7 @@ void building_t::shoot_gun_at_animals(point const &p1, point const &p2) {
 		if (!get_cube_height_radius(rat.pos, 0.5*rat.radius, rat.height).line_intersects(p1, p2)) continue; // smaller radius
 		add_blood_decal(rat.pos, 0.8*rat.get_xy_radius(), RED);
 		gen_sound_thread_safe(SOUND_RAT_SQUEAK, local_to_camera_space(rat.pos), 1.0, 1.5); // very high pitch
-		rat.dead  = 1;
-		rat.speed = 0.0;
+		rat.kill();
 	}
 	for (spider_t &spider : interior->room_geom->spiders) {
 		if (spider.squished) continue;
@@ -92,8 +91,19 @@ void building_t::shoot_gun_at_animals(point const &p1, point const &p2) {
 		bc.expand_by(vector3d(spider.radius, spider.radius, 0.75*spider.radius)); // smaller size
 		if (!bc.line_intersects(p1, p2)) continue;
 		add_blood_decal(spider.pos, 1.5*spider.get_xy_radius(), spider_blood_color);
-		spider.squished = 1;
-		spider.speed    = 0.0;
+		spider.squish();
+	}
+}
+
+void building_t::kill_animals_in_area(cube_t const &area) {
+	// only rats and spiders are affected, not insects and pets
+	if (!has_room_geom()) return; // error?
+
+	for (rat_t &rat : interior->room_geom->rats) {
+		if (area.contains_pt(rat.pos)) {rat.kill();}
+	}
+	for (spider_t &spider : interior->room_geom->spiders) {
+		if (area.contains_pt(spider.pos)) {spider.squish();}
 	}
 }
 
@@ -316,7 +326,7 @@ bool building_t::add_rat(point const &pos, float hlength, vector3d const &dir, p
 					float const tray_height(0.25*panel.get_sz_dim(!i->dim));
 					i->flags |= RO_FLAG_NONEMPTY;
 					rat.pos   = cube_bot_center(body) + tray_height*plus_z; // centered on the microwave tray
-					rat.dead  = 1;
+					rat.kill();
 					interior->room_geom->rats.add(rat);
 					interior->room_geom->modified_by_player = 1;
 					return 1;
@@ -465,7 +475,8 @@ void building_t::update_pet_rats(point const &camera_bs, unsigned building_ix) {
 		room_object_t const &obj(objs[rat.tunnel_tank_ix]);
 
 		if (!obj.is_pet_container()) { // taken by the player?
-			any_removed = rat.dead = 1; // will be removed below
+			any_removed = 1; // will be removed below
+			rat.kill();
 			continue;
 		}
 		if (rat.is_sleeping()) {
@@ -1526,7 +1537,8 @@ bool building_t::maybe_squish_animals(room_object_t const &obj, point const &pla
 		if (obj.get_size().get_max_val() < spider.get_xy_radius()) continue; // object is too small to squish this spider
 		add_blood_decal(spider.pos, 1.5*spider.get_xy_radius(), spider_blood_color);
 		spider.pos.z -= 0.4*spider.get_height(); // move it near the ground since it will be drawn flattened
-		any_squished  = spider.squished = 1;
+		any_squished  = 1;
+		spider.squish();
 		register_achievement("Splat the Spider");
 	} // for spider
 	for (insect_t &insect : interior->room_geom->insects) { // Note: no size check, achievement, or height reduction

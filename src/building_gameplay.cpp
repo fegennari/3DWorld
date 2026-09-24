@@ -704,6 +704,8 @@ public:
 };
 lava_manager_t lava_manager;
 
+bool has_lava_on_floor() {return lava_manager.is_floor_lava();}
+
 vector<vending_info_t> vend_types;
 
 vending_info_t const &get_vending_type(unsigned vtype) {
