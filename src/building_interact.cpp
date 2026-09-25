@@ -1926,11 +1926,11 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 		if (has_lava_on_floor()) {
 			dist_to_fire_sq = 0.1; // enables fire sound at max volume
 			point const feet_pos(camera_rot - get_player_eye_height()*plus_z);
-			if (is_over_uncovered_floor(feet_pos)) {player_take_damage(0.01);} // lava damage
-			float const z_kill_range(get_floor_thickness());
+			if (is_over_uncovered_floor(feet_pos)) {player_take_damage(0.01);} // lava damage to player
+			float const lava_z1(get_bcube_z1_inc_ext_basement() + get_floor_for_zval(camera_rot.z)*floor_spacing), z_kill_range(get_floor_thickness());
 			cube_t kill_area(bcube);
-			set_cube_zvals(kill_area, feet_pos.z-z_kill_range, feet_pos.z+z_kill_range);
-			kill_animals_in_area(kill_area);
+			set_cube_zvals(kill_area, lava_z1-z_kill_range, lava_z1+z_kill_range);
+			kill_animals_in_area(kill_area); // lava damage to rats and spiders
 		}
 		if (!player_room_no_power && player_room_ix >= 0 /*&& !is_house*/) { // check for sounds; should this be for office buildings only?
 			room_t const &room(get_room(player_room_ix));

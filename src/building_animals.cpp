@@ -712,7 +712,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, float timestep, 
 	bool const is_scared(rat.fear > 0.0), newly_scared(is_scared && !was_scared);
 
 	// determine destination
-	if (rat.attacking) {
+	if (rat.attacking && fabs(rat.pos.z - (camera_bs.z - get_player_eye_height())) < 2.0*rat.height) { // at similar zvals
 		float const player_radius(get_scaled_player_radius()), min_dist(player_radius + hlength);
 		point target(camera_bs.x, camera_bs.y, rat.pos.z);
 		vector3d const vdir((target - rat.pos).get_norm());
