@@ -1516,6 +1516,7 @@ public:
 		lava_mat.add_cube_to_verts(lava, YELLOW, llc, ~EF_Z2); // top only
 	}
 	void draw_and_clear(shader_t &s) {
+		bind_vao(0);
 		tid_nm_pair_dstate_t state(s);
 		lava_mat.upload_draw_and_clear(state);
 	}
@@ -1904,6 +1905,21 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	bool const cube_map_ref(reflection_pass && is_cube_map_reflection);
 	int const ref_pass(reflection_pass ? (cube_map_ref ? 2 : 1) : 0); // set ref_pass=1 for cube maps to disable some small objects
 	assert(s.is_setup());
+
+	if (player_in_building_or_doorway && !shadow_only && has_lava_on_floor()) { // draw lava on the floor, first so that alpha blending with rugs works
+		unsigned const floor_ix(building.get_floor_for_zval(camera_bs.z)); // lava lamps are only in houses, so we don't need to deal with variable floor spacing (malls, factories, etc.)
+		float const lava_z1(building.get_bcube_z1_inc_ext_basement() + floor_ix*floor_spacing);
+		//float const lava_z2(lava_z1 + building.get_fc_thickness() + 2.0*building.get_flooring_thick()); // above rugs and flooring
+		float const lava_z2(lava_z1 + building.get_fc_thickness() + 0.5*building.get_rug_thickness()); // under rugs and flooring
+		cube_t lava(building.bcube);
+		set_cube_zvals(lava, lava_z1, lava_z2);
+		lava_draw.set_building(building.bcube, 2.0/obj_scale);
+
+		for (cube_t const &c : building.interior->floors) {
+			if (c.intersects(lava)) {lava_draw.add_lava(c);}
+		}
+		lava_draw.draw_and_clear(s);
+	}
 	if (!draw_ext_only) {mats_static .draw(bbd, s, shadow_only, ref_pass);}
 	if (draw_lights)    {mats_lights .draw(bbd, s, shadow_only, ref_pass);}
 	if (inc_small  )    {mats_dynamic.draw(bbd, s, shadow_only, ref_pass);}
@@ -2356,20 +2372,6 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	if (!shadow_only && !reflection_pass) {water_sound_manager.finalize();}
 	water_draw.draw_and_clear(s);
 
-	if (player_in_building_or_doorway && !shadow_only && has_lava_on_floor()) { // draw lava on the floor
-		unsigned const floor_ix(building.get_floor_for_zval(camera_bs.z)); // lava lamps are only in houses, so we don't need to deal with variable floor spacing (malls, factories, etc.)
-		float const lava_z1(building.get_bcube_z1_inc_ext_basement() + floor_ix*floor_spacing);
-		//float const lava_z2(lava_z1 + building.get_fc_thickness() + 2.0*building.get_flooring_thick()); // above rugs and flooring
-		float const lava_z2(lava_z1 + building.get_fc_thickness() + 0.5*building.get_rug_thickness()); // under rugs and flooring
-		cube_t lava(building.bcube);
-		set_cube_zvals(lava, lava_z1, lava_z2);
-		lava_draw.set_building(building.bcube, 2.0/obj_scale);
-		
-		for (cube_t const &c : building.interior->floors) {
-			if (c.intersects(lava)) {lava_draw.add_lava(c);}
-		}
-		lava_draw.draw_and_clear(s);
-	}
 	if (player_in_building && !shadow_only && player_held_object.is_valid() && &building == player_building) {
 		// draw the item the player is holding; actual_player_pos should be the correct position for reflections
 		point const obj_pos(get_player_held_object_pos(reflection_pass ? actual_player_pos : camera_bs));
