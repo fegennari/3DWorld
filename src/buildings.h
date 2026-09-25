@@ -1125,6 +1125,7 @@ private:
 	void add_door_handle(door_t const &door, door_rotation_t const &drot, colorRGBA const &color, bool residential);
 	void add_metal_door(door_t const &D, building_t const &building, door_rotation_t &drot);
 	void maybe_add_door_sign(door_t const &door, door_rotation_t const &drot);
+	void draw_and_update_lava(building_t const &building, point const camera_bs, shader_t &s);
 	static void add_closet_objects(room_object_t const &c, vect_room_object_t &objects, bool no_models);
 	static void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[MAX_SHELVES], unsigned num_shelves, vect_room_object_t &objects, bool add_models_mode=0);
 public:

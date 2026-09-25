@@ -1906,19 +1906,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	int const ref_pass(reflection_pass ? (cube_map_ref ? 2 : 1) : 0); // set ref_pass=1 for cube maps to disable some small objects
 	assert(s.is_setup());
 
-	if (player_in_building_or_doorway && !shadow_only && has_lava_on_floor()) { // draw lava on the floor, first so that alpha blending with rugs works
-		unsigned const floor_ix(building.get_floor_for_zval(camera_bs.z)); // lava lamps are only in houses, so we don't need to deal with variable floor spacing (malls, factories, etc.)
-		float const lava_z1(building.get_bcube_z1_inc_ext_basement() + floor_ix*floor_spacing);
-		//float const lava_z2(lava_z1 + building.get_fc_thickness() + 2.0*building.get_flooring_thick()); // above rugs and flooring
-		float const lava_z2(lava_z1 + building.get_fc_thickness() + 0.5*building.get_rug_thickness()); // under rugs and flooring
-		cube_t lava(building.bcube);
-		set_cube_zvals(lava, lava_z1, lava_z2);
-		lava_draw.set_building(building.bcube, 2.0/obj_scale);
-
-		for (cube_t const &c : building.interior->floors) {
-			if (c.intersects(lava)) {lava_draw.add_lava(c);}
-		}
-		lava_draw.draw_and_clear(s);
+	if (player_in_building_or_doorway && !shadow_only && has_lava_on_floor()) {
+		draw_and_update_lava(building, camera_bs, s); // draw lava on the floor, first so that alpha blending with rugs works
 	}
 	if (!draw_ext_only) {mats_static .draw(bbd, s, shadow_only, ref_pass);}
 	if (draw_lights)    {mats_lights .draw(bbd, s, shadow_only, ref_pass);}
@@ -2396,6 +2385,42 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		indexed_vao_manager_with_shadow_t::post_render();
 	}
 	draw_bcube_xlate = zero_vector;
+}
+
+void building_room_geom_t::draw_and_update_lava(building_t const &building, point const camera_bs, shader_t &s) {
+	unsigned const floor_ix(building.get_floor_for_zval(camera_bs.z)); // lava lamps are only in houses, so we don't need to deal with variable floor spacing (malls, factories, etc.)
+	float const floor_spacing(building.get_window_vspace()), lava_z1(building.get_bcube_z1_inc_ext_basement() + floor_ix*floor_spacing);
+	//float const lava_z2(lava_z1 + building.get_fc_thickness() + 2.0*building.get_flooring_thick()); // above rugs and flooring
+	float const lava_z2(lava_z1 + building.get_fc_thickness() + 0.5*building.get_rug_thickness()); // under rugs and flooring
+	cube_t lava(building.bcube);
+	set_cube_zvals(lava, lava_z1, lava_z2);
+	lava_draw.set_building(building.bcube, 2.0/obj_scale);
+	static float last_smoke_ticks(0);
+	bool const gen_smoke(last_smoke_ticks > 0.1*TICKS_PER_SECOND); // every 0.1s
+	if (gen_smoke) {last_smoke_ticks = 0.0;} else {last_smoke_ticks += fticks;}
+	vect_cube_t floor_cubes;
+	cube_t smoke_area;
+
+	for (cube_t const &c : building.interior->floors) {
+		if (!c.intersects(lava)) continue;
+		lava_draw.add_lava(c);
+		if (gen_smoke) {floor_cubes.push_back(c); smoke_area.assign_or_union_with_cube(c);}
+	}
+	lava_draw.draw_and_clear(s);
+
+	if (gen_smoke && !floor_cubes.empty()) {
+		static rand_gen_t rgen;
+		float const smoke_radius(0.1*floor_spacing);
+		point smoke_pos;
+		smoke_pos.z = lava_z2 + smoke_radius;
+
+		for (unsigned n = 0; n < 10; ++n) { // 10 attempts to place over the floor
+			gen_xy_pos_in_cube(smoke_pos, smoke_area, rgen);
+			if (!point_in_cubes_xy_exp(floor_cubes, smoke_pos)) continue;
+			particle_manager.add_particle(smoke_pos, 0.001*plus_z, DK_GRAY, smoke_radius, PART_EFFECT_SMOKE, -1, 0.5); // coll_radius=0.5
+			break; // done
+		}
+	}
 }
 
 void building_t::subtract_stairs_and_elevators_from_cube(cube_t const &c, vect_cube_t &cube_parts, bool inc_stairs, bool inc_elevators) const {
