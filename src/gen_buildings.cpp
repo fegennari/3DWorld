@@ -537,6 +537,7 @@ void set_interior_lighting(shader_t &s, bool have_indir) {
 	else if (player_in_basement && !is_in_mall) {
 		s.add_uniform_float("SHADOW_LEAKAGE", 0.0); // make basements darker and avoid lights leaking through parking garage ceilings
 	}
+	if (has_lava_on_floor()) {ambient_scale += 0.5;} // lava ambient glow
 	s.add_uniform_float("diffuse_scale",       diffuse_scale);
 	s.add_uniform_float("ambient_scale",       ambient_scale);
 	s.add_uniform_float("hemi_lighting_scale", hemi_scale);

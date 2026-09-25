@@ -2944,6 +2944,7 @@ bool enable_building_indir_lighting();
 bool player_in_windowless_building();
 bool player_cant_see_outside_building();
 bool player_take_damage(float damage_scale, bool scream=0, int poison_type=0, uint8_t *has_key=nullptr);
+bool has_lava_on_floor();
 cube_t get_stairs_bcube_expanded(stairwell_t const &s, float ends_clearance, float sides_clearance, float doorway_width);
 float get_door_open_dist();
 float get_lamp_width_scale();

@@ -41,7 +41,6 @@ colorRGBA get_glow_color(float stime, bool fade);
 void play_hum_sound(point const &pos, float gain, float pitch);
 bool ceiling_fan_is_on(room_object_t &obj, vect_room_object_t const &objs);
 bool object_has_something_on_it(room_object_t const &obj, vect_room_object_t const &objs, vect_room_object_t::const_iterator objs_end);
-bool has_lava_on_floor();
 
 // Note: pos is in camera space
 void gen_sound_thread_safe(unsigned id, point const &pos, float gain, float pitch, float gain_scale, bool skip_if_already_playing) {
