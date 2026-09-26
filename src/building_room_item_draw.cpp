@@ -1503,18 +1503,21 @@ lava_lamp_draw_t lava_lamp_draw;
 class lava_draw_t {
 	rgeom_mat_t lava_mat;
 	point llc;
+	colorRGBA color;
 public:
-	lava_draw_t() : lava_mat(tid_nm_pair_t(LAVA_TEX)) {
-		lava_mat.tex.emissive = 1.0;
-	}
+	lava_draw_t() : lava_mat(tid_nm_pair_t(LAVA_TEX)) {}
+
 	void set_building(cube_t const &bcube, float tscale) {
 		llc = bcube.get_llc();
 		lava_mat.tex.tscale_x = lava_mat.tex.tscale_y = tscale;
+		lava_mat.tex.emissive = get_lava_intensity();
+		color = YELLOW*(0.1f + 0.9f*lava_mat.tex.emissive);
 	}
 	void add_lava(cube_t const &lava) {
-		lava_mat.add_cube_to_verts(lava, YELLOW, llc, ~EF_Z2); // top only
+		lava_mat.add_cube_to_verts(lava, color, llc, ~EF_Z2); // top only
 	}
 	void draw_and_clear(shader_t &s) {
+		//float const lifetime(get_lava_lifetime());
 		bind_vao(0);
 		tid_nm_pair_dstate_t state(s);
 		lava_mat.upload_draw_and_clear(state);
@@ -1904,10 +1907,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	bool const cube_map_ref(reflection_pass && is_cube_map_reflection);
 	int const ref_pass(reflection_pass ? (cube_map_ref ? 2 : 1) : 0); // set ref_pass=1 for cube maps to disable some small objects
 	assert(s.is_setup());
-
-	if (player_in_building_or_doorway && !shadow_only && has_lava_on_floor()) {
-		draw_and_update_lava(building, camera_bs, s); // draw lava on the floor, first so that alpha blending with rugs works
-	}
+	if (player_in_building_or_doorway && !shadow_only) {draw_and_update_lava(building, camera_bs, s);} // draw lava on the floor, first so that alpha blending with rugs works
 	if (!draw_ext_only) {mats_static .draw(bbd, s, shadow_only, ref_pass);}
 	if (draw_lights)    {mats_lights .draw(bbd, s, shadow_only, ref_pass);}
 	if (inc_small  )    {mats_dynamic.draw(bbd, s, shadow_only, ref_pass);}
@@ -2387,15 +2387,17 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 }
 
 void building_room_geom_t::draw_and_update_lava(building_t const &building, point const camera_bs, shader_t &s) {
+	if (get_lava_lifetime() == 0.0) return; // no lava
 	unsigned const floor_ix(building.get_floor_for_zval(camera_bs.z)); // lava lamps are only in houses, so we don't need to deal with variable floor spacing (malls, factories, etc.)
 	float const floor_spacing(building.get_window_vspace()), lava_z1(building.get_bcube_z1_inc_ext_basement() + floor_ix*floor_spacing);
 	//float const lava_z2(lava_z1 + building.get_fc_thickness() + 2.0*building.get_flooring_thick()); // above rugs and flooring
 	float const lava_z2(lava_z1 + building.get_fc_thickness() + 0.5*building.get_rug_thickness()); // under rugs and flooring
+	float const intensity(get_lava_intensity());
 	cube_t lava(building.bcube);
 	set_cube_zvals(lava, lava_z1, lava_z2);
 	lava_draw.set_building(building.bcube, 2.0/obj_scale);
 	static float last_smoke_ticks(0);
-	bool const gen_smoke(last_smoke_ticks > 0.1*TICKS_PER_SECOND); // every 0.1s
+	bool const gen_smoke(intensity > 0.0 && last_smoke_ticks > 0.1*TICKS_PER_SECOND/intensity); // every 0.1s at max intensity
 	if (gen_smoke) {last_smoke_ticks = 0.0;} else {last_smoke_ticks += fticks;}
 	vect_cube_t floor_cubes;
 	cube_t smoke_area;

@@ -540,7 +540,8 @@ void set_interior_lighting(shader_t &s, bool have_indir) {
 	s.add_uniform_float("diffuse_scale",       diffuse_scale);
 	s.add_uniform_float("ambient_scale",       ambient_scale);
 	s.add_uniform_float("hemi_lighting_scale", hemi_scale);
-	if (has_lava_on_floor()) {s.add_uniform_color("ambient_add", colorRGB(0.5, 0.2, 0.0));} // red-orange
+	float const lava_intensity(get_lava_intensity());
+	if (lava_intensity > 0.0) {s.add_uniform_color("ambient_add", colorRGB(0.5, 0.2, 0.0)*lava_intensity);} // red-orange
 	building_ambient_scale = ambient_scale; // cache so that we can reset back to this value when drawing bubbles, etc.
 }
 void reset_interior_lighting(shader_t &s) {

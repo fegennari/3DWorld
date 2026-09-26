@@ -1925,14 +1925,16 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 		{
 			player_take_damage(0.002); // very small amount of steam damage; only for extended basements (not prison showers)
 		}
-		if (has_lava_on_floor()) {
+		float const lava_damage_scale(get_lava_intensity());
+
+		if (lava_damage_scale > 0.0) {
 			point const feet_pos(camera_rot - get_player_eye_height()*plus_z);
-			if (is_over_uncovered_floor(feet_pos)) {player_take_damage(0.01);} // lava damage to player
+			if (is_over_uncovered_floor(feet_pos)) {player_take_damage(0.01*lava_damage_scale);} // lava damage to player
 			float const lava_zval(get_bcube_z1_inc_ext_basement() + get_floor_for_zval(camera_rot.z)*floor_spacing), z_kill_range(get_floor_thickness());
 			cube_t kill_area(bcube);
 			set_cube_zvals(kill_area, lava_zval-z_kill_range, lava_zval+z_kill_range);
 			kill_animals_in_area(kill_area); // lava damage to rats and spiders
-			dist_to_fire_sq  = fabs(feet_pos.z - lava_zval); // enables fire sound at max volume and heat wave postprocessing effect
+			dist_to_fire_sq  = fabs(feet_pos.z - lava_zval)/lava_damage_scale; // enables fire sound at max volume and heat wave postprocessing effect
 			dist_to_fire_sq *= dist_to_fire_sq;
 		}
 		if (!player_room_no_power && player_room_ix >= 0 /*&& !is_house*/) { // check for sounds; should this be for office buildings only?

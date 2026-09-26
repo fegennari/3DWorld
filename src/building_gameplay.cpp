@@ -677,18 +677,24 @@ tape_manager_t tape_manager;
 
 class lava_manager_t {
 	double lava_start_ticks=0.0, lava_end_ticks=0.0;
+	float lifetime=0.0; // 0=not started, 0-0.1 is forming, 0.9-1.0 is cooling, 1.0 is cooled; stays at 1.0 until reset by leaving the building or another lava cycle
+	float const lava_delay = 5.0;
+	float const lava_time  = 10.0;
 public:
 	bool is_countdown_stage() const {return (lava_start_ticks > 0.0 && tfticks < lava_start_ticks);}
 	bool is_floor_lava     () const {return (lava_end_ticks   > 0.0 && tfticks < lava_end_ticks  );}
+	float get_lifetime     () const {return lifetime;}
+	float get_intensity    () const {return ((lifetime < 0.1f) ? 10.0f*lifetime : ((lifetime > 0.9f) ? 10.0f*(1.0f - min(lifetime, 1.0f)) : 1.0f));}
 
 	void start_floor_is_lava() {
-		cout << "start lava" << endl;
 		if (is_floor_lava() || is_countdown_stage()) return; // finish the current cycle first
-		lava_start_ticks = tfticks + 5.0*TICKS_PER_SECOND; // 5s delay
+		lava_start_ticks = tfticks + lava_delay*TICKS_PER_SECOND; // 5s delay
+		//lifetime = 0.0; // no, let it reheat
 	}
 	void next_frame() {
 		if (!camera_in_building) { // clear lava effect when player leaves the building
 			lava_start_ticks = lava_end_ticks = 0.0;
+			lifetime = 0.0;
 		}
 		if (is_countdown_stage()) { // show countdown timer
 			double const time_rem_secs((lava_start_ticks - tfticks)/TICKS_PER_SECOND);
@@ -698,16 +704,20 @@ public:
 		else if (lava_start_ticks > 0.0) { // start lava
 			print_text_onscreen("The Floor is Lava!", RED, 1.25, 2.0*TICKS_PER_SECOND, 20);
 			lava_start_ticks = 0.0;
-			lava_end_ticks   = tfticks + 10.0*TICKS_PER_SECOND; // 10s lava
+			lava_end_ticks   = tfticks + lava_time*TICKS_PER_SECOND; // 10s lava
 		}
 		else if (lava_end_ticks > 0 && tfticks > lava_end_ticks) { // end lava
 			lava_end_ticks = 0.0;
+			lifetime = 1.0;
 		}
+		if (is_floor_lava()) {lifetime = CLIP_TO_01(1.0f - float(lava_end_ticks - tfticks)/(lava_time*TICKS_PER_SECOND));}
 	}
 };
 lava_manager_t lava_manager;
 
-bool has_lava_on_floor() {return lava_manager.is_floor_lava();}
+bool has_lava_on_floor  () {return lava_manager.is_floor_lava();} // controls player/animal damage, smoke, and heat
+float get_lava_lifetime () {return lava_manager.get_lifetime ();}
+float get_lava_intensity() {return lava_manager.get_intensity();}
 
 vector<vending_info_t> vend_types;
 
