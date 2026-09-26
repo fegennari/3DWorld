@@ -3144,6 +3144,15 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 			railing.z2()  = railing.z1() + num_floors*floor_spacing;
 			railings.emplace_back(railing, TYPE_RAILING, 0, !dim, !step_dir, (RO_FLAG_OPEN | RO_FLAG_EXTERIOR), 1.0, SHAPE_CUBE, railing_color);
 			railings.back().item_flags = max(num_floors, 1U) - 1; // store the number of floors-1 in item_flags
+
+			if (add_step_gaps) { // add a metal beam connecting the steps in the form of a railing
+				room_object_t support(railings.back());
+				support.flags = (RO_FLAG_EXTERIOR | RO_FLAG_ADJ_TOP | RO_FLAG_NOCOLL);
+				support.expand_by(0.8*railing_thickness); // larger radius
+				support.translate_dim(2, -0.47*floor_spacing); // translate down
+				support.translate_dim(dim, (step.get_center_dim(dim) - support.get_center_dim(dim))); // shift to the middle of the stairs
+				objs.push_back(support);
+			}
 			// add end railing
 			railing = top_railing;
 			railing.d[!dim][step_dir]  = railing.d[!dim][!step_dir] + sdir_sign*railing_thickness;
