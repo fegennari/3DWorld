@@ -1620,6 +1620,9 @@
     <None Include="shaders\billboard_texture_compress.comp">
       <Filter>Shaders\compute</Filter>
     </None>
+    <None Include="shaders\lava_plane.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Script1.rc">

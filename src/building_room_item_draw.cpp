@@ -1511,16 +1511,25 @@ public:
 		llc = bcube.get_llc();
 		lava_mat.tex.tscale_x = lava_mat.tex.tscale_y = tscale;
 		lava_mat.tex.emissive = get_lava_intensity();
-		color = YELLOW*(0.1f + 0.9f*lava_mat.tex.emissive);
+		color = YELLOW*(0.02f + 0.98f*lava_mat.tex.emissive);
 	}
 	void add_lava(cube_t const &lava) {
 		lava_mat.add_cube_to_verts(lava, color, llc, ~EF_Z2); // top only
 	}
 	void draw_and_clear(shader_t &s) {
-		//float const lifetime(get_lava_lifetime());
+		shader_t lava_shader;
+		lava_shader.set_vert_shader("no_lighting_tex_coord");
+		lava_shader.set_frag_shader("lava_plane");
+		lava_shader.begin_shader();
+		lava_shader.add_uniform_int("lava_tex",  0);
+		lava_shader.add_uniform_int("noise_tex", 1);
+		lava_shader.add_uniform_float("lifetime", get_lava_lifetime());
+		select_texture(DISINT_TEX, 1);
 		bind_vao(0);
-		tid_nm_pair_dstate_t state(s);
+		tid_nm_pair_dstate_t state(lava_shader);
 		lava_mat.upload_draw_and_clear(state);
+		lava_shader.end_shader();
+		s.enable();
 	}
 };
 
@@ -2402,8 +2411,9 @@ void building_room_geom_t::draw_and_update_lava(building_t const &building, poin
 	vect_cube_t floor_cubes;
 	cube_t smoke_area;
 
-	for (cube_t const &c : building.interior->floors) {
+	for (cube_t c : building.interior->floors) {
 		if (!c.intersects(lava)) continue;
+		set_cube_zvals(c, lava_z1, lava_z2);
 		lava_draw.add_lava(c);
 		if (gen_smoke) {floor_cubes.push_back(c); smoke_area.assign_or_union_with_cube(c);}
 	}
