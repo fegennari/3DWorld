@@ -1,5 +1,5 @@
 #ifdef USE_BINDLESS_TEXTURES
-layout (location = 4) in sampler2DArray tex_handle; // 64-bit handle passed as two 32-bit uints
+layout (location = 4) in uvec2 tex_handle; // 64-bit handle passed as two 32-bit uints
 #endif
 
 out vec4 vertex_vs;
