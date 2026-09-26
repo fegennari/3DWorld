@@ -687,6 +687,9 @@ public:
 		lava_start_ticks = tfticks + 5.0*TICKS_PER_SECOND; // 5s delay
 	}
 	void next_frame() {
+		if (!camera_in_building) { // clear lava effect when player leaves the building
+			lava_start_ticks = lava_end_ticks = 0.0;
+		}
 		if (is_countdown_stage()) { // show countdown timer
 			double const time_rem_secs((lava_start_ticks - tfticks)/TICKS_PER_SECOND);
 			string const msg("Floor is Lava in " + std::to_string(round_fp(time_rem_secs)) + "s");

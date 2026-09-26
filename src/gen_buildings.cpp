@@ -537,10 +537,10 @@ void set_interior_lighting(shader_t &s, bool have_indir) {
 	else if (player_in_basement && !is_in_mall) {
 		s.add_uniform_float("SHADOW_LEAKAGE", 0.0); // make basements darker and avoid lights leaking through parking garage ceilings
 	}
-	if (has_lava_on_floor()) {ambient_scale += 0.5;} // lava ambient glow
 	s.add_uniform_float("diffuse_scale",       diffuse_scale);
 	s.add_uniform_float("ambient_scale",       ambient_scale);
 	s.add_uniform_float("hemi_lighting_scale", hemi_scale);
+	if (has_lava_on_floor()) {s.add_uniform_color("ambient_add", colorRGB(0.5, 0.2, 0.0));} // red-orange
 	building_ambient_scale = ambient_scale; // cache so that we can reset back to this value when drawing bubbles, etc.
 }
 void reset_interior_lighting(shader_t &s) {
@@ -548,6 +548,7 @@ void reset_interior_lighting(shader_t &s) {
 	s.add_uniform_float("ambient_scale",       1.0 ); // reset to default
 	s.add_uniform_float("hemi_lighting_scale", 0.5 ); // reset to default
 	s.add_uniform_float("SHADOW_LEAKAGE",      0.05); // reset to default
+	s.add_uniform_color("ambient_add", colorRGB(0.0, 0.0, 0.0)); // reset to default
 }
 void reset_interior_lighting_and_end_shader(shader_t &s) {
 	reset_interior_lighting(s);
