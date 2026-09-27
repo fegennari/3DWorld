@@ -126,7 +126,7 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigne
 		city_bldg_t const building(cw, dim, dir, ent_dir, plot_ix, bldgs.size(), btype, rgen);
 		cube_t const place_bc(building.bcube_with_extras);
 
-		if (!has_bcube_int_xy(place_bc, bcubes, pad_dist)) { // not too close to a building
+		if (plot.contains_cube_xy(place_bc) && !has_bcube_int_xy(place_bc, bcubes, pad_dist)) { // fully inside plot and not too close to a building
 			bldg_groups.add_obj(building, bldgs);
 			gstations.back().pavement.d[dim][!dir] = bldg_start; // shift gas station pavement to edge of building
 			// add car building sign on the side facing the road
@@ -186,7 +186,7 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigne
 			cs.d[dim][ dir] -= dscale*0.75*len_delta; // shrink more on entrance side to make room for pedestrians
 			cs.d[dim][!dir] += dscale*0.25*len_delta;
 		}
-		if (!has_bcube_int_xy(cs, bcubes, pad_dist)) { // not too close to a building
+		if (plot.contains_cube_xy(cs) && !has_bcube_int_xy(cs, bcubes, pad_dist)) { // fully inside plot and not too close to a building
 			// attempt to widen in incremental steps
 			for (unsigned n = 0; n < 5; ++n) {
 				cube_t cand(cs);
