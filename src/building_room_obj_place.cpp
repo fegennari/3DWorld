@@ -1501,6 +1501,7 @@ bool building_t::reassign_room_as_bedroom(rand_gen_t rgen, light_ix_assign_t &li
 	assert(has_room_geom());
 	float const floor_spacing(get_window_vspace()), fc_thick(get_fc_thickness());
 	vector<room_cand_t> cands;
+	cands.reserve(10); // fix for release build heap corruption (compiler bug?)
 
 	for (unsigned r = 0; r < interior->rooms.size(); ++r) {
 		room_t const &room(interior->rooms[r]);
@@ -1515,7 +1516,7 @@ bool building_t::reassign_room_as_bedroom(rand_gen_t rgen, light_ix_assign_t &li
 		}
 	} // for r
 	if (cands.empty()) return 0;
-	sort(cands.begin(), cands.end());
+	if (cands.size() > 1) {sort(cands.begin(), cands.end());}
 	unsigned const objs_start(interior->room_geom->objs.size());
 	colorRGBA const &chair_color(chair_colors[rgen.rand() % NUM_CHAIR_COLORS]);
 	vect_cube_t blockers, lights_bcubes;
