@@ -2943,8 +2943,9 @@ void city_obj_placer_t::finalize_streetlights_power_grass_blockers(streetlights_
 	if (was_moved) {sl.sort_streetlights_by_yx();} // must re-sort if a streetlight was moved
 
 	if (add_city_grass >= 2) {
-		for (driveway_t  const &dw : driveways) {grass_blockers.add(dw,       all_objs_bcube);}
-		for (pool_deck_t const &pd : pdecks   ) {grass_blockers.add(pd.bcube, all_objs_bcube);}
+		for (driveway_t    const &dw : driveways) {grass_blockers.add(dw,          all_objs_bcube);}
+		for (pool_deck_t   const &pd : pdecks   ) {grass_blockers.add(pd.bcube,    all_objs_bcube);}
+		for (gas_station_t const &gs : gstations) {grass_blockers.add(gs.pavement, all_objs_bcube);}
 
 		for (swimming_pool_t const &p : pools) {
 			if (!p.above_ground) {grass_blockers.add(p.bcube, all_objs_bcube);} // in-ground pools only
