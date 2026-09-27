@@ -38,9 +38,7 @@ bool line_intersect_torus(double ax, double ay, double az,
 	bool found(0);
 
 	while(nroots--) {
-		float const t0((float)roots[nroots]/vlength);
-		//double const x(ax + t*bx), y(ay + t*by), l(R*(PI_TWO - atan2(y,x)));
-		//if (l <= vlength && l >= 0)
+		float const t0((float)(roots[nroots]/vlength));
 
 		if (t0 <= t && t0 >= 0.0) {
 			t     = t0;
