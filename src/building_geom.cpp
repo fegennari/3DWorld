@@ -257,6 +257,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 	roof_tquads.clear();
 	doors.clear();
 	interior.reset();
+	bool const pref_special(global_building_params.pref_special_buildings);
 	building_mat_t const &mat(get_material());
 	rand_gen_t rgen;
 	rgen.set_state(123+rseed1, 345*rseed2);
@@ -265,10 +266,11 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 	wall_color      = mat.wall_color; // start with default wall color
 
 	if (btype == BTYPE_UNSET) { // building type not customized
+		unsigned const rand_val(pref_special ? 7 : 15); // 1/16 the time, 1/8 the time if prefer special
 		if (is_house)                                       {btype = BTYPE_HOUSE   ;} // may be flatted as BTYPE_MULT_FAM in gen_house()
 		else if (rgen.rand_probability(mat.apartment_prob)) {btype = ((rseed1 & 1) ? BTYPE_HOTEL : BTYPE_APARTMENT);}
-		else if (is_cube() && (rseed1&15) == 0)             {btype = BTYPE_HOSPITAL;} // 1/16 the time
-		else if (is_cube() && (rseed1&15) == 1)             {btype = BTYPE_SCHOOL  ;} // 1/16 the time
+		else if (is_cube() && (rseed1&rand_val) == 0)       {btype = BTYPE_HOSPITAL;} // 1/16 the time
+		else if (is_cube() && (rseed1&rand_val) == 1)       {btype = BTYPE_SCHOOL  ;} // 1/16 the time
 		else                                                {btype = BTYPE_OFFICE  ;} // office is the default for non-residential buildings
 	}
 	assign_name(rgen);
@@ -280,6 +282,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 	}
 	// determine building shape (cube, cylinder, other)
 	if (was_custom_placed) {} // left as default
+	else if (pref_special) {num_sides = 4;} // cube
 	else if (rgen.rand_probability(mat.round_prob)) {num_sides = MAX_CYLIN_SIDES;} // max number of sides for drawing rounded (cylinder) buildings
 	else if (rgen.rand_probability(mat.cube_prob )) {num_sides = 4;} // cube
 	else { // N-gon
@@ -292,7 +295,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 		flat_side_amt = max(0.0f, min(0.45f, rgen.rand_uniform(mat.min_fsa, mat.max_fsa)));
 		if (flat_side_amt > 0.0 && rot_sin == 0.0) {start_angle = rgen.rand_uniform(0.0, TWO_PI);} // flat side, not rotated: add random start angle to break up uniformity
 	}
-	if (!was_custom_placed && (num_sides == 3 || num_sides == 4 || num_sides == 6) && mat.max_asf > 0.0 && rgen.rand_probability(mat.asf_prob)) { // triangles/cubes/hexagons
+	if (!was_custom_placed && !pref_special && (num_sides == 3 || num_sides == 4 || num_sides == 6) && mat.max_asf > 0.0 && rgen.rand_probability(mat.asf_prob)) { // triangles/cubes/hexagons
 		alt_step_factor = max(0.0f, min(0.99f, rgen.rand_uniform(mat.min_asf, mat.max_asf)));
 		if (alt_step_factor > 0.0 && !(num_sides&1)) {half_offset = 1;} // chamfered cube/hexagon
 		if (alt_step_factor > 0.0) {num_sides *= 2;}
@@ -300,11 +303,11 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 	// determine the number of levels and splits
 	unsigned num_levels(mat.min_levels);
 
-	if (!was_custom_placed && mat.min_levels < mat.max_levels) { // have a range of levels
+	if (!was_custom_placed && !pref_special && mat.min_levels < mat.max_levels) { // have a range of levels
 		if (was_cube || rgen.rand_bool()) {num_levels += rgen.rand() % (mat.max_levels - mat.min_levels + 1);} // only half of non-cubes are multilevel (unless min_level > 1)
 	}
 	if (mat.min_level_height > 0.0) {num_levels = max(mat.min_levels, min(num_levels, unsigned(bcube.dz()/mat.min_level_height)));}
-	num_levels = max(num_levels, 1U); // min_levels can be zero to apply more weight to 1 level buildings
+	max_eq(num_levels, 1U); // min_levels can be zero to apply more weight to 1 level buildings
 	bool const do_split(num_levels < 4 && is_cube() && !was_custom_placed && rgen.rand_probability(mat.split_prob)); // don't split if >= 4 levels, non-cubes, or custom placed
 	float const height(base.dz()), floor_spacing(get_window_vspace());
 
@@ -320,7 +323,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 				place_area.expand_by_xy(0.05f*(bcube.dx() + bcube.dy()));
 				if (!has_bcube_int(place_area, parts)) {tree_pos = place_area.get_cube_center(); tree_pos.z = ground_floor_z1;}
 			}
-			if (is_cube_office && !is_rotated() && min(bcube.dx(), bcube.dy()) > 18.0*floor_spacing && rand_gen_t(rgen).rand_bool()) {
+			if (is_cube_office && !is_rotated() && min(bcube.dx(), bcube.dy()) > 18.0*floor_spacing && (pref_special || rand_gen_t(rgen).rand_bool())) {
 				btype = BTYPE_PRISON; // large, single level cube; copy rgen
 				assign_name(rgen); // re-assign a name
 			}
@@ -333,7 +336,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 			
 			// consider a possible vertical split of the floorplan into two parts
 			if (!interior_enabled() || num_floors < 2) {} // no interior, or single floor, can't split vertically
-			else if (rgen.rand_probability(global_building_params.split_stack_floorplan_prob)) {
+			else if (!pref_special && rgen.rand_probability(global_building_params.split_stack_floorplan_prob)) {
 				// while this works, it doesn't seem to add much value, it only creates odd geometry and makes connecting stairs/elevators difficult
 				// two stacked parts of the same x/y dimensions but different interior floorplans
 				parts.push_back(base);
@@ -354,7 +357,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 				change_roof_type_to_flat();
 				assign_name(rgen); // re-assign a name
 			}
-			else if (is_cube_office && num_floors >= 3 && num_floors <= 6 && can_use_hallway_for_part(0) && min(bcube.dx(), bcube.dy()) > 13.0*floor_spacing) {
+			else if (is_cube_office && num_floors >= 3 && num_floors <= (pref_special ? 10 : 6) && can_use_hallway_for_part(0) && min(bcube.dx(), bcube.dy()) > 13.0*floor_spacing) {
 				btype = BTYPE_DATACENTER;
 				change_roof_type_to_flat();
 				assign_name(rgen); // re-assign a name
@@ -377,7 +380,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 	bool const not_too_small(min(bcube.dx(), bcube.dy()) > 4.0*abs_min_edge_move);
 	assert(height > 0.0);
 
-	if (!do_split && not_too_small && (rgen.rand()&3) < (was_cube ? 2 : 3) && !has_windows()) {
+	if (!do_split && !pref_special && not_too_small && (rgen.rand()&3) < (was_cube ? 2 : 3) && !has_windows()) {
 		// oddly shaped multi-sided overlapping sections (50% chance for cube buildings and 75% chance for others)
 		vector2d const sz(base.get_size_xy());
 		parts.reserve(num_levels); // at least this many

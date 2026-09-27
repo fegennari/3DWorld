@@ -341,6 +341,7 @@ void building_params_t::init_kw_maps() {
 	kwmb.add("gen_building_interiors",   gen_building_interiors);
 	kwmb.add("enable_rotated_room_geom", enable_rotated_room_geom);
 	kwmb.add("use_voronoise_cracks",     use_voronoise_cracks);
+	kwmb.add("pref_special_buildings",   pref_special_buildings);
 }
 
 bool building_params_t::parse_buildings_option(FILE *fp) {
