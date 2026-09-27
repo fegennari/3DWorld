@@ -13,6 +13,7 @@ It has the following features:
 * Procedural voxel 3D terrain generation with realtime user editing
 * Terrain generator including various noise functions, erosion, realtime user editing, heightmap read/write
 * Procedural building (interior and exterior), road, and city generation
+* NPC AI behaviors for people, cars, and animals with target selection and path finding/navigation
 * Physics simulation for primitive object types and others (> 10K dynamic objects)
 * Realtime day/night cycle with weather (rain, snow, hail, wind, lightning)
 * Physically based materials with reflection and refraction
@@ -29,15 +30,14 @@ It has the following features:
 I converted the project from svn to git at commit 6607.
 Most of the code is written in C++, with GLSL for shaders.
 This is intended to be a cross-platform project.
-Microsoft Visual Studio 2022 project files are included.
+Microsoft Visual Studio Insiders 2026 Community project files are included.
 A linux/gcc makefile is also included, but is more experimental. See README.linux for more details.
-The project should build under gcc on linux with some work, but it's been a while since I tried this.
-I have an old makefile that is out of date, but may not take too much work to fixup and make it usable.
+The project should build under gcc on linux with some work, but may not run with all graphics drivers.
 
 Be warned, this is a large repository, currently about 1GB.
 I've included source code, config files, textures, sounds, small models, lighting files, scene data, heightmaps, and project files.
 This repo does not contain the large model files used in some scenes, you'll have to download these separately.
-This means that some of the scene config files won't work because they can't find their referenced data.
+This means that some of the scene config files won't fully work because they can't find their referenced data.
 The current list of dependencies is:
 * OpenGL 4.5 (Should come with Windows 8/10/11 latest graphics drivers)
 * OpenAL 1.1 (optional) (System Install: https://www.openal.org/downloads/ or you can try the newer openal-soft: https://github.com/kcat/openal-soft)
@@ -55,47 +55,44 @@ The current list of dependencies is:
 
 I've included stripped down versions of most of these libraries in the dependencies directory.
 I removed all large files that aren't required by 3DWorld, in some cases even examples/tests/documentation.
-These have been built with MS Visual Studio 2022 Community on Windows 11.
+These have been built with MS Visual Studio Insiders 2026 Community on Windows 11.
 If you want to use these, you'll need to copy the directories to the root directory and rebuild any libraries needed for other versions of Windows or Visual Studio.
 If you clone/install vcpkg it should be at the same level as the 3DWorld directory.
 
 Note that many of these dependencies are old and could be replaced with newer libraries. I've been concentrating on adding content and I'm not too interested in this.
-Freeglut should probably be replaced with SDL, and the image libraries with STB or DevIL. (STB is used as a fallback but doesn't support all of the images used.)
+Freeglut should probably be replaced with SDL, and the image libraries with STB. (STB is used as a fallback but doesn't support all of the images used.)
 
 If you want to build 3DWorld, you can use the projects in the dependencies/ folder, or download and build them yourself and change the project settings to use them.
-I currently use the x64 MS Visual Studio 2022 Community build target for 3DWorld, but the win32 build target also works.
-The MSVS 2019 project 3DWorld_msvs2019.vcxproj is currently out of date but can possibly be made to work.
-It should compile and run in 32-bit mode if you copy the DLLs from the lib64/ folder into the root of the repo and make some other project settings changes.
+I currently use the x64 MS Visual Studio Insiders 2026 Community build target for 3DWorld, but the win32 build target also works.
+It should compile and run in either 32 or 64-bit mode if you copy the DLLs from the lib64/ folder into the root of the repo and make some other project settings changes.
 
 If you have linux, you can try to build using the provided makefile. The file README.linux should be helpful.
-I've gotten 3DWorld to build and mostly run on Ubuntu 18.04 with gcc 7 and Ubuntu 20.04 with gcc 9.
+I've gotten 3DWorld to build and mostly run on Ubuntu 20.04 with gcc 9.
 
 3DWorld takes a config filename on the command line. If not found, it reads defaults.txt and uses any config file(s) listed there.
 Some of these congig files include models such as the Sponza Atrium, Stanford Dragon, sportscar, etc.
 These files are too large to store in the git repo. I've attempted to have 3DWorld generate nonfatal errors if the models can't be found.
-Many of the larger models can be found at the McGuire Computer Graphics Archive:
+Many of the larger models can be found on Sketchfab or at the McGuire Computer Graphics Archive:
 http://casual-effects.com/data/
+Also see image_and_model_credits.txt in the root of the repo.
 
-I've packaged up the 3D models that are too large for the GitHub repo and put them on Google Drive here: v7, 732MB, for latest release:
-https://drive.google.com/file/d/1T2fPwiJ7x2ga8hRPrLAZDlkWZMh-NsVp/view?usp=drive_link
-
-And the newer file: v9, 853MB, for git head:
-https://drive.google.com/file/d/11R-LCFb6VEylX7ncPgkUrgZN01zz88P2/view?usp=drive_link
+I've packaged up the 3D models that are too large for the GitHub repo and put them on Google Drive. The current version is v10 and can be found here:
+https://drive.google.com/file/d/1X_Do9Mzyj7bl1N4W-Kh0Rb7N5lNTIfa1/view?usp=drive_link
 
 Some of these models are stored in 3DWorld's internal format and should not be reused in other projects. Others come from websites such as Mixamo.
 There is also a textures directory with additional textures used with building interiors that can be merged with the project textures directory.
 
 System requirements:
-* Windows 8/10/11; Linux when using the makefile with gcc.
-* Microsoft Visual Studio 2019 or 2022. The professional or community version is needed for OpenMP support. You can also try to use gcc on linux.
-* A relatively new generation of Nvidia or AMD GPU (Runs on my laptop with Intel graphics, but at 12-20 FPS)
-* At least 8GB system memory for the larger scenes
-* At least 4GB GPU memory for the larger scenes; My GPU has 12GB of memory
+* Windows 10/11; Linux when using the makefile with gcc.
+* Microsoft Visual Studio 2026. The professional or community version is needed for OpenMP support. You can also try to use gcc on linux.
+* A relatively new generation of Nvidia or AMD GPU (Runs on my laptop with integrated graphics, but at 12-20 FPS)
+* At least 16GB system memory for the larger scenes
+* At least 8GB GPU memory for the larger scenes; My GPU has 12GB of memory
 
 Troubleshooting:
 It seems like some systems (AMD cards in particular) require an OpenGL core context. This can be selected by adding "use_core_context 1" in the config file.
 This can also be enabled in scene_config/config_post.txt, which is a file that applies after reading all other top-level config files.
-In some situations (some Nvidia cards), using a core context can be slower, which is why I don't have it enabled by default.
+In some situations (some Nvidia cards), using a core context can be slower, which is why I don't have it enabled by default in all scenes.
 
 Useful Keys (see readme-keys.txt for more key bindings):
 * a,s,d,w: Movement
@@ -118,6 +115,7 @@ Useful Keys (see readme-keys.txt for more key bindings):
 I currently have this repo up for educational purposes under the GPLv3 license.
 Some sub-modules are available with other licenses compatible with commercial use in my GitHub account.
 It's not meant as a commercial tool and I'm not trying to make money here.
+That's also why I don't spend money on software, models, or textures.
 I'm also not looking for others to work on the project at this stage, though I'm accepting feedback, bug reports, and suggestions.
 Maybe things will change if I decide to make a real game out of this.
 If you would like to use something here for your project, please let me know.
@@ -125,6 +123,8 @@ If you would like to use something here for your project, please let me know.
 There is no further documentation for 3DWorld.
 However, I do have a blog that includes descriptions of the algorithms and lots of screenshots:
 https://3dworldgen.blogspot.com
+And my YouTube channel:
+https://www.youtube.com/@FrankGennari
 
 Please do not send me bot/AI generated pull requests. Please do not make suggestions related to the dependencies directory. This is included as a reference and the user is expected to update and/or build these libraries themselves.
 
@@ -164,7 +164,7 @@ Procedural building basement with people, indirect lighting, and pipes routed al
 
 ![alt text](https://1.bp.blogspot.com/-ZbJUmGiha84/YTRRfRWTE4I/AAAAAAAADEs/yB9tPZcllnM40FOsh8nkut3HtDjm0MLqQCLcBGAsYHQ/s1920/residential_grid.jpg)
 
-Procedural residential neighborhood with office buildings in the backround. There are cars and people both on the sidewalks and inside buildings. (config_heightmap.txt)
+Procedural residential neighborhood with office buildings in the background. There are cars and people both on the sidewalks and inside buildings. (config_heightmap.txt)
 
 ![alt text](https://1.bp.blogspot.com/-GW82PSnZt7s/X7DVx4wb4aI/AAAAAAAACxM/4PSV1e2iI8wzVEXVnA9K3GPrPqfdpKmcwCLcBGAsYHQ/w640-h360/office_libraries.jpg)
 
@@ -272,7 +272,7 @@ Museum scene with indirect lighting, reflective surfaces, and shadow mapping. Th
 
 ![alt text](https://1.bp.blogspot.com/-2AzAKVCUhvw/VpGvWG6uQwI/AAAAAAAAAgM/3QLnzeiaeCw/s1600/snow_scene.jpg)
 
-Snowy house scene generated by dropping a billion snow particles and accumlating snow. Snow is precomputed but can be rendered in realtime. (house/config_house_winter.txt)
+Snowy house scene generated by dropping a billion snow particles and accumulating snow. Snow is precomputed but can be rendered in realtime. (house/config_house_winter.txt)
 
 ![alt text](https://1.bp.blogspot.com/-2LlXIzcVDnA/VmUt8R4cwGI/AAAAAAAAAeY/Mx_xy30eVCQ/s640/house_rain.jpg)
 
