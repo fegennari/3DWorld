@@ -174,19 +174,22 @@ bool building_t::add_room_lockers(rand_gen_t &rgen, room_t const &room, float zv
 {
 	float const floor_spacing(get_window_vspace()), locker_height(0.75*floor_spacing), locker_depth(0.25*locker_height);
 	float locker_width(0.22*locker_height);
-	cube_t place_area(place_area_in), valid_area(parts[room.part_id]);
+	cube_t place_area(place_area_in), valid_area(room.is_ext_basement() ? room : parts[room.part_id]);
 	valid_area.expand_by_xy(-get_trim_thickness()); // leave a small gap around exterior walls to prevent Z-fighting
+	if (!place_area.intersects(valid_area)) {cout << TXTS(room) << TXTS(place_area) << TXTS(valid_area) << endl;}
 	assert(place_area.intersects(valid_area));
 	place_area.intersect_with_cube(valid_area);
-	vect_room_object_t &objs(interior->room_geom->objs);
-	float const room_len(place_area.get_sz_dim(dim)); // long dim
-	unsigned const lockers_start(objs.size()), num_lockers(room_len/locker_width); // floor
+	float const room_len(place_area.get_sz_dim(dim)), room_width(place_area.get_sz_dim(!dim)); // long dim, short dim
+	float const clearance(get_min_front_clearance_inc_people()), se_clearance(2.0*clearance), front_clearance(max(clearance, 2.0f*locker_width));
+	if (room_width < locker_depth + front_clearance) return 0; // can't fit lockers on either side
+	// choose a side if can't fit lockers on both sides
+	if (room_width < 2.0*locker_depth + front_clearance && dir_skip_mask == 0) {dir_skip_mask = (1 << rgen.rand_bool());}
+	unsigned const num_lockers(room_len/locker_width); // floor
 	// if there are enough lockers, increase their width slightly so that lockers tile to fill the exact wall length
 	if (num_lockers >= 10) {locker_width = room_len/num_lockers;}
 	bool const add_blockers(rtype != RTYPE_HALL); // add blockers in front of rows of lockers, except for school hallways (which have splits for secondary hallways, etc.)
 	bool const single_side (rtype == RTYPE_GYM ), first_dir(single_side ? rgen.rand_bool() : 0);
 	// add expanded blockers for stairs, elevators, etc. to ensure there's space for the player and people to walk on the sides
-	float const clearance(get_min_front_clearance_inc_people()), se_clearance(2.0*clearance);
 	add_padlocks &= building_obj_model_loader.is_model_valid(OBJ_MODEL_PADLOCK);
 	vector3d const sz(add_padlocks ? building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_PADLOCK) : zero_vector); // D, W, H
 	colorRGBA const lock_color(0.4, 0.4, 0.4); // gray
@@ -194,6 +197,8 @@ bool building_t::add_room_lockers(rand_gen_t &rgen, room_t const &room, float zv
 	colorRGBA const locker_colors[num_locker_colors] =
 	{colorRGBA(0.4, 0.6, 0.7), colorRGBA(0.4, 0.7, 0.6), colorRGBA(0.2, 0.5, 0.8), colorRGBA(0.7, 0.05, 0.05), colorRGBA(0.6, 0.45, 0.25), GRAY};
 	colorRGBA const locker_color(locker_colors[(7*mat_ix + 11*room_id + 13*interior->rooms.size())%num_locker_colors]); // random per part/room
+	vect_room_object_t &objs(interior->room_geom->objs);
+	unsigned const lockers_start(objs.size());
 	vect_cube_t blockers;
 
 	for (stairwell_t const &s : interior->stairwells) {

@@ -775,7 +775,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 						if (is_ground_floor) {r->assign_to(RTYPE_LOBBY, f);} // first floor primary hallway, make it the lobby
 						if (f == 0) {place_objects_onto_surfaces(rgen, *r, room_id, tot_light_amt, objs_start, f, is_basement, 1);} // first floor reception desks; not_private=1
 					}
-					else if (is_school()) { // add lockers on upper parts
+					else if (is_school() && !is_ext_basement) { // add lockers on upper parts
 						bool const hall_dim(dx < dy);
 						cube_t const &part(get_part_for_room(*r));
 
@@ -1126,7 +1126,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					added_obj = no_plants = no_whiteboard = 1;
 					r->assign_to(RTYPE_LOUNGE, f);
 				}
-				if (!added_obj && num_locker_rooms < 2 && !has_window && rgen.rand_float() < 0.25) { // maybe make locker room if there is no window
+				if (!added_obj && num_locker_rooms < 2 && !has_window /*&& !is_ext_basement*/ && rgen.rand_float() < 0.25) { // maybe make locker room if there is no window
 					added_obj = no_plants = no_whiteboard = add_locker_room_objs(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start);
 					if (added_obj) {r->assign_to(RTYPE_LOCKER, f); ++num_locker_rooms;}
 				}
