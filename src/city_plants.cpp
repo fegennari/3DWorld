@@ -654,7 +654,7 @@ void pond_t::draw_lily_pads(draw_state_t &dstate, city_draw_qbds_t &qbds, bool s
 	bool const draw_bot(dstate.camera_bs.z < get_water_zval());
 	float const dz_off((draw_bot ? -1.0 : 1.0)*max(0.0001f*bcube.dz(), 0.00025f*dist)), z1(get_water_zval() + 2.0*dz_off), z2(z1 + dz_off);
 	color_wrapper const cw(WHITE);
-	if (!shadow_only) {select_texture(get_texture_by_name("lilypad.png"));} // set in case we drew cat tails previously
+	if (!shadow_only) {select_texture(get_texture_by_name("lilypad.png", 0, 0, 1, 0.0, 1, 0));} // disable mipmaps because they make lily pads look like squares in the distance
 
 	for (sphere_t const &lp : lily_pads) { // draw lily pads
 		if (shadow_only) { // circular
