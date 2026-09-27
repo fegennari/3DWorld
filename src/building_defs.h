@@ -609,6 +609,7 @@ struct building_mat_t : public building_tex_params_t {
 	cube_t pos_range, prev_pos_range, sz_range; // pos_range z is unused?
 	color_range_t side_color, roof_color; // exterior
 	colorRGBA window_color=GRAY, wall_color=WHITE, ceil_color=WHITE, floor_color=LT_GRAY, house_ceil_color=WHITE, house_floor_color=WHITE;
+	string mat_name;
 
 	building_mat_t() : pos_range(-100,100,-100,100,0,0), sz_range(1,1,1,1,1,1) {}
 	float gen_house_size_scale(rand_gen_t &rgen) const {return ((house_scale_min == house_scale_max) ? house_scale_min : rgen.rand_uniform(house_scale_min, house_scale_max));}

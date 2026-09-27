@@ -376,6 +376,9 @@ bool building_params_t::parse_buildings_option(FILE *fp) {
 	else if (str == "house_scale_range") { // per-material
 		if (!read_float(fp, cur_mat.house_scale_min) || !read_float(fp, cur_mat.house_scale_max)) {buildings_file_err(str, read_error);}
 	}
+	else if (str == "mat_name") { // material name
+		if (!read_string(fp, cur_mat.mat_name)) {buildings_file_err(str, read_error);}
+	}
 	// material colors / textures
 	else if (str == "side_color") {
 		if (!read_color(fp, cur_mat.side_color.cmin)) {buildings_file_err(str, read_error);}
