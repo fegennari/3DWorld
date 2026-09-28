@@ -440,7 +440,7 @@ struct ped_draw_vars_t {
 
 struct city_zone_t : public cube_t {
 	float zval=0.0;
-	bool is_park=0, is_residential=0;
+	bool is_park=0, is_residential=0, is_non_house=0;
 	uint8_t street_dir=0; // encoded as 2*dim + dir + 1; 0 is unassigned
 	unsigned nbuildings=0, capacity=0; // in number of buildings; 0 is unlimited
 	unsigned max_floors=0; // 0=unlimited

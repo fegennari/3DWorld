@@ -2292,7 +2292,10 @@ private:
 			if (driveway.get_length() < 1.5*car_len  ) continue; // driveway is too short
 			if (driveway.get_width () < 1.1*car_width) continue; // driveway is too narrow (mostly applies to trucks or walkways)
 
-			if (!is_residential) { // not a residential city
+			if (is_residential) {
+				if (driveway.park_lot_ix >= 0) continue; // convenience store walkway, not a driveway
+			}
+			else { // commercial city
 				bool const allow_hcap(rgen.rand_float() < 0.25);
 				int const psix(city_obj_placer.select_dest_parking_space(dix, allow_hcap, 1, car_len, rgen)); // reserve_spot=1
 				if (psix < 0) continue;

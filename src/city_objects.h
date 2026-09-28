@@ -996,7 +996,7 @@ private:
 	void place_detail_objects(road_plot_t &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> &tree_pos, vect_cube_t const &pond_blockers,
 		vect_cube_t const &plot_cuts, unsigned city_id, unsigned plot_ix, unsigned plot_id_offset, rand_gen_t &rgen, bool have_streetlights);
 	void place_residential_plot_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<road_t> const &roads,
-		vect_cube_t const &pool_blockers, unsigned driveways_start, unsigned plot_ix, unsigned city_ix, cube_t &inner_space, rand_gen_t &rgen);
+		vect_cube_t const &pool_blockers, unsigned driveways_start, unsigned plot_ix, unsigned city_ix, unsigned plot_id_offset, cube_t &inner_space, rand_gen_t &rgen);
 	bool place_swimming_pool(road_plot_t const &plot, city_zone_t const &yard, cube_with_ix_t const &house, bool dim, bool dir, bool shrink_dim,
 		unsigned prev_blockers_end, unsigned plot_ix, unsigned city_ix, float divider_hwidth, float const translate_dist[2],
 		vect_cube_t const &pool_blockers, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen);

@@ -3532,7 +3532,7 @@ public:
 			get_city_plot_zones(city_plot_bcubes); // Note: assumes approx equal area for placement distribution
 
 			for (auto i = city_plot_bcubes.begin(); i != city_plot_bcubes.end(); ++i) {
-				if (i->is_park) continue; // skip parks
+				if (i->is_park || i->is_non_house) continue; // skip parks and residential plots marked as non-house
 				valid_city_plot_ixs.push_back(i - city_plot_bcubes.begin()); // record non-park plots
 				if (i->is_residential) {++num_residential;} else {++num_non_residential;}
 			}
@@ -3700,7 +3700,7 @@ public:
 			}
 		} // for i
 		if (buildings.capacity() > 2*buildings.size()) {
-			unsigned const orig_sz(buildings.size()), num_extra(128); // for custom placed buildings
+			unsigned const orig_sz(buildings.size()), num_extra(256); // for custom placed buildings
 			buildings.resize(buildings.size() + num_extra);
 			buildings.shrink_to_fit();
 			buildings.resize(orig_sz);

@@ -64,6 +64,20 @@ size_t city_obj_placer_t::get_gpu_mem() const {
 	return mem;
 }
 
+void make_conv_store(building_t &b, cube_t const &cs, unsigned city_ix, bool dim, bool dir, bool stree_side, rand_gen_t &rgen) {
+	b.is_in_city = 1;
+	b.city_ix    = city_ix;
+	b.bcube      = cs; // copy XY; zvals set below
+	b.street_dir = 2*dim + dir + 1; // facing gas station
+	b.street_side= stree_side;
+	b.btype      = BTYPE_CONV_STORE;
+	b.roof_type  = ROOF_TYPE_PEAK;
+	b.mat_ix     = global_building_params.choose_rand_mat(rgen, 0, 1, 0); // use brick or concrete: city_only=0, non_city_only=1, residential=0
+	b.was_custom_placed = 1;
+	b.gen_roof_and_side_color(rgen);
+	b.set_z_range(cs.z1(), cs.z2());
+}
+
 // Note: copies rgen by value to avoid disrupting the original sequence
 bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigned city_id, unsigned plot_ix, unsigned plot_id_offset,
 	vect_cube_t const &plot_cuts, vector<car_t> &cars, vect_cube_t &bcubes, vect_cube_t &colliders, rand_gen_t rgen, bool add_cars)
@@ -171,7 +185,7 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigne
 			}
 			add_cube_to_colliders_and_blockers(place_bc, colliders, new_bcubes);
 		}
-	} // end car wash
+	} // end car wash/service station
 	if (1) { // maybe add a conveinence store at the back
 		float const cs_len(6.2*nom_car_size.y), cs_min_depth(2.0*nom_car_size.x), cs_height(0.2*city_params.road_width);
 		float const depth_offset((ent_dir ? -1.0 : 1.0)*cs_min_depth);
@@ -187,25 +201,14 @@ bool city_obj_placer_t::maybe_place_gas_station(road_plot_t const &plot, unsigne
 			cs.d[dim][!dir] += dscale*0.25*len_delta;
 		}
 		if (plot.contains_cube_xy(cs) && !has_bcube_int_xy(cs, bcubes, pad_dist)) { // fully inside plot and not too close to a building
-			// attempt to widen in incremental steps
-			for (unsigned n = 0; n < 5; ++n) {
+			for (unsigned n = 0; n < 5; ++n) { // attempt to widen in incremental steps
 				cube_t cand(cs);
 				cand.d[!dim][!ent_dir] += 0.1*depth_offset;
 				if (has_bcube_int_xy(cand, bcubes, pad_dist)) break; // too wide
 				cs = cand;
 			}
 			building_t b;
-			b.is_in_city = 1;
-			b.city_ix    = city_id;
-			b.bcube      = cs; // copy XY; zvals set below
-			b.street_dir = 2*(!dim) + ent_dir + 1; // facing gas station
-			b.street_side= dir;
-			b.btype      = BTYPE_CONV_STORE;
-			b.roof_type  = ROOF_TYPE_PEAK;
-			b.mat_ix     = global_building_params.choose_rand_mat(rgen, 0, 1, 0); // use brick or concrete: city_only=0, non_city_only=1, residential=0
-			b.was_custom_placed = 1;
-			b.gen_roof_and_side_color(rgen);
-			b.set_z_range(cs.z1(), cs.z2());
+			make_conv_store(b, cs, city_id, !dim, ent_dir, dir, rgen);
 			if (place_city_building_at(b, (plot_ix + plot_id_offset), rgen)) {new_bcubes.push_back(cs);}
 		}
 	}
@@ -217,7 +220,7 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t const &full_plot, vecto
 	vect_cube_t &bcubes, vect_cube_t &colliders, vect_cube_t const &plot_cuts, rand_gen_t &rgen, bool add_cars)
 {
 	vector3d const nom_car_size(city_params.get_nom_car_size()); // {length, width, height}
-	float const space_width(PARK_SPACE_WIDTH *nom_car_size.y); // add 50% extra space between cars
+	float const space_width(PARK_SPACE_WIDTH *nom_car_size.y); // add 60% extra space between cars
 	float const space_len  (PARK_SPACE_LENGTH*nom_car_size.x); // space for car + gap for cars to drive through
 	float const pad_dist   (max(1.0f*nom_car_size.x, get_min_obj_spacing())); // one car length or min building spacing
 	float const sidewalk_width(get_sidewalk_width());
@@ -461,6 +464,7 @@ void city_obj_placer_t::add_cars_to_driveways(vector<car_t> &cars, vector<road_p
 	vector3d const nom_car_size(city_params.get_nom_car_size()); // {length, width, height}
 
 	for (auto i = driveways.begin(); i != driveways.end(); ++i) {
+		if (i->park_lot_ix    >= 0 ) continue; // parking lot entrance, not a driveway
 		if (rgen.rand_float() < 0.5) continue; // no car in this driveway 50% of the time
 		car.cur_road = (unsigned short)i->plot_ix; // store plot_ix in road field
 		car.cur_seg  = (unsigned short)(i - driveways.begin()); // store driveway index in cur_seg
@@ -1739,12 +1743,12 @@ bool check_valid_house_obj_place(point const &pos, float height, float radius, f
 }
 
 void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<road_t> const &roads,
-	vect_cube_t const &pool_blockers, unsigned driveways_start, unsigned plot_ix, unsigned city_ix, cube_t &inner_space, rand_gen_t &rgen)
+	vect_cube_t const &pool_blockers, unsigned driveways_start, unsigned plot_ix, unsigned city_ix, unsigned plot_id_offset, cube_t &inner_space, rand_gen_t &rgen)
 {
 	assert(plot_subdiv_sz > 0.0);
 	sub_plots.clear();
 	if (plot.is_park) return; // no dividers in parks
-	if (!subdivide_plot_for_residential(plot, roads, plot_subdiv_sz, 0, city_ix, sub_plots, inner_space)) return; // parent_plot_ix=0, not needed
+	if (!subdivide_plot_for_residential(plot, roads, plot_subdiv_sz, plot_ix, city_ix, sub_plots, inner_space)) return; // parent_plot_ix=0, not needed
 	if (sub_plots.size() <= 1) return; // nothing to divide
 	has_residential_plots = 1;
 	if (rgen.rand_bool()) {std::reverse(sub_plots.begin(), sub_plots.end());} // reverse half the time so that we don't prefer a divider in one side or the other
@@ -1753,8 +1757,9 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 	unsigned const dividers_start(dividers.size()), prev_blockers_end(blockers.size()); // prev_blockers_end is the end of blockers placed by previous steps for this plot
 	vect_cube_with_ix_t bcubes; // we need the building index for the get_building_door_pos_closest_to() call
 
-	for (auto i = sub_plots.begin(); i != sub_plots.end(); ++i) { // populate each yard
+	for (auto i = sub_plots.begin(); i != sub_plots.end(); ++i) { // populate each house yard
 		unsigned const yard_blockers_start(blockers.size());
+		bool const sdim((i->street_dir-1)>>1), sdir((i->street_dir-1)&1); // direction to the road
 		// place plot dividers
 		float hwidth(0.0), translate_dist[2] = {0.0, 0.0};
 		unsigned const type(rgen.rand() % (DIV_NUM_TYPES-1)); // use a consistent divider type for all sides of this plot, excluding house walls
@@ -1810,6 +1815,45 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 			} // for dim
 		} // end dividers
 
+		if (i->is_non_house) { // not a house; add a store with parking lot and driveways
+			vector3d const nom_car_size(city_params.get_nom_car_size()); // {length, width, height}
+			float const park_space_width(PARK_SPACE_WIDTH *nom_car_size.y); // add 60% extra space between cars
+			float const park_space_len  (PARK_SPACE_LENGTH*nom_car_size.x); // space for car + gap for cars to drive through
+			float const min_space(get_min_obj_spacing()), back_gap(1.2*min_space), front_gap(1.0*min_space);
+			float const cs_depth(i->get_sz_dim(sdim) - back_gap - min_space - park_space_len);
+			float const dsign(sdir ? 1.0 : -1.0), back_wall_pos(i->d[sdim][!sdir] + dsign*back_gap);
+			float const front_wall_pos(back_wall_pos + dsign*cs_depth), parking_lot_int_edge(front_wall_pos + dsign*front_gap);
+			bool const ent_dir(plot.get_center_dim(!sdim) < i->get_center_dim(!sdim));
+			cube_t subplot_inner(*i);
+			subplot_inner.d[!sdim][!ent_dir] += (ent_dir ? 1.0 : -1.0)*hwidth; // clip off space for side plot divider
+			float const sp_width(subplot_inner.get_sz_dim(!sdim));
+			unsigned const num_spaces(sp_width/park_space_width);
+			if (num_spaces == 0) continue; // shouldn't happen
+			float const dest_sp_width(num_spaces*park_space_width); // make it an exact multiple of parking space size for correct texture scaling
+			subplot_inner.d[!sdim][!ent_dir] += (ent_dir ? 1.0 : -1.0)*(sp_width - dest_sp_width);
+			cube_t cs(subplot_inner);
+			cs.z2() += 0.25*city_params.road_width; // set roof height
+			cs.d[sdim][!sdir] = back_wall_pos;
+			cs.d[sdim][ sdir] = front_wall_pos; // set depth
+			cs.expand_in_dim(!sdim, -1.5*min_space); // side gap
+			building_t b;
+			make_conv_store(b, cs, city_ix, sdim, sdir, rgen.rand_bool(), rgen); // random side dir
+			if (!place_city_building_at(b, (plot_ix + plot_id_offset), rgen)) continue;
+			blockers.push_back(cs);
+			// add parking lot
+			unsigned const pix(parking_lots.size());
+			cube_t parking_lot(subplot_inner);
+			parking_lot.d[sdim][!sdir] = parking_lot_int_edge;
+			parking_lot_t pl(parking_lot, sdim, !sdir, ent_dir, num_spaces, 1, pix);
+			parking_lots.push_back(pl);
+			blockers.push_back(parking_lot);
+			// add sidewalk/driveway between the store and the parking lot; should be too narrow to park a car
+			cube_t sidewalk(subplot_inner);
+			sidewalk.d[sdim][!sdir] = front_wall_pos;
+			sidewalk.d[sdim][ sdir] = parking_lot_int_edge;
+			driveways.emplace_back(sidewalk, !sdim, ent_dir, pix);
+			continue;
+		}
 		// place yard objects
 		// Note: can't check for collisions with fire escapes and balcony support pillars here because they haven't been placed yet
 		if (!i->is_residential || i->is_park || i->street_dir == 0) continue; // not a residential plot along a road
@@ -1818,7 +1862,6 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 		if (bcubes.empty()) continue; // no house, skip adding other yard objects
 		assert(bcubes.size() == 1); // there should be exactly one building/house in this sub-plot
 		cube_with_ix_t const &house(bcubes.front());
-		bool const sdim((i->street_dir-1)>>1), sdir((i->street_dir-1)&1); // direction to the road
 		float const plot_z(i->z2());
 
 		// attempt place swimming pool; often unsuccessful
@@ -2062,6 +2105,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 		float const mbox_height(1.1*sz_scale), bbh_height(4.2*sz_scale), sidewalk_width(get_inner_sidewalk_width()), walkway_width_max(0.1*city_params.road_width);
 
 		for (auto dw = driveways.begin()+driveways_start; dw != driveways.end(); ++dw) {
+			if (dw->park_lot_ix >= 0) continue; // parking lot entrance, not a house driveway or walkway
 			bool const dim(dw->dim), dir(dw->dir);
 			// if a house has both a driveway and a walkway, add the mailbox to the walkway and the BB hoop to the driveway;
 			// but no one is tracking which building each driveway belongs to, and both the driveway and walkway are optional, so we need to group them by sub-plot
@@ -2687,7 +2731,8 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 			if (i->intersects_xy(c)) {blockers.push_back(c);}
 		}
 		if (city_params.assign_house_plots && plot_subdiv_sz > 0.0) {
-			place_residential_plot_objects(*i, blockers, colliders, roads, underground_blockers, driveways_start, plot_id, city_id, inner_space, detail_rgen); // before placing trees
+			// place residential objects before placing trees
+			place_residential_plot_objects(*i, blockers, colliders, roads, underground_blockers, driveways_start, plot_id, city_id, plot_id_offset, inner_space, detail_rgen);
 
 			if (!inner_space.is_all_zeros()) { // place extra trees in the empty space between house yards
 				road_plot_t place_area(*i);
@@ -2822,18 +2867,23 @@ void city_obj_placer_t::add_objs_on_buildings(road_plot_t const &plot, vect_cube
 		ndiv   [d] = max(1U, unsigned(round_fp(plot_sz/plot_subdiv_sz)));
 		spacing[d] = plot_sz/ndiv[d];
 	}
-	if (ndiv[0] >= 100 || ndiv[1] >= 100) return 0; // too many plots? this shouldn't happen, but failing here is better than asserting or generating too many buildings
+	unsigned const nx(ndiv[0]), ny(ndiv[1]);
+	if (nx >= 100 || ny >= 100) return 0; // too many plots? this shouldn't happen, but failing here is better than asserting or generating too many buildings
 	unsigned const max_floors(0); // 0 is unlimited
-	if (sub_plots.empty()) {sub_plots.reserve(2*(ndiv[0] + ndiv[1]) - 4);}
+	if (sub_plots.empty()) {sub_plots.reserve(2*(nx + ny) - 4);}
+	rand_gen_t rgen;
+	rgen.set_state(city_ix+1, parent_plot_ix+1);
+	rgen.rand_mix();
+	unsigned const non_house_ix(rgen.rand() % (nx*ny)); // may be a center plot, which will be ignored
 
-	for (unsigned y = 0; y < ndiv[1]; ++y) {
-		float const y1(plot.y1() + spacing[1]*y), y2((y+1 == ndiv[1]) ? plot.y2() : (y1 + spacing[1])); // last sub-plot must end exactly at plot y2
+	for (unsigned y = 0; y < ny; ++y) {
+		float const y1(plot.y1() + spacing[1]*y), y2((y+1 == ny) ? plot.y2() : (y1 + spacing[1])); // last sub-plot must end exactly at plot y2
 
-		for (unsigned x = 0; x < ndiv[0]; ++x) {
-			float const x1(plot.x1() + spacing[0]*x), x2((x+1 == ndiv[0]) ? plot.x2() : (x1 + spacing[0])); // last sub-plot must end exactly at plot x2
+		for (unsigned x = 0; x < nx; ++x) {
+			float const x1(plot.x1() + spacing[0]*x), x2((x+1 == nx) ? plot.x2() : (x1 + spacing[0])); // last sub-plot must end exactly at plot x2
 			cube_t const c(x1, x2, y1, y2, plot.z1(), plot.z2());
 
-			if (x > 0 && y > 0 && x+1 < ndiv[0] && y+1 < ndiv[1]) { // interior plot, no road access
+			if (x > 0 && y > 0 && x+1 < nx && y+1 < ny) { // interior plot, no road access
 				inner_space.assign_or_union_with_cube(c);
 				continue; // skip - not a sub-plot
 			}
@@ -2856,6 +2906,9 @@ void city_obj_placer_t::add_objs_on_buildings(road_plot_t const &plot, vect_cube
 				if (sdir) {++street_number;} // make it an odd number if on this side of the road
 				sub_plots.back().address    = std::to_string(street_number) + " " + road_name;
 				sub_plots.back().street_num = street_number;
+			}
+			if (y*nx + x == non_house_ix) { // only add if a corner sub-plot
+				sub_plots.back().is_non_house = ((x == 0 || x+1 == nx) && (y == 0 || y+1 == ny));
 			}
 		} // for x
 	} // for y
@@ -2949,6 +3002,9 @@ void city_obj_placer_t::finalize_streetlights_power_grass_blockers(streetlights_
 
 		for (swimming_pool_t const &p : pools) {
 			if (!p.above_ground) {grass_blockers.add(p.bcube, all_objs_bcube);} // in-ground pools only
+		}
+		if (has_residential()) { // add parking lots, but only for residential cities that have grass in the city blocks
+			for (parking_lot_t const &p : parking_lots) {grass_blockers.add(p, all_objs_bcube);}
 		}
 		vect_cube_t road_segs; // porches and driveways
 		get_city_road_segs_in_region(all_objs_bcube, road_segs); // all_objs_bcube should contain everything inside a plot, since it includes power poles on the roads
