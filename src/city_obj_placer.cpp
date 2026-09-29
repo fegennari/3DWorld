@@ -1831,13 +1831,14 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 			float const dsign(sdir ? 1.0 : -1.0), back_wall_pos(i->d[sdim][!sdir] + dsign*back_gap);
 			float const front_wall_pos(back_wall_pos + dsign*cs_depth), parking_lot_int_edge(front_wall_pos + dsign*front_gap);
 			bool const ent_dir(plot.get_center_dim(!sdim) < i->get_center_dim(!sdim));
+			float const edsign(ent_dir ? 1.0 : -1.0);
 			cube_t subplot_inner(*i);
-			subplot_inner.d[!sdim][!ent_dir] += (ent_dir ? 1.0 : -1.0)*hwidth; // clip off space for side plot divider
+			subplot_inner.d[!sdim][!ent_dir] += edsign*hwidth; // clip off space for side plot divider
 			float const sp_width(subplot_inner.get_sz_dim(!sdim));
 			unsigned const num_spaces(sp_width/park_space_width);
 			if (num_spaces == 0) continue; // shouldn't happen
 			float const dest_sp_width(num_spaces*park_space_width); // make it an exact multiple of parking space size for correct texture scaling
-			subplot_inner.d[!sdim][!ent_dir] += (ent_dir ? 1.0 : -1.0)*(sp_width - dest_sp_width);
+			subplot_inner.d[!sdim][!ent_dir] += edsign*(sp_width - dest_sp_width);
 			cube_t cs(subplot_inner);
 			cs.z2() += 0.25*city_params.road_width; // set roof height
 			cs.d[sdim][!sdir] = back_wall_pos;
@@ -1859,6 +1860,19 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 			sidewalk.d[sdim][!sdir] = front_wall_pos;
 			sidewalk.d[sdim][ sdir] = parking_lot_int_edge;
 			driveways.emplace_back(sidewalk, !sdim, ent_dir, plot_ix, pix);
+
+			// add dumpster at the end of the sidewalk
+			if (building_obj_model_loader.is_model_valid(OBJ_MODEL_DUMPSTER)) {
+				vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_DUMPSTER)); // W, D, H
+				float const height(0.3*nom_car_size.x), width(height*sz.y/sz.z);
+				point pos;
+				pos.z      = plot.z1();
+				pos[ sdim] = sidewalk.get_center_dim(sdim);
+				pos[!sdim] = sidewalk.d[!sdim][!ent_dir] + edsign*width*rgen.rand_uniform(1.0, 1.5); // near the edge opposite the side road
+				dumpster_t const dumpster(pos, height, sdim, sdir);
+				dumpster_groups.add_obj(dumpster, dumpsters);
+				add_cube_to_colliders_and_blockers(dumpster.bcube, colliders, blockers);
+			}
 			// add driveway slots for each parking space
 			cube_t driveway(parking_lot);
 
@@ -2889,7 +2903,8 @@ void city_obj_placer_t::add_objs_on_buildings(road_plot_t const &plot, vect_cube
 	rand_gen_t rgen;
 	rgen.set_state(city_ix+1, parent_plot_ix+1);
 	rgen.rand_mix();
-	unsigned const non_house_ix(rgen.rand() % (nx*ny)); // may be a center plot, which will be ignored
+	// add empty plot for convenience store, etc. 25% of the time; may be a center plot, which will be ignored
+	unsigned const non_house_ix((rgen.rand_float() < 0.25) ? (rgen.rand() % (nx*ny)) : 0xFF);
 
 	for (unsigned y = 0; y < ny; ++y) {
 		float const y1(plot.y1() + spacing[1]*y), y2((y+1 == ny) ? plot.y2() : (y1 + spacing[1])); // last sub-plot must end exactly at plot y2
