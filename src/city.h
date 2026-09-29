@@ -301,6 +301,7 @@ struct driveway_t : public oriented_cube_t {
 	mutable unsigned last_ped_frame=0;
 	mutable uint8_t in_use=0; // either reserves the spot, or a car is parked there; 1=temporary, 2=permanent
 	uint8_t turn_dir=TURN_NONE; // for driveway with a turn or bend, such as entering a car wash
+	bool is_parking_space=0;
 	unsigned plot_ix=0;
 	int park_lot_ix=-1, gstation_ix=-1; // driveway may be part of a parking lot, gas station, or car wash
 	float stop_loc=0.0; // used for gas stations
@@ -699,6 +700,7 @@ public:
 	void add_city_quad(road_seg_t  const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool);
 	void add_city_quad(road_isec_t const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool);
 	void add_city_quad(road_t      const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool);
+	void add_city_quad(driveway_t  const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool);
 	void add_city_quad(road_plot_t const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool draw_all);
 	void draw_city_skirt(cube_t const &bcube, bool shadow_only);
 

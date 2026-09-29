@@ -1247,6 +1247,9 @@ void road_draw_state_t::add_city_quad(road_isec_t const &r, quad_batch_draw &qbd
 void road_draw_state_t::add_city_quad(road_t      const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool) { // tracks
 	r.add_road_quad(qbd, color, ar/TRACKS_WIDTH);
 }
+void road_draw_state_t::add_city_quad(driveway_t  const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool) { // driveway
+	if (!r.is_parking_space) {add_flat_city_quad(r, qbd, color, ar);} // skip parking spaces because the parking lot is drawn instead
+}
 void road_draw_state_t::add_city_quad(road_plot_t const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool draw_all) { // plots and parks
 	if (r.no_draw) return; // park drawn as heightmap rather than quad
 	if (!draw_all && (type_ix == TYPE_PARK) != r.is_park) return;

@@ -464,18 +464,25 @@ void city_obj_placer_t::add_cars_to_driveways(vector<car_t> &cars, vector<road_p
 	vector3d const nom_car_size(city_params.get_nom_car_size()); // {length, width, height}
 
 	for (auto i = driveways.begin(); i != driveways.end(); ++i) {
-		if (i->park_lot_ix    >= 0 ) continue; // parking lot entrance, not a driveway
-		if (rgen.rand_float() < 0.5) continue; // no car in this driveway 50% of the time
+		if (i->park_lot_ix    >= 0) continue; // parking lot entrance, not a driveway
+		if (rgen.rand_float() < (i->is_parking_space ? 0.75 : 0.5)) continue; // no car in this driveway 50% of the time, 75% for parking spaces
 		car.cur_road = (unsigned short)i->plot_ix; // store plot_ix in road field
 		car.cur_seg  = (unsigned short)(i - driveways.begin()); // store driveway index in cur_seg
 		cube_t const &plot(plots[i->plot_ix]);
 		car.dim = (i->y1() == plot.y1() || i->y2() == plot.y2()); // check which edge of the plot the driveway is connected to, which is more accurate than the aspect ratio
 		if (i->get_sz_dim(car.dim) < 1.6*nom_car_size.x || i->get_sz_dim(!car.dim) < 1.25*nom_car_size.y) continue; // driveway is too small to fit this car (or may be a walkway)
 		car.dir = rgen.rand_bool(); // randomly pulled in vs. backed in, since we don't know the direction to the house anyway
-		float const pad_l(0.75*nom_car_size.x), pad_w(0.6*nom_car_size.y); // needs to be a bit larger to fit trucks
 		point cpos(0.0, 0.0, i->z2());
-		cpos[ car.dim] = rgen.rand_uniform(i->d[ car.dim][0]+pad_l, i->d[ car.dim][1]-pad_l);
-		cpos[!car.dim] = rgen.rand_uniform(i->d[!car.dim][0]+pad_w, i->d[!car.dim][1]-pad_w); // not quite centered
+
+		if (i->is_parking_space) { // parking lot parking space; more centered
+			cpos[ car.dim] = i->get_center_dim( car.dim) + rgen.signed_rand_float()*0.05*nom_car_size.x - 0.1*i->get_sz_dim(car.dim)*(i->dir ? 1.0 : -1.0); // a bit toward the front
+			cpos[!car.dim] = i->get_center_dim(!car.dim) + rgen.signed_rand_float()*0.05*nom_car_size.y;
+		}
+		else { // normal driveway
+			float const pad_l(0.75*nom_car_size.x), pad_w(0.6*nom_car_size.y); // needs to be a bit larger to fit trucks
+			cpos[ car.dim] = rgen.rand_uniform(i->d[ car.dim][0]+pad_l, i->d[ car.dim][1]-pad_l);
+			cpos[!car.dim] = rgen.rand_uniform(i->d[!car.dim][0]+pad_w, i->d[!car.dim][1]-pad_w); // not quite centered
+		}
 		car.set_bcube(cpos, nom_car_size);
 		// check if this car intersects another parked car; this can only happen if two driveways intersect, which should be rare
 		bool intersects(0);
@@ -1819,7 +1826,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 			vector3d const nom_car_size(city_params.get_nom_car_size()); // {length, width, height}
 			float const park_space_width(PARK_SPACE_WIDTH *nom_car_size.y); // add 60% extra space between cars
 			float const park_space_len  (PARK_SPACE_LENGTH*nom_car_size.x); // space for car + gap for cars to drive through
-			float const min_space(get_min_obj_spacing()), back_gap(1.2*min_space), front_gap(1.0*min_space);
+			float const min_space(get_min_obj_spacing()), back_gap(1.1*min_space), front_gap(1.0*min_space);
 			float const cs_depth(i->get_sz_dim(sdim) - back_gap - min_space - park_space_len);
 			float const dsign(sdir ? 1.0 : -1.0), back_wall_pos(i->d[sdim][!sdir] + dsign*back_gap);
 			float const front_wall_pos(back_wall_pos + dsign*cs_depth), parking_lot_int_edge(front_wall_pos + dsign*front_gap);
@@ -1835,9 +1842,9 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 			cs.z2() += 0.25*city_params.road_width; // set roof height
 			cs.d[sdim][!sdir] = back_wall_pos;
 			cs.d[sdim][ sdir] = front_wall_pos; // set depth
-			cs.expand_in_dim(!sdim, -1.5*min_space); // side gap
+			cs.expand_in_dim(!sdim, -1.3*min_space); // side gap
 			building_t b;
-			make_conv_store(b, cs, city_ix, sdim, sdir, rgen.rand_bool(), rgen); // random side dir
+			make_conv_store(b, cs, city_ix, sdim, sdir, ent_dir, rgen); // random side dir
 			if (!place_city_building_at(b, (plot_ix + plot_id_offset), rgen)) continue;
 			blockers.push_back(cs);
 			// add parking lot
@@ -1851,7 +1858,15 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 			cube_t sidewalk(subplot_inner);
 			sidewalk.d[sdim][!sdir] = front_wall_pos;
 			sidewalk.d[sdim][ sdir] = parking_lot_int_edge;
-			driveways.emplace_back(sidewalk, !sdim, ent_dir, pix);
+			driveways.emplace_back(sidewalk, !sdim, ent_dir, plot_ix, pix);
+			// add driveway slots for each parking space
+			cube_t driveway(parking_lot);
+
+			for (unsigned n = 0; n < num_spaces; ++n) {
+				set_wall_width(driveway, (parking_lot.d[!sdim][0] + (n + 0.5)*park_space_width), 0.5*park_space_width, !sdim);
+				driveways.emplace_back(driveway, sdim, sdir, plot_ix, -1); // no parking_lot_ix
+				driveways.back().is_parking_space = 1;
+			}
 			continue;
 		}
 		// place yard objects
@@ -2105,7 +2120,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 		float const mbox_height(1.1*sz_scale), bbh_height(4.2*sz_scale), sidewalk_width(get_inner_sidewalk_width()), walkway_width_max(0.1*city_params.road_width);
 
 		for (auto dw = driveways.begin()+driveways_start; dw != driveways.end(); ++dw) {
-			if (dw->park_lot_ix >= 0) continue; // parking lot entrance, not a house driveway or walkway
+			if (dw->park_lot_ix >= 0 || dw->is_parking_space) continue; // parking lot entrance or parking space, not a house driveway or walkway, skip
 			bool const dim(dw->dim), dir(dw->dir);
 			// if a house has both a driveway and a walkway, add the mailbox to the walkway and the BB hoop to the driveway;
 			// but no one is tracking which building each driveway belongs to, and both the driveway and walkway are optional, so we need to group them by sub-plot
@@ -2962,8 +2977,14 @@ bool city_obj_placer_t::move_to_not_intersect_driveway(point &pos, float radius,
 	cube_t test_cube;
 	test_cube.set_from_sphere(pos, radius);
 
+	if (has_residential()) { // check for parking lots
+		for (parking_lot_t const &p : parking_lots) {
+			if (move_pos_to_avoid(p, test_cube, pos, dim)) return 1;
+		}
+	}
 	// Note: this could be accelerated by iterating by plot, but this seems to already be fast enough (< 1ms)
-	for (cube_t const &dw : driveways) {
+	for (driveway_t const &dw : driveways) {
+		if (dw.is_parking_space) continue; // handled by parking lot iteration above
 		// maybe we should check for an adjacent driveway, but that would be rare and moving could result in oscillation
 		if (move_pos_to_avoid(dw, test_cube, pos, dim)) return 1;
 	}
@@ -2996,7 +3017,9 @@ void city_obj_placer_t::finalize_streetlights_power_grass_blockers(streetlights_
 	if (was_moved) {sl.sort_streetlights_by_yx();} // must re-sort if a streetlight was moved
 
 	if (add_city_grass >= 2) {
-		for (driveway_t    const &dw : driveways) {grass_blockers.add(dw,          all_objs_bcube);}
+		for (driveway_t const &dw : driveways) {
+			if (!dw.is_parking_space) {grass_blockers.add(dw, all_objs_bcube);} // parking space driveways are added with parking lots below
+		}
 		for (pool_deck_t   const &pd : pdecks   ) {grass_blockers.add(pd.bcube,    all_objs_bcube);}
 		for (gas_station_t const &gs : gstations) {grass_blockers.add(gs.pavement, all_objs_bcube);}
 

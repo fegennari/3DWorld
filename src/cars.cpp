@@ -316,17 +316,18 @@ bool car_t::run_enter_driveway_logic(vector<car_t> const &cars, driveway_t const
 	return 1;
 }
 void car_t::pull_into_driveway(driveway_t const &driveway, rand_gen_t &rgen) {
+	bool const ddim(driveway.dim), ddir(driveway.dir);
 	float stop_pos(0.0), car_pos(0.0);
 
-	if (driveway.is_parking_lot()) { // parking lot driveway
+	if (driveway.is_parking_lot()) { // parking lot right angle driveway
 		in_parking_lot = 1;
 
 		if (maybe_apply_turn(park_space_cent[dim], 1)) { // turning into parking space row; for_driveway=1
 			set_target_speed(0.25); // 25% of max speed when turning
 			return; // continue to turn
 		}
-		if (dim == driveway.dim) { // in driveway; stop and turn at dest parking space
-			assert(dir != driveway.dir);
+		if (dim == ddim) { // in driveway; stop and turn at dest parking space
+			assert(dir != ddir);
 			car_pos = get_front_end(); // add half length to get front of car
 		}
 		else { // pull into parking space
@@ -335,7 +336,7 @@ void car_t::pull_into_driveway(driveway_t const &driveway, rand_gen_t &rgen) {
 		stop_pos = park_space_cent[dim];
 		set_target_speed(CAR_DW_SPEED_MULT); // 40% of max speed - reset in case we stopped due to a pedestrian in the way
 	}
-	else { // not a parking lot
+	else { // not a parking lot, or a direct parking space
 		bool const is_gs_or_cw(driveway.is_gas_station());
 		car_pos = bcube.get_center_dim(dim); // pull into driveway to gas pump or car wash bay; may be reset below
 
@@ -345,8 +346,8 @@ void car_t::pull_into_driveway(driveway_t const &driveway, rand_gen_t &rgen) {
 					set_target_speed(0.25); // 25% of max speed when turning
 					return; // continue to turn
 				}
-				if (dim == driveway.dim && driveway.turn_dir != TURN_NONE) { // in car wash entrance driveway; turn at dest car wash bay
-					assert(dir != driveway.dir);
+				if (dim == ddim && driveway.turn_dir != TURN_NONE) { // in car wash entrance driveway; turn at dest car wash bay
+					assert(dir != ddir);
 					car_pos = get_front_end(); // add half length to get front of car
 				}
 			}
@@ -357,21 +358,22 @@ void car_t::pull_into_driveway(driveway_t const &driveway, rand_gen_t &rgen) {
 		}
 		else { // house driveway; stop in the center
 			set_target_speed(CAR_DW_SPEED_MULT); // reset speed in case we stopped due to a pedestrian in the way; car will slowly inch forward
-			stop_pos = driveway.get_center_dim(driveway.dim);
+			stop_pos = driveway.get_center_dim(ddim);
+			if (driveway.is_parking_space) {stop_pos -= 0.1*driveway.get_sz_dim(ddim)*(ddir ? 1.0 : -1.0);} // a bit toward the front of the parking space
 		}
-		if (dim != driveway.dim || dir == driveway.dir) {
+		if (dim != ddim || dir == ddir) {
 			cout << TXT(dim) << TXT(dir) << TXT(is_gs_or_cw) << TXT(dest_cwash) << TXT(dest_gstation) << TXT(need_wash) << TXT(need_gas) << TXTS(driveway) << endl;
 		}
-		assert(dim == driveway.dim);
-		assert(dir != driveway.dir);
+		assert(dim == ddim);
+		assert(dir != ddir);
 	}
 	if ((car_pos < stop_pos) != dir) { // reached the driveway center or turn point
-		if (driveway.is_parking_lot() && dim == driveway.dim) { // turn into parking space
+		if (driveway.is_parking_lot() && dim == ddim) { // turn into parking space
 			bool const ps_dir(bcube.get_center_dim(!dim) < park_space_cent[!dim]), dw_turn_dir(dir ^ ps_dir ^ dim);
 			turn_dir = (dw_turn_dir ? (uint8_t)TURN_RIGHT : (uint8_t)TURN_LEFT);
 			begin_turn(); // capture car centerline before the turn
 		}
-		else if (driveway.turn_dir != TURN_NONE && dim == driveway.dim) { // turn into car wash
+		else if (driveway.turn_dir != TURN_NONE && dim == ddim) { // turn into car wash
 			turn_dir = driveway.turn_dir;
 			begin_turn(); // capture car centerline before the turn
 		}
