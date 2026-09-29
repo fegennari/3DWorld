@@ -716,6 +716,7 @@ void building_t::add_door_sign(string const &text, room_t const &room, float zva
 	bool const check_contained_in_room(!is_residential()); // apartment buildings and hotels always need room numbers
 	bool const in_mall(has_mall() && room.is_ext_basement());
 	auto const skip_door((interior->ext_basement_door_stack_ix >= 0) ? (interior->door_stacks.begin() + interior->ext_basement_door_stack_ix) : interior->door_stacks.end());
+	vect_room_object_t &objs(interior->room_geom->objs);
 
 	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {
 		if (!i->is_connected_to_room(room_id)) continue;
@@ -741,9 +742,10 @@ void building_t::add_door_sign(string const &text, room_t const &room, float zva
 			set_cube_zvals(sign, zval+0.55*floor_spacing, zval+0.6*floor_spacing); // high enough that it's not blocked by filing cabinets
 			sign.translate_dim(!i->dim, shift_amt);
 			
-			if (overlaps_or_adj_int_window(sign)) { // check interior windows for conference room, etc.
+			// check interior windows for conference room, etc.; check for objects like commercial fridges in convenience stores
+			if (overlaps_or_adj_int_window(sign) || (is_conv_store() && has_bcube_int(sign, objs))) {
 				sign.translate_dim(!i->dim, -2.0*shift_amt); // try the other dir
-				if (overlaps_or_adj_int_window(sign)) continue; // can't place sign here
+				if (overlaps_or_adj_int_window(sign) || (is_conv_store() && has_bcube_int(sign, objs))) continue; // can't place sign here
 			}
 			if (has_bcube_int_no_adj(sign, interior->wall_clip_cubes)) continue; // don't place over clipped wall
 		}
@@ -764,7 +766,7 @@ void building_t::add_door_sign(string const &text, room_t const &room, float zva
 		if (has_bcube_int(sign_pad, interior->elevators) || has_bcube_int(sign_pad, interior->stairwells)) continue; // check if blocked by side elevator or stairs
 		// check if the sign is contained in room, including the side wall
 		if (check_contained_in_room && (room.d[!i->dim][0]-half_wt > sign.d[!i->dim][0] || room.d[!i->dim][1]+half_wt < sign.d[!i->dim][1])) continue;
-		add_sign_outside_door(interior->room_geom->objs, sign, text, text_color, room_id, i->dim, side, !dark_mode); // add_frame=!dark_mode
+		add_sign_outside_door(objs, sign, text, text_color, room_id, i->dim, side, !dark_mode); // add_frame=!dark_mode
 		if (is_apt_or_hotel() && zval > ground_floor_z1) break; // only add to the first (front) door; applies to above ground rooms, not basement or mall
 	} // for i
 }

@@ -430,7 +430,7 @@ void building_t::add_conv_store_objs(rand_gen_t &rgen, room_t const &room, float
 	} // for d
 	// block off this area from shelf racks
 	place_area.d[dim][dir] = counter_front; // add a gap for shelf racks
-	// add commercial fridge
+	// add commercial fridges
 	unsigned const objs_start(objs.size()), skip_walls_mask(1 << (2*dim + dir)), num_cf(2);
 
 	for (unsigned n = 0; n < num_cf; ++n) { // not at window
