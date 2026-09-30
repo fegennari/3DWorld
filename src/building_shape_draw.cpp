@@ -316,7 +316,7 @@ void rgeom_mat_t::add_sphere_to_verts(point const &center, vector3d const &size,
 		sd.get_itri_points(verts, ixs);
 		assert((ixs.size() % 6) == 0); // must be a multiple of 6 (triangle pairs)
 		vncs.resize(verts.size());
-		for (unsigned i = 0; i < verts.size(); ++i) {vncs[i] = vert_norm_comp_tc(verts[i].v, verts[i].n, verts[i].t[0], verts[i].t[1]);} // vntc => vnctc
+		for (unsigned i = 0; i < verts.size(); ++i) {vncs[i].assign(verts[i].v, verts[i].n, verts[i].t[0], verts[i].t[1]);} // vntc => vnctc
 	}
 	color_wrapper const cw(color);
 	unsigned const ioff(itri_verts.size());

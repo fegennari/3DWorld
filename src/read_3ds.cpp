@@ -432,7 +432,7 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 				for (unsigned j = 0; j < 3; ++j) {
 					unsigned const ix(ixs[j]);
 					vector3d const normal((use_vertex_normals == 0 || (face_n != zero_vector && !normals[ix].is_valid())) ? face_n : normals[ix]);
-					tri[j] = vert_norm_tc(pts[j], normal, verts[ix].t[0], verts[ix].t[1]);
+					tri[j].assign(pts[j], normal, verts[ix].t[0], verts[ix].t[1]);
 				}
 				model.add_polygon(tri, vmap, vmap_tan, i->first, obj_id);
 			} // for f

@@ -198,10 +198,10 @@ void coll_obj::draw_coll_cube(int tid, cobj_draw_buffer &cdb, bool force_draw_al
 				n0[d0] = (e ? 1.0 : -1.0);
 				vert_norm_texp v[4];
 				point p;
-				p[dim] = ic.d[dim][dir]; p[d0] =    d[d0][e]; p[d1] = ic.d[d1][0]; v[0] = vert_norm_texp(p, n0,    vnt);
-				p[dim] =    d[dim][dir]; p[d0] = ic.d[d0][e]; p[d1] = ic.d[d1][0]; v[1] = vert_norm_texp(p, vnt.n, vnt);
-				p[dim] =    d[dim][dir]; p[d0] = ic.d[d0][e]; p[d1] = ic.d[d1][1]; v[2] = vert_norm_texp(p, vnt.n, vnt);
-				p[dim] = ic.d[dim][dir]; p[d0] =    d[d0][e]; p[d1] = ic.d[d1][1]; v[3] = vert_norm_texp(p, n0,    vnt);
+				p[dim] = ic.d[dim][dir]; p[d0] =    d[d0][e]; p[d1] = ic.d[d1][0]; v[0].assign(p, n0,    vnt);
+				p[dim] =    d[dim][dir]; p[d0] = ic.d[d0][e]; p[d1] = ic.d[d1][0]; v[1].assign(p, vnt.n, vnt);
+				p[dim] =    d[dim][dir]; p[d0] = ic.d[d0][e]; p[d1] = ic.d[d1][1]; v[2].assign(p, vnt.n, vnt);
+				p[dim] = ic.d[dim][dir]; p[d0] =    d[d0][e]; p[d1] = ic.d[d1][1]; v[3].assign(p, n0,    vnt);
 				for (unsigned i = 0; i < 6; ++i) {cdb.add_vert(v[quad_to_tris_ixs[i]]);} // quads (2 triangles)
 			}
 		} // for i

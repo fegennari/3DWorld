@@ -735,7 +735,7 @@ public:
 						tcoord.y = model_auto_tc_scale*v[V.vix][dimy];
 					}
 					else {tcoord = tc[V.tix];}
-					poly[p] = vert_norm_tc(v[V.vix], normal, tcoord.x, tcoord.y);
+					poly[p].assign(v[V.vix], normal, tcoord.x, tcoord.y);
 					if (!colors.empty()) {assert(V.vix < colors.size()); color += colors[V.vix];}
 				} // for p
 				if (!colors.empty()) {color = color/j->npts; color.A = 1.0;} // uses average vertex color for each face/polygon, with alpha=1.0

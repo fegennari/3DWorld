@@ -329,7 +329,7 @@ void create_vert(vert_norm_tc &v, point const &p, vector3d const &n, float ts, f
 	v.assign(p, calc_oriented_normal(p, n, two_sided_lighting), ts, tt);
 }
 void create_vert(vert_norm_texp &v, point const &p, vector3d const &n, texgen_params_t const &tp, bool two_sided_lighting) {
-	v = vert_norm_texp(p, calc_oriented_normal(p, n, two_sided_lighting), tp);
+	v.assign(p, calc_oriented_normal(p, n, two_sided_lighting), tp);
 }
 
 void gen_cone_triangles(vector<vert_norm_tc> &verts, vector_point_norm const &vpn, bool two_sided_lighting, float tc_t0, float tc_t1, float ts_scale, vector3d const &xlate) {
@@ -1021,10 +1021,10 @@ void disable_flares() {
 
 void draw_one_tquad(float x1, float y1, float x2, float y2, float z, int prim_type) { // Note: normal is +z
 	vert_norm_tc verts[4];
-	verts[0] = vert_norm_tc(point(x1, y1, z), plus_z, 0, 0); // clockwise
-	verts[1] = vert_norm_tc(point(x1, y2, z), plus_z, 0, 1);
-	verts[2] = vert_norm_tc(point(x2, y2, z), plus_z, 1, 1);
-	verts[3] = vert_norm_tc(point(x2, y1, z), plus_z, 1, 0);
+	verts[0].assign(point(x1, y1, z), plus_z, 0, 0); // clockwise
+	verts[1].assign(point(x1, y2, z), plus_z, 0, 1);
+	verts[2].assign(point(x2, y2, z), plus_z, 1, 1);
+	verts[3].assign(point(x2, y1, z), plus_z, 1, 0);
 	draw_verts(verts, 4, prim_type); // GL_TRIANGLE_FAN (quads) or GL_PATCHES
 }
 void draw_tquad(float xsize, float ysize, float z, int prim_type) { // Note: normal is +z

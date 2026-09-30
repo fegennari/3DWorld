@@ -61,8 +61,8 @@ struct vert_norm_comp : public vert_wrap_t, public norm_comp { // size = 16
 	typedef norm_comp normal_type;
 	vert_norm_comp() {}
 	vert_norm_comp(vert_norm const &vn) : vert_wrap_t(vn.v), norm_comp(vn.n) {}
-	vert_norm_comp(point const &v_, vector3d  const &n_) : vert_wrap_t(v_), norm_comp(n_) {}
-	vert_norm_comp(point const &v_, norm_comp const &n_) : vert_wrap_t(v_), norm_comp(n_) {}
+	template<typename N> vert_norm_comp(point const &v_, N const &n_) : vert_wrap_t(v_), norm_comp(n_) {}
+	template<typename N> void assign(point const &v_, N const &n_) {v = v_; set_norm(n_);}
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
 	void swap_dims(unsigned d1, unsigned d2) {assert(d1 < 3 && d2 < 3); swap(v[d1], v[d2]); swap(n[d1], n[d2]);}
 	void invert_dim(unsigned d) {assert(d < 3); v[d] = -v[d]; invert_normal_dim(d);}
@@ -74,9 +74,9 @@ struct vert_norm_comp_tc : public vert_norm_comp { // size = 24
 	typedef vert_norm_comp_tc non_color_class;
 	vert_norm_comp_tc() {}
 	vert_norm_comp_tc(vert_norm_comp const &vn, float ts, float tt) : vert_norm_comp(vn) {t[0] = ts; t[1] = tt;}
-	vert_norm_comp_tc(point const &v_, norm_comp const &n_, float ts, float tt) : vert_norm_comp(v_, n_) {t[0] = ts; t[1] = tt;}
-	vert_norm_comp_tc(point const &v_, vector3d  const &n_, float ts, float tt) : vert_norm_comp(v_, n_) {t[0] = ts; t[1] = tt;}
-	vert_norm_comp_tc(point const &v_, vector3d  const &n_, float const tc[2] ) : vert_norm_comp(v_, n_) {t[0] = tc[0]; t[1] = tc[1];}
+	template<typename N> vert_norm_comp_tc(point const &v_, N const &n_, float ts, float tt) : vert_norm_comp (v_, n_) {t[0] = ts; t[1] = tt;}
+	template<typename N> vert_norm_comp_tc(point const &v_, N const &n_, float const tc[2] ) : vert_norm_comp (v_, n_) {t[0] = tc[0]; t[1] = tc[1];}
+	template<typename N> void assign(point const &v_, N const &n_, float ts, float tt) {vert_norm_comp::assign(v_, n_); t[0] = ts; t[1] = tt;}
 	void set_tc(float tx, float ty) {t[0] = tx; t[1] = ty;}
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
 };
@@ -160,7 +160,6 @@ struct color_wrapper_ctor : public color_wrapper { // size = 4
 	color_wrapper_ctor(colorRGBA const &color) {set_c4(color);}
 };
 
-
 struct color_wrapper_float { // size = 16
 	colorRGBA c; // Note: c[3] (alpha component) is not used in all cases
 
@@ -204,12 +203,8 @@ struct vert_norm_comp_color : public vert_norm_comp, public color_wrapper { // s
 	vert_norm_comp_color(vert_norm_comp const &vn, color_wrapper const &cw) : vert_norm_comp(vn), color_wrapper(cw) {}
 	vert_norm_comp_color(point const &v_, vector3d  const &n_, colorRGB  const &c_) : vert_norm_comp(v_, n_) {set_c3(c_);}
 	vert_norm_comp_color(point const &v_, vector3d  const &n_, colorRGBA const &c_) : vert_norm_comp(v_, n_) {set_c4(c_);}
-	vert_norm_comp_color(point const &v_, vector3d  const &n_, color_wrapper const &cw) : vert_norm_comp(v_, n_), color_wrapper(cw) {}
-	vert_norm_comp_color(point const &v_, norm_comp const &n_, color_wrapper const &cw) : vert_norm_comp(v_, n_), color_wrapper(cw) {}
-	void assign(point const &v_, vector3d const &n_, unsigned char const *const c_, bool has_alpha=0) {
-		v = v_; set_norm(n_); copy_color(c_, has_alpha);
-	}
-	void assign(point const &v_, char const *const n_, unsigned char const *const c_, bool has_alpha=0) {
+	template<typename N> vert_norm_comp_color(point const &v_, N const &n_, color_wrapper const &cw) : vert_norm_comp(v_, n_), color_wrapper(cw) {}
+	template<typename N> void assign(point const &v_, N const &n_, unsigned char const *const c_, bool has_alpha=0) {
 		v = v_; set_norm(n_); copy_color(c_, has_alpha);
 	}
 	void assign(point const &v_, norm_comp const &n_, color_wrapper const &c_) {
@@ -275,8 +270,7 @@ struct vert_norm_color_tangent : public vert_norm_color {
 	vector3d t;
 
 	vert_norm_color_tangent() {}
-	vert_norm_color_tangent(point const &v_, vector3d const &n_, colorRGBA const     &c_, vector3d const &t_) : vert_norm_color(v_, n_, c_), t(t_) {}
-	vert_norm_color_tangent(point const &v_, vector3d const &n_, unsigned char const *c_, vector3d const &t_) : vert_norm_color(v_, n_, c_), t(t_) {}
+	template<typename C> vert_norm_color_tangent(point const &v_, vector3d const &n_, C const &c_, vector3d const &t_) : vert_norm_color(v_, n_, c_), t(t_) {}
 };
 
 
@@ -290,6 +284,7 @@ struct vert_norm_texp : public vert_norm, public texgen_params_t { // size = 76
 	vert_norm_texp(vert_norm const &vn, texgen_params_t const &tp) : vert_norm(vn), texgen_params_t(tp) {}
 	vert_norm_texp(point const &v_, vector3d const &n_, texgen_params_t const &tp) : vert_norm(v_, n_), texgen_params_t(tp) {}
 	vert_norm_texp(float x, float y, float z, vector3d const &n_, texgen_params_t const &tp) : vert_norm(point(x, y, z), n_), texgen_params_t(tp) {}
+	void assign(point const &v_, vector3d const &n_, texgen_params_t const &tp) {v = v_; n = n_; *((texgen_params_t *)this) = tp;}
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
 	static void unset_attrs();
 };

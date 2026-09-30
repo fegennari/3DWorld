@@ -759,7 +759,7 @@ void flower_manager_t::create_verts_range(vector<vert_norm_comp_color> &verts, u
 		cw.set_c4(i->color);
 		norm_comp const n(i->normal);
 		point const pts[4] = {(i->pos - v1 - v2), (i->pos + v1 - v2), (i->pos + v1 + v2), (i->pos - v1 + v2)};
-		UNROLL_4X(verts[ix++] = vert_norm_comp_color(vert_norm_comp(pts[i_], n), cw);)
+		UNROLL_4X(verts[ix++].assign(pts[i_], n, cw);)
 	}
 	assert(ix == verts.size());
 }

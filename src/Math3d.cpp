@@ -1204,7 +1204,7 @@ void add_rotated_quad_pts(vert_norm_comp *points, unsigned &ix, float theta, flo
 	pts[2] = -xscale1*v2; pts[2].z += z + zscale;
 	pts[3] =  xscale1*v2; pts[3].z += z + zscale;
 	norm_comp const nc(cross_product((pts[1] - pts[0]), (pts[2] - pts[1])).get_norm());
-	for (unsigned i = 0; i < 4; ++i) {points[ix++] = vert_norm_comp((pts[i] + pos), nc);}
+	for (unsigned i = 0; i < 4; ++i) {points[ix++].assign((pts[i] + pos), nc);}
 }
 
 

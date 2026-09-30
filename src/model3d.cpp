@@ -985,9 +985,8 @@ template<typename T> void indexed_vntc_vect_t<T>::write_to_obj_file(ostream &out
 
 void polygon_t::from_triangle(triangle const &t) {
 	resize(3);
-	float const tc[2] = {0.0, 0.0}; // all zero?
 	vector3d const normal(t.get_normal());
-	UNROLL_3X(operator[](i_) = vert_norm_tc(t.pts[i_], normal, tc);)
+	UNROLL_3X(operator[](i_).assign(t.pts[i_], normal, 0.0, 0.0);) // ts=tt=0.0
 }
 
 bool polygon_t::is_convex() const {

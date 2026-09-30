@@ -2153,9 +2153,9 @@ void uobj_draw_data::draw_headhunter() const {
 			for (unsigned dir = 0; dir < 2; ++dir) { // {-,+}
 				float const val(dir ? 1.0 : -1.0);
 				vector3d const n(val*dim, val*(1-dim), 0);
-				verts[3*(2*dim+dir)+0] = vert_norm(point(0.05*val*(1-dim), 0.05*val*dim, -0.6), n);
-				verts[3*(2*dim+dir)+1] = vert_norm(point(0.05*val*(1-dim), 0.05*val*dim, -1.6), n);
-				verts[3*(2*dim+dir)+2] = vert_norm(point(0.45*val*(1-dim), 0.45*val*dim, -1.7), n);
+				verts[3*(2*dim+dir)+0].assign(point(0.05*val*(1-dim), 0.05*val*dim, -0.6), n);
+				verts[3*(2*dim+dir)+1].assign(point(0.05*val*(1-dim), 0.05*val*dim, -1.6), n);
+				verts[3*(2*dim+dir)+2].assign(point(0.45*val*(1-dim), 0.45*val*dim, -1.7), n);
 			}
 		}
 		draw_verts(verts, 12, GL_TRIANGLES);
