@@ -357,7 +357,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 				change_roof_type_to_flat();
 				assign_name(rgen); // re-assign a name
 			}
-			else if (is_cube_office && num_floors >= 3 && num_floors <= (pref_special ? 10 : 6) && can_use_hallway_for_part(0) && min(bcube.dx(), bcube.dy()) > 13.0*floor_spacing) {
+			else if (is_cube_office && num_floors >= 3 && num_floors <= (pref_special ? 10U : 6U) && can_use_hallway_for_part(0) && min(bcube.dx(), bcube.dy()) > 13.0*floor_spacing) {
 				btype = BTYPE_DATACENTER;
 				change_roof_type_to_flat();
 				assign_name(rgen); // re-assign a name

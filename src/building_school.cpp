@@ -183,7 +183,7 @@ bool building_t::add_room_lockers(rand_gen_t &rgen, room_t const &room, float zv
 	float const clearance(get_min_front_clearance_inc_people()), se_clearance(2.0*clearance), front_clearance(max(clearance, 2.0f*locker_width));
 	if (room_width < locker_depth + front_clearance) return 0; // can't fit lockers on either side
 	// choose a side if can't fit lockers on both sides
-	if (room_width < 2.0*locker_depth + front_clearance && dir_skip_mask == 0) {dir_skip_mask = (1 << rgen.rand_bool());}
+	if (room_width < 2.0*locker_depth + front_clearance && dir_skip_mask == 0) {dir_skip_mask = (1 << unsigned(rgen.rand_bool()));}
 	unsigned const num_lockers(room_len/locker_width); // floor
 	// if there are enough lockers, increase their width slightly so that lockers tile to fill the exact wall length
 	if (num_lockers >= 10) {locker_width = room_len/num_lockers;}
