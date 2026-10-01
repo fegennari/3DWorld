@@ -269,6 +269,24 @@ void draw_state_t::draw_cube(quad_batch_draw &qbd, cube_t const &c, color_wrappe
 		if (cview_dir.y >= 0.0) {point const pts[4] = {p[3], p[0], p[4], p[7]}; qbd.add_quad_pts(pts, cw,  plus_y, tr_right);} // +y right
 	}
 }
+void draw_state_t::draw_cube(quad_batch_draw_untex &qbd, cube_t const &c, color_wrapper const &cw, bool skip_bottom, unsigned skip_dims, bool skip_top, bool no_cull) const {
+	point p[8];
+	set_cube_pts(c, 0, 0, p);
+	vector3d const cview_dir(no_cull ? zero_vector : (camera_bs - c.get_cube_center()));
+
+	if (!(skip_dims & 4)) { // Z
+		if (!skip_top    && cview_dir.z >= 0.0) {qbd.add_quad_pts(p+4, cw,  plus_z);} // +z top
+		if (!skip_bottom && cview_dir.z <= 0.0) {qbd.add_quad_pts(p+0, cw, -plus_z);} // -z bot
+	}
+	if (!(skip_dims & 1)) { // X
+		if (cview_dir.x <= 0.0) {point const pts[4] = {p[0], p[1], p[5], p[4]}; qbd.add_quad_pts(pts, cw, -plus_x);} // -x back
+		if (cview_dir.x >= 0.0) {point const pts[4] = {p[2], p[3], p[7], p[6]}; qbd.add_quad_pts(pts, cw,  plus_x);} // +x front
+	}
+	if (!(skip_dims & 2)) { // Y
+		if (cview_dir.y <= 0.0) {point const pts[4] = {p[1], p[2], p[6], p[5]}; qbd.add_quad_pts(pts, cw, -plus_y);} // -y left
+		if (cview_dir.y >= 0.0) {point const pts[4] = {p[3], p[0], p[4], p[7]}; qbd.add_quad_pts(pts, cw,  plus_y);} // +y right
+	}
+}
 bool draw_state_t::add_light_flare(point const &flare_pos, vector3d const &n, colorRGBA const &color, float alpha, float radius) {
 	point pos(xlate + flare_pos);
 	vector3d const view_dir((camera_pdu.pos - pos).get_norm());

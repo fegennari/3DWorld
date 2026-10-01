@@ -1279,6 +1279,7 @@ void rotate_verts(point *verts, unsigned num_verts, vector3d const &axis, float 
 
 template void rotate_verts(vector<vert_norm_comp_tc_color> &verts, vector3d const &axis, float angle, vector3d const &about, unsigned start); // used for building room geom
 template void rotate_verts(vector<vert_norm_tc_color     > &verts, vector3d const &axis, float angle, vector3d const &about, unsigned start); // used for parking lot solar roofs
+template void rotate_verts(vector<vert_norm_color        > &verts, vector3d const &axis, float angle, vector3d const &about, unsigned start); // used for parking lot solar roofs
 
 
 // vrot must be normalized

@@ -83,9 +83,17 @@ typedef point_sprite_drawer_t<vert_norm_color              > point_sprite_drawer
 typedef point_sprite_drawer_t<sized_vert_t<vert_norm_color>> point_sprite_drawer_norm_sized;
 
 
-struct quad_batch_draw { // Note: might want an indexed version of this
-	vector<vert_norm_tc_color> verts;
+template<typename vert_t> struct quad_batch_draw_t { // Note: might want an indexed version of this
+	vector<vert_t> verts;
 
+	bool empty() const {return verts.empty();}
+	void clear() {verts.clear();}
+	void draw() const {draw_verts(verts, GL_TRIANGLES);}
+	void draw_and_clear() {draw(); clear();}
+	void draw_and_clear_quads() {draw_quad_verts_as_tris(verts); clear();}
+	void add_quads(quad_batch_draw_t<vert_t> const &qbd) {verts.insert(verts.end(), qbd.verts.begin(), qbd.verts.end());}
+};
+struct quad_batch_draw : public quad_batch_draw_t<vert_norm_tc_color> {
 	void add_quad_pts(point const pts[4], color_wrapper const &cw, vector3d const &n=plus_z, tex_range_t const &tr=tex_range_t());
 	void add_quad_pts_vert_norms(vert_norm const pts[4], color_wrapper const &cw, tex_range_t const &tr=tex_range_t());
 	void add_quad_pts_vert_norms(point const pts[4], vector3d const n[4], color_wrapper const &cw, tex_range_t const &tr=tex_range_t());
@@ -94,16 +102,13 @@ struct quad_batch_draw { // Note: might want an indexed version of this
 		float xsize, float ysize, tex_range_t const &tr=tex_range_t(), bool minimize_fill=0, vector3d const *const normal_=nullptr);
 	void add_billboard(point const &pos, point const &viewer, vector3d const &up_dir, colorRGBA const &c,
 		float xsize, float ysize, tex_range_t const &tr=tex_range_t(), bool minimize_fill=0, vector3d const *const normal_=nullptr) {
-			add_xlated_billboard(pos, pos, viewer, up_dir, c, xsize, ysize, tr, minimize_fill, normal_);
+		add_xlated_billboard(pos, pos, viewer, up_dir, c, xsize, ysize, tr, minimize_fill, normal_);
 	}
-	bool empty() const {return verts.empty();}
-	void clear() {verts.clear();}
 	void add_animated_billboard(point const &pos, point const &viewer, vector3d const &up_dir, colorRGBA const &c, float xsize, float ysize, float timescale);
-	void draw() const {draw_verts(verts, GL_TRIANGLES);}
-	void draw_and_clear() {draw(); clear();}
-	void draw_and_clear_quads() {draw_quad_verts_as_tris(verts); clear();}
 	void draw_as_flares_and_clear(int flare_tex=BLUR_TEX);
-	void add_quads(quad_batch_draw const &qbd) {verts.insert(verts.end(), qbd.verts.begin(), qbd.verts.end());}
+};
+struct quad_batch_draw_untex : public quad_batch_draw_t<vert_norm_color> {
+	void add_quad_pts(point const pts[4], color_wrapper const &cw, vector3d const &n=plus_z);
 };
 
 

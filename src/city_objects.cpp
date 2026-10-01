@@ -107,11 +107,39 @@ void add_cylin_as_tris(vector<vert_norm_tc_color> &verts, point const ce[2], flo
 		}
 	} // for i
 }
+void add_cylin_as_tris(vector<vert_norm_color> &verts, point const ce[2], float r1, float r2, color_wrapper const &cw, unsigned ndiv, unsigned draw_top_bot) {
+	vector3d v12;
+	vector_point_norm const &vpn(gen_cylinder_data(ce, r1, r2, ndiv, v12));
+	vert_norm_color quad_pts[4];
+
+	for (unsigned i = 0; i < ndiv; ++i) { // similar to gen_cylinder_quads(), but with a color
+		for (unsigned j = 0; j < 2; ++j) {
+			unsigned const S(i + j), s(S%ndiv);
+			vector3d const normal(vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]); // normalize?
+			quad_pts[2*j+0].assign(vpn.p[(s<<1)+!j], normal, cw);
+			quad_pts[2*j+1].assign(vpn.p[(s<<1)+ j], normal, cw);
+		}
+		for (unsigned n = 0; n < 6; ++n) {verts.push_back(quad_pts[q2t_ixs[n]]);}
+
+		for (unsigned d = 0; d < 2; ++d) { // draw bottom and top triangle(s)
+			if (!(draw_top_bot & (1<<d))) continue;
+			unsigned const I((i+1)%ndiv);
+			vector3d const normal(d ? v12 : -v12);
+			verts.emplace_back(ce[d],           normal, cw);
+			verts.emplace_back(vpn.p[(i<<1)+d], normal, cw);
+			verts.emplace_back(vpn.p[(I<<1)+d], normal, cw);
+		}
+	} // for i
+}
 void add_cylin_as_tris(vector<vert_norm_tc_color> &verts, point const &p1, point const &p2, float r1, float r2, color_wrapper const &cw,
 	unsigned ndiv, unsigned draw_top_bot, float tst=1.0, float tss=1.0, bool swap_ts_tt=0)
 {
 	point const ce[2] = {p1, p2};
 	add_cylin_as_tris(verts, ce, r1, r2, cw, ndiv, draw_top_bot, tst, tss, swap_ts_tt);
+}
+void add_cylin_as_tris(vector<vert_norm_color> &verts, point const &p1, point const &p2, float r1, float r2, color_wrapper const &cw, unsigned ndiv, unsigned draw_top_bot) {
+	point const ce[2] = {p1, p2};
+	add_cylin_as_tris(verts, ce, r1, r2, cw, ndiv, draw_top_bot);
 }
 
 // model_city_obj_t
@@ -1011,7 +1039,7 @@ void parking_gate_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float di
 			dstate.draw_cube(qbds.qbd, body, WHITE, 1, 0.0, (4 | (1 << unsigned(!dim))));
 			untex_skip_dims = (1 << (unsigned)dim); // skip front face below
 		}
-		dstate.draw_cube(qbds.untex_qbd, body, colorRGBA(0.9, 0.6, 0.0), 1, 0.0, untex_skip_dims); // yellow-orange
+		dstate.draw_cube(qbds.untex_qbd, body, colorRGBA(0.9, 0.6, 0.0), 1, untex_skip_dims); // yellow-orange
 	}
 	else {dstate.draw_cube(qbds.qbd, arm, WHITE, 1, 1.0/bcube.dz());} // draw arm
 }
@@ -1290,16 +1318,16 @@ bool power_pole_t::add_wire(point const &p1, point const &p2, bool add_pole, boo
 	city_obj_t::post_draw(dstate, shadow_only);
 }
 
-void draw_wire(point const *const pts, float radius, color_wrapper const &cw, quad_batch_draw &untex_qbd, unsigned ndiv=4) { // pts is size 2
+void draw_wire(point const *const pts, float radius, color_wrapper const &cw, quad_batch_draw_untex &untex_qbd, unsigned ndiv=4) { // pts is size 2
 	vector_point_norm const &vpn(gen_cylinder_data(pts, radius, radius, ndiv));
 
 	for (unsigned i = 0; i < ndiv; ++i) { // similar to gen_cylinder_quads()
 		unsigned const in((i+1)%ndiv);
 		unsigned const pt_ixs[4] = {(i<<1)+1, (i<<1), (in<<1), (in<<1)+1};
-		for (unsigned n = 0; n < 6; ++n) {untex_qbd.verts.emplace_back(vpn.p[pt_ixs[q2t_ixs[n]]], plus_z, 0, 0, cw.c);}
+		for (unsigned n = 0; n < 6; ++n) {untex_qbd.verts.emplace_back(vpn.p[pt_ixs[q2t_ixs[n]]], plus_z, cw.c);}
 	}
 }
-void draw_ortho_wire(point const &p, float radius, float pole_spacing, bool d, color_wrapper const &cw, draw_state_t &dstate, quad_batch_draw &untex_qbd) {
+void draw_ortho_wire(point const &p, float radius, float pole_spacing, bool d, color_wrapper const &cw, draw_state_t &dstate, quad_batch_draw_untex &untex_qbd) {
 	cube_t wire(p);
 	wire.d[d][0] -= pole_spacing; // extend to the adjacent pole
 	wire.expand_in_dim(!d, radius);
@@ -1307,7 +1335,7 @@ void draw_ortho_wire(point const &p, float radius, float pole_spacing, bool d, c
 	// black, don't need normals/tcs/colors; could use indexed triangles, but the time taken to draw these wires is insignificant (< 1% of total frame time)
 	dstate.draw_cube(untex_qbd, wire, cw, 0); // since wires are black, and we can't see the ends, we can't even tell they're cubes rather than cylinders
 }
-void draw_standoff_geom(point const ce[2], float radius, float dmax, point const &camera_bs, color_wrapper const &cw, quad_batch_draw &untex_qbd) {
+void draw_standoff_geom(point const ce[2], float radius, float dmax, point const &camera_bs, color_wrapper const &cw, quad_batch_draw_untex &untex_qbd) {
 	unsigned const ndiv(max(4U, min(32U, unsigned(0.33f*dmax/p2p_dist(camera_bs, ce[1])))));
 
 	if (ndiv <= 16) { // single truncated cone
@@ -1332,7 +1360,7 @@ void draw_standoff_geom(point const ce[2], float radius, float dmax, point const
 	}
 }
 void draw_vert_standoff(point const &p1, point const &camera_bs, float height, float radius, float delta_offset, float dmax, bool dim,
-	bool is_first, unsigned verts_start, unsigned &verts_end, color_wrapper const &cw, quad_batch_draw &untex_qbd)
+	bool is_first, unsigned verts_start, unsigned &verts_end, color_wrapper const &cw, quad_batch_draw_untex &untex_qbd)
 {
 	if (is_first) { // first standoff, draw a truncated cone
 		point ce[2] = {p1, p1};
@@ -1361,7 +1389,7 @@ void power_pole_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist
 	float const wire_radius(get_wire_radius()), pole_height(bcube.dz());
 	cube_t tf_bcube;
 	point conduit_top;
-	quad_batch_draw &m_qbd(qbds.untex_qbd), &s_qbd(qbds.untex_spec_qbd); // {matte, specular}
+	quad_batch_draw_untex &m_qbd(qbds.untex_qbd), &s_qbd(qbds.untex_spec_qbd); // {matte, specular}
 
 	if (pole_visible) {
 		unsigned const ndiv(shadow_only ? 16 : max(4U, min(32U, unsigned(1.5f*dmax/p2p_dist(camera_bs, pos)))));
@@ -1419,8 +1447,8 @@ void power_pole_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist
 					unsigned const start_ix(qbds.untex_qbd.verts.size());
 					cube_t    const parts [5] = {tcam,  mount, shroud_t, shroud_l, shroud_r};
 					colorRGBA const colors[5] = {WHITE, GRAY,  WHITE,    WHITE,    WHITE   };
-					for (unsigned n = 0; n < 5; ++n) {dstate.draw_cube(qbds.untex_qbd, parts[n], colors[n], 0, 0.0, 0, 0, 0, 0, 1.0, 1.0, 1.0, 0, 1);} // no_cull=1 since it's rotated
-					dstate.draw_cube(qbds.untex_qbd, window, BLACK, 0, 0.0, 6, 0, 0, 0, 1.0, 1.0, 1.0, 0, 1); // no_cull=1, draw X only (only really need one side)
+					for (unsigned n = 0; n < 5; ++n) {dstate.draw_cube(qbds.untex_qbd, parts[n], colors[n], 0, 0, 0, 1);} // no_cull=1 since it's rotated
+					dstate.draw_cube(qbds.untex_qbd, window, BLACK, 0, 6, 0, 1); // no_cull=1, draw X only (only really need one side)
 					rotate_verts(qbds.untex_qbd.verts, plus_y, -0.20*PI, attach_pt, start_ix); // tilt downward
 					rotate_verts(qbds.untex_qbd.verts, plus_z, -0.25*PI, attach_pt, start_ix); // rotate 45 degrees to face the intersection
 				}
@@ -1585,7 +1613,7 @@ void power_pole_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist
 			cube_t wire(w.pts[1], w.pts[1]); // connection point to bottom horizontal wires
 			wire.expand_in_z (vwire_spacing); // connect to wires above and below
 			wire.expand_by_xy(wire_radius);
-			dstate.draw_cube(m_qbd, wire, black, 1, 0.0, 4); // skip top and bottom
+			dstate.draw_cube(m_qbd, wire, black, 1, 4); // skip top and bottom
 			if (w.pole_base.z == w.pts[0].z || !dist_less_than(w.pts[0], camera_bs, 0.15*dmax)) continue; // no pole, or too far away
 			point const ce[2] = {w.pole_base, (w.pts[0] + vector3d(0.0, 0.0, wire_radius))};
 			float const radius(1.5f*wire_radius);
@@ -2165,7 +2193,7 @@ void draw_cube_frame(draw_state_t &dstate, city_draw_qbds_t &qbds, cube_t const 
 	for (unsigned n = 0; n < 4; ++n) { // draw 4 corners
 		set_wall_width(corner, frame_area.d[0][n& 1], frame_hwidth, 0); // x
 		set_wall_width(corner, frame_area.d[1][n>>1], frame_hwidth, 1); // y
-		dstate.draw_cube(qbds.untex_qbd, corner, color, 1, 0.0, 4); // skip top and bottom
+		dstate.draw_cube(qbds.untex_qbd, corner, color, 1, 4); // skip top and bottom
 	}
 	// draw bottom and top
 	cube_t bot(bcube), top(bcube);
@@ -2234,11 +2262,11 @@ void ww_elevator_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dis
 					cube_t side(frame_bounds);
 					side.d[sdim][!sdir] = side.d[sdim][sdir] + (sdir ? -1.0 : 1.0)*glass_thickness; // set width
 					set_wall_width(side, zval, trim_hthick, 2);
-					dstate.draw_cube(qbds.untex_qbd, side, outer_frame_color, 0, 0.0, (sdim ? 1 : 2));
+					dstate.draw_cube(qbds.untex_qbd, side, outer_frame_color, 0, (sdim ? 1 : 2));
 				}
 				if (zval + trim_hthick < ww_bcube.z1()) { // draw support bars if below the walkway
 					set_wall_width(support_bar, zval, trim_hthick, 2);
-					dstate.draw_cube(qbds.untex_qbd, support_bar, outer_frame_color, 0, 0.0, (dim ? 2 : 1));
+					dstate.draw_cube(qbds.untex_qbd, support_bar, outer_frame_color, 0, (dim ? 2 : 1));
 				}
 			} // for zval
 		}
@@ -2264,7 +2292,7 @@ void ww_elevator_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dis
 				cube_t bar(gate);
 				set_wall_width(bar, (gate.d[!dim][0] + bar_hthick + n*vbar_spacing), bar_hthick, !dim);
 				bar.expand_in_z(-bar_hthick); // remove overlap with h-bars
-				dstate.draw_cube(qbds.untex_qbd, bar, gate_color, 1, 0.0, 4); // skip top and bottom
+				dstate.draw_cube(qbds.untex_qbd, bar, gate_color, 1, 4); // skip top and bottom
 			}
 			for (unsigned n = 0; n < num_h_bars; ++n) { // horizontal bars
 				cube_t bar(gate);
@@ -2273,7 +2301,7 @@ void ww_elevator_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dis
 			}
 		}
 		// draw upper doors; skip top and bottom, since they're covered by trim
-		for (auto d = doors.begin()+1; d != doors.end(); ++d) {dstate.draw_cube(qbds.untex_qbd, *d, GRAY, 1, 1.0, 4);}
+		for (auto d = doors.begin()+1; d != doors.end(); ++d) {dstate.draw_cube(qbds.untex_qbd, *d, GRAY, 1, 4);}
 	}
 	else { // transparent glass pass; draw 4 glass side walls
 		colorRGBA const glass_color(0.8, 1.0, 0.9, 0.25);
@@ -2287,7 +2315,7 @@ void ww_elevator_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dis
 			cube_with_ix_t const &s(to_draw[n].second);
 			bool const skip_bot(s.ix & EF_Z1), skip_top(s.ix & EF_Z2);
 			unsigned const skip_dims(((s.ix & EF_X1) ? 1 : 0) | ((s.ix & EF_Y1) ? 2 : 0));
-			dstate.draw_cube(qbds.untex_qbd, s, glass_color, skip_bot, 0.0, skip_dims, 0, 0, 0, 1.0, 1.0, 1.0, skip_top, 1); // no_cull=1
+			dstate.draw_cube(qbds.untex_qbd, s, glass_color, skip_bot, skip_dims, skip_top, 1); // no_cull=1
 		}
 	}
 }
@@ -2462,11 +2490,11 @@ void parking_solar_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float d
 	}
 	else { // draw roof frame
 		unsigned const vs(qbds.untex_qbd.verts.size());
-		dstate.draw_cube(qbds.untex_qbd, roof, LT_GRAY, 0, 0.0, 0, 0, 0, 0, 1.0, 1.0, 1.0, 0, 1); // draw all sides; no_cull=1 since it's rotated
+		dstate.draw_cube(qbds.untex_qbd, roof, LT_GRAY, 0, 0, 0, 1); // draw all sides; no_cull=1 since it's rotated
 		rotate_verts(qbds.untex_qbd.verts, axis, angle, about, vs);
 	}
 	if (dstate.pass_ix == 1) { // draw 4 untextured metal legs
-		for (cube_t const &leg : get_legs()) {dstate.draw_cube(qbds.untex_qbd, leg, WHITE, 0, 0.0, 4);} // skip top and bottom
+		for (cube_t const &leg : get_legs()) {dstate.draw_cube(qbds.untex_qbd, leg, WHITE, 0, 4);} // skip top and bottom
 	}
 }
 bool parking_solar_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
@@ -2539,8 +2567,12 @@ void obj_with_roof_pavement_lights_t::draw_lights(draw_state_t &dstate, city_dra
 	bool const enable_lights(has_daytime_lights || is_night());
 	
 	for (unsigned n = 0; n < num_lights; ++n) {
-		quad_batch_draw &lights_qbd((enable_lights && (lights_enabled & (1<<n))) ? qbds.emissive_qbd : qbds.untex_qbd); // lights on/emissive at night
-		dstate.draw_cube(lights_qbd, lights[n], lights_color, 0, 0.0, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1); // skip_top=1
+		if (enable_lights && (lights_enabled & (1<<n))) { // lights on/emissive at night
+			dstate.draw_cube(qbds.emissive_qbd, lights[n], lights_color, 0, 0.0, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1); // skip_top=1
+		}
+		else {
+			dstate.draw_cube(qbds.untex_qbd, lights[n], lights_color, 0, 0, 1, 0); // skip_top=1
+		}
 	}
 }
 void obj_with_roof_pavement_lights_t::add_lights(vector3d const &xlate, cube_t &lights_bcube, float ldist,
@@ -2672,7 +2704,7 @@ void gas_station_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dis
 	if (!shadow_only && !bcube.closest_dist_less_than(dstate.camera_bs, 0.50*dmax)) return; // only draw the roof (pavement has Z-fighting problems anyway)
 	if (!shadow_only) {draw_road_pavement(dstate, qbds);} // draw pavement surface
 	colorRGBA const pillar_color(0.25, 0.25, 1.0); // light blue
-	for (unsigned n = 0; n < num_pillars; ++n) {dstate.draw_cube(qbds.untex_qbd, pillars[n], pillar_color, 1, 0.0, 4);} // skip top and bottom
+	for (unsigned n = 0; n < num_pillars; ++n) {dstate.draw_cube(qbds.untex_qbd, pillars[n], pillar_color, 1, 4);} // skip top and bottom
 	if (!shadow_only && !bcube.closest_dist_less_than(dstate.camera_bs, 0.25*dmax)) return; // skip small/detailed objects
 	
 	if (!shadow_only && !manholes.empty()) { // draw manholes
@@ -3220,7 +3252,7 @@ void sign_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale
 	}
 	else {
 		unsigned const skip_dims(is_restroom ? (1 << (unsigned)dim) : 0); // skip front and back for restroom
-		dstate.draw_cube(qbds.untex_qbd, frame_bcube, bkg_color, 0, 0.0, skip_dims); // untextured, matte back
+		dstate.draw_cube(qbds.untex_qbd, frame_bcube, bkg_color, 0, skip_dims); // untextured, matte back
 	}
 	if (frame_width > 0.0) { // draw frame
 		cube_t frame_exp(frame_bcube);
@@ -3231,12 +3263,12 @@ void sign_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale
 			set_wall_width(ctb, frame_bcube.d[   2][d], frame_width,    2);
 			set_wall_width(clr, frame_bcube.d[!dim][d], frame_width, !dim);
 			set_cube_zvals(clr, frame_bcube.z1(), frame_bcube.z2()); // clip to sign bounds
-			dstate.draw_cube(qbds.untex_qbd, ctb, frame_color, 0, 0.0, 0); // untextured, draw all faces
-			dstate.draw_cube(qbds.untex_qbd, clr, frame_color, 0, 0.0, 4); // untextured, skip top and bottom
+			dstate.draw_cube(qbds.untex_qbd, ctb, frame_color, 0, 0); // untextured, draw all faces
+			dstate.draw_cube(qbds.untex_qbd, clr, frame_color, 0, 4); // untextured, skip top and bottom
 		}
 	}
 	if (!connector.is_all_zeros()) { // draw connector; is this needed for the shadow pass?
-		dstate.draw_cube(qbds.untex_qbd, connector, LT_GRAY, 0, 0.0, (free_standing ? 4 : 0)); // untextured, matte; skip top and bottom if free standing
+		dstate.draw_cube(qbds.untex_qbd, connector, LT_GRAY, 0, (free_standing ? 4 : 0)); // untextured, matte; skip top and bottom if free standing
 	}
 	if (free_standing) {} // connector is the base and sign bcube is the top
 	if (shadow_only) return; // no text or images in shadow pass
@@ -3342,7 +3374,8 @@ void stopsign_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_s
 		set_cube_zvals(sign, (bcube.z2() - 1.3*width), (bcube.z2() - width)); // below the main octagon sign part
 		sign.expand_in_dim(!dim, -0.2*width); // shrink
 		sign.d[dim][!dir] = sign_back; // make it very thin
-		dstate.draw_cube((front_facing ? qbds.qbd : qbds.untex_qbd), sign, (front_facing ? WHITE : LT_GRAY), 0, 0.0, skip_dims); // back side is untextured
+		if (front_facing) {dstate.draw_cube(qbds.qbd,       sign, WHITE,   0, 0.0, skip_dims);} // back side is untextured
+		else              {dstate.draw_cube(qbds.untex_qbd, sign, LT_GRAY, 0,      skip_dims);}
 	}
 	if (dstate.pass_ix != 1) return; // no pole in this pass
 	if (!shadow_only && !bcube.closest_dist_less_than(dstate.camera_bs, 0.4*dist_scale*dstate.draw_tile_dist)) return; // pole too far away to draw
@@ -3438,7 +3471,7 @@ void city_flag_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_
 	color_wrapper const cw(GOLD);
 	dstate.temp_verts.clear();
 	get_sphere_triangles(dstate.temp_verts, ce[1], sphere_radius, ndiv);
-	for (vert_wrap_t const &v : dstate.temp_verts) {qbds.untex_spec_qbd.verts.emplace_back(v.v, (v.v - ce[1]).get_norm(), 0.0, 0.0, cw);}
+	for (vert_wrap_t const &v : dstate.temp_verts) {qbds.untex_spec_qbd.verts.emplace_back(v.v, (v.v - ce[1]).get_norm(), cw);}
 }
 bool city_flag_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	if (sphere_cube_int_update_pos(pos_, radius_, (flag_bcube + xlate), p_last, 0, cnorm)) return 1; // flag coll

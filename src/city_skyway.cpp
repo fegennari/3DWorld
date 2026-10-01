@@ -20,26 +20,43 @@ class tile_drawer_t {
 	uint64_t last_tile_id=0;
 	bool tile_was_set=0;
 public:
-	void next_cube(cube_t const &c, draw_state_t &dstate, quad_batch_draw &qbd) {
+	template<typename QBD> void next_cube(cube_t const &c, draw_state_t &dstate, QBD &qbd) {
 		unsigned const tile_id(get_tile_id_containing_point_no_xyoff(c.get_cube_center()));
 		if (tile_was_set && tile_id == last_tile_id) return;
 		qbd.draw_and_clear();
 		dstate.begin_tile(c.get_cube_center(), 1);
 		last_tile_id = tile_id;
 	}
-	void end_draw(quad_batch_draw &qbd) {
+	template<typename QBD> void end_draw(QBD &qbd) {
 		qbd.draw_and_clear();
 		tile_was_set = 0;
 	}
 };
 
-void draw_long_cube(cube_t const &c, colorRGBA const &color, draw_state_t &dstate, quad_batch_draw &qbd, tile_drawer_t &td, float dist_scale,
-	bool shadow_only=0, bool skip_bottom=0, bool skip_top=0, float tscale=0.0, unsigned skip_dims=0, bool swap_tc_xy=0, float tex_tyoff=0.0)
+void draw_long_cube_seg(draw_state_t &dstate, quad_batch_draw &qbd, cube_t &c2, color_wrapper const &cw,
+	bool skip_bottom=0, bool skip_top=0, unsigned skip_dims=0, float tscale=0.0, bool swap_tc_xy=0, float tex_tyoff=0.0)
+{
+	unsigned const verts_start(qbd.verts.size());
+	dstate.draw_cube(qbd, c2, cw, skip_bottom, tscale, skip_dims, 0, 0, swap_tc_xy, 1.0, 1.0, 1.0, skip_top);
+
+	if (tex_tyoff != 0.0) {
+		tex_tyoff *= tscale;
+		for (auto v = qbd.verts.begin()+verts_start; v != qbd.verts.end(); ++v) {v->t[1] += tex_tyoff;}
+	}
+}
+void draw_long_cube_seg(draw_state_t &dstate, quad_batch_draw_untex &qbd, cube_t &c2, color_wrapper const &cw,
+	bool skip_bottom=0, bool skip_top=0, unsigned skip_dims=0, float tscale=0.0, bool swap_tc_xy=0, float tex_tyoff=0.0)
+{
+	dstate.draw_cube(qbd, c2, cw, skip_bottom, skip_dims, skip_top); // Note: some args not used
+}
+template<typename QBD> void draw_long_cube(cube_t const &c, colorRGBA const &color, draw_state_t &dstate, QBD &qbd, tile_drawer_t &td, float dist_scale,
+	bool shadow_only=0, bool skip_bottom=0, bool skip_top=0, unsigned skip_dims=0, float tscale=0.0, bool swap_tc_xy=0, float tex_tyoff=0.0)
 {
 	bool const dim(c.dx() < c.dy()); // longer dim; only supports splitting in one dim
 	float const tile_sz(dim ? MESH_Y_SIZE*DY_VAL : MESH_X_SIZE*DX_VAL), length(c.get_sz_dim(dim));
 	unsigned const num_segs(shadow_only ? 1U : unsigned(ceil(2.0*length/tile_sz)));
 	float const step_len(length/num_segs);
+	color_wrapper const cw(color);
 	cube_t c2(c);
 
 	for (unsigned s = 0; s < num_segs; ++s) { // split into segments, one per tile shadow map
@@ -50,13 +67,7 @@ void draw_long_cube(cube_t const &c, colorRGBA const &color, draw_state_t &dstat
 			unsigned skip_dims_seg(skip_dims);
 			if (!(beg && dstate.camera_bs[dim] < c2.d[dim][0]) && !(end && dstate.camera_bs[dim] > c2.d[dim][1])) {skip_dims_seg |= (1 << unsigned(dim));} // skip int seg ends
 			td.next_cube(c2, dstate, qbd);
-			unsigned const verts_start(qbd.verts.size());
-			dstate.draw_cube(qbd, c2, color, skip_bottom, tscale, skip_dims_seg, 0, 0, swap_tc_xy, 1.0, 1.0, 1.0, skip_top);
-
-			if (tex_tyoff != 0.0) {
-				tex_tyoff *= tscale;
-				for (auto v = qbd.verts.begin()+verts_start; v != qbd.verts.end(); ++v) {v->t[1] += tex_tyoff;}
-			}
+			draw_long_cube_seg(dstate, qbd, c2, cw, skip_bottom, skip_top, skip_dims_seg, tscale, swap_tc_xy, tex_tyoff);
 		}
 		c2.d[dim][0] += step_len;
 	} // for s
@@ -81,7 +92,7 @@ void moving_walkway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, tile_d
 	if (draw_track) { // track
 		float const tscale(1.0/track.get_sz_dim(!dim)); // scale to fit track width
 		float const tex_tyoff(speed*move_time*(dir ? -1.0 : 1.0));
-		draw_long_cube(track, WHITE, dstate, qbds.qbd, td, dist_scale, shadow_only, 1, 0, tscale, 0, dim, tex_tyoff); // skip_bottom=1, skip_top=0
+		draw_long_cube(track, WHITE, dstate, qbds.qbd, td, dist_scale, shadow_only, 1, 0, 0, tscale, dim, tex_tyoff); // skip_bottom=1, skip_top=0
 		
 		if (active && animate2 && !shadow_only && !reflection_pass) {
 			move_time += fticks;
@@ -265,7 +276,7 @@ void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_on
 		unsigned skip_dims(0);
 		if (is_end) {skip_dims|= (1 << unsigned(!dim));} // don't need to draw sides of ends
 		if (shadow_only) {c.expand_in_dim(!dim, (is_end ? 1.0 : -1.0)*side_shift);} // shrink walls slightly to prevent shadow acne
-		draw_long_cube(c, ext_color, dstate, qbds.qbd, td, dist_scale, shadow_only, skip_bottom, 0, tscale, skip_dims);
+		draw_long_cube(c, ext_color, dstate, qbds.qbd, td, dist_scale, shadow_only, skip_bottom, 0, skip_dims, tscale);
 	}
 	if (!skip_interior_geom) { // draw steps if player is above the floor
 		for (cube_t const &c : steps) {
@@ -275,13 +286,13 @@ void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_on
 		}
 	}
 	if (shadow_only) {
-		draw_long_cube(bot, ext_color, dstate, qbds.qbd, td, dist_scale, shadow_only, 0, 0, tscale); // draw all sides
+		draw_long_cube(bot, ext_color, dstate, qbds.qbd, td, dist_scale, shadow_only, 0, 0, 0, tscale); // draw all sides
 	}
 	else {
-		draw_long_cube(bot, ext_color, dstate, qbds.qbd, td, dist_scale, shadow_only, 0, 1, tscale); // draw all sides except for top
+		draw_long_cube(bot, ext_color, dstate, qbds.qbd, td, dist_scale, shadow_only, 0, 1, 0, tscale); // draw all sides except for top
 		td.end_draw(qbds.qbd);
 		set_tile_floor_texture();
-		draw_long_cube(bot, GRAY, dstate, qbds.qbd, td, dist_scale, shadow_only, 1, 0, 4.0, 3); // draw top only
+		draw_long_cube(bot, GRAY, dstate, qbds.qbd, td, dist_scale, shadow_only, 1, 0, 3, 4.0); // draw top only
 		bind_default_flat_normal_map();
 	}
 	td.end_draw(qbds.qbd);
@@ -339,7 +350,7 @@ void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_on
 		for (unsigned d = 0; d < 2; ++d) { // sides
 			cube_t eside(esides);
 			eside.d[dim][!d] = eside.d[dim][d] + (d ? -1.0 : 1.0)*(wwidth + 2.0*thickness);
-			dstate.draw_cube(qbds.untex_qbd, eside, WHITE, 1, 0.0, 4); // skip_bottom=1, skip dim Z
+			dstate.draw_cube(qbds.untex_qbd, eside, WHITE, 1, 4); // skip_bottom=1, skip dim Z
 		}
 	} // for e
 	td.end_draw(qbds.untex_qbd);
@@ -381,7 +392,7 @@ void skyway_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, bool shadow_on
 	frame.expand_in_dim(!dim, -frame_width); // meets the edge frame
 
 	for (unsigned n = 0; n <= num_roof_panels; ++n) {
-		dstate.draw_cube(qbds.untex_qbd, frame, BLACK, 0, 0.0, (1 << unsigned(!dim))); // skip ends
+		dstate.draw_cube(qbds.untex_qbd, frame, BLACK, 0, (1 << unsigned(!dim))); // skip ends
 		frame.translate_dim(dim, panel_len);
 	}
 	qbds.untex_qbd.draw_and_clear();
@@ -398,7 +409,7 @@ void skyway_t::draw_glass_surfaces(draw_state_t &dstate, city_draw_qbds_t &qbds)
 	tile_drawer_t td;
 	enable_blend();
 	glDepthMask(GL_FALSE); // disable depth writing so that clouds, etc. are drawn over the glass
-	draw_long_cube(top, colorRGBA(1.0, 1.0, 1.0, 0.25), dstate, qbds.untex_qbd, td, dist_scale, 0, 0, 0, 0.0, 3); // shadow_only=0
+	draw_long_cube(top, colorRGBA(1.0, 1.0, 1.0, 0.25), dstate, qbds.untex_qbd, td, dist_scale, 0, 0, 0, 3); // shadow_only=0
 	td.end_draw(qbds.untex_qbd);
 	dstate.s.set_refract_ix(1.0); // reset
 	glDepthMask(GL_TRUE);

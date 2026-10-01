@@ -31,7 +31,8 @@ enum {POOL_DECK_WOOD=0, POOL_DECK_CONCRETE, NUM_POOL_DECK_TYPES};
 unsigned const NUM_POOL_DECK_PASSES(NUM_POOL_DECK_TYPES + 2); // {deck types}, roof, pillars
 
 struct city_draw_qbds_t {
-	quad_batch_draw qbd, untex_qbd, untex_spec_qbd, emissive_qbd;
+	quad_batch_draw qbd, emissive_qbd;
+	quad_batch_draw_untex untex_qbd, untex_spec_qbd;
 	bool empty() const {return (qbd.empty() && untex_qbd.empty() && untex_spec_qbd.empty() && emissive_qbd.empty());}
 	bool has_untex_verts() const {return (!untex_qbd.empty() || !untex_spec_qbd.empty());}
 };
