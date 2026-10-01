@@ -4351,10 +4351,8 @@ public:
 						if (player_in_building_bcube) {}
 						else if (bdist_sq > rgeom_clear_dist_sq) {b.clear_room_geom();} // optimization
 						else if (!camera_in_building && bdist_sq > rgeom_sm_clear_dist_sq) {b.clear_small_room_geom_vbos();} // memory optimization
-						if (bdist_sq > rgeom_draw_dist_sq) continue; // too far away
-						bool const has_mall(b.has_mall());
-						float const ddist_scale(has_mall ? 0.5 : 1.0); // reduced draw distance for malls, since they have so much geom
-						if (has_mall && bdist_sq > ddist_scale*rgeom_draw_dist_sq) continue; // too far away (for a mall)
+						float ddist_scale(b.has_mall() ? 0.5 : 1.0); // reduced draw distance for malls (~0.7x), since they have so much geom
+						if (bdist_sq > ddist_scale*rgeom_draw_dist_sq) continue; // too far away
 						bool const ext_basement_conn_visible(b.interior_visible_from_other_building_ext_basement(xlate));
 						if (reflection_pass && !player_in_building_bcube && !ext_basement_conn_visible) continue; // not the correct building
 						bool const mall_elevator_visible(b.top_of_mall_elevator_visible(camera_bs, xlate));
@@ -4383,12 +4381,15 @@ public:
 						bool const camera_not_near_building(!camera_near_building && !ext_basement_conn_visible);
 						if (!reflection_pass) {b.register_open_ext_door_state(!camera_not_near_building, camera_bs, door_open_dist);} // for door handle draw and doorbell sound
 						// draw interior detail objects if player is in the building (inc ext basement), even if far from the building center
+						bool const lower_detail(b.is_house && b.is_in_city && (display_mode & 0x10));
+						if (lower_detail) {ddist_scale *= 0.5;} // ~0.7x
 						unsigned inc_small(bdist_sq < ddist_scale*rgeom_sm_draw_dist_sq || mall_elevator_visible);
-						if      (cant_see_inside)                                    {inc_small = 4;} // only exterior detail objects
-						else if (player_in_building_bcube)                           {inc_small = 3;} // include interior and exterior detail objects
-						else if (ext_basement_conn_visible || mall_skylight_visible) {inc_small = 3;} // include interior and exterior detail objects
-						else if (inc_small && bdist_sq < rgeom_int_detail_dist_sq)   {inc_small = 3;} // include interior and exterior detail objects
-						else if (inc_small && bdist_sq < rgeom_ext_detail_dist_sq)   {inc_small = 2;} // include exterior detail objects
+						if (ddist_scale && bdist_sq > ddist_scale*rgeom_draw_dist_sq) {inc_small = 4;} // only exterior detail objects
+						else if (cant_see_inside)                                     {inc_small = 4;} // only exterior detail objects
+						else if (player_in_building_bcube)                            {inc_small = 3;} // include interior and exterior detail objects
+						else if (ext_basement_conn_visible || mall_skylight_visible)  {inc_small = 3;} // include interior and exterior detail objects
+						else if (inc_small && bdist_sq < rgeom_int_detail_dist_sq)    {inc_small = 3;} // include interior and exterior detail objects
+						else if (inc_small && bdist_sq < rgeom_ext_detail_dist_sq)    {inc_small = 2;} // include exterior detail objects
 						if (debug_draw) {inc_small = 3;}
 						bool const player_in_bldg(debug_draw || player_in_building_bcube);
 						if (ext_basement_conn_visible) {s.add_uniform_float("wet_effect", 0.0);} // disable for non-player building
