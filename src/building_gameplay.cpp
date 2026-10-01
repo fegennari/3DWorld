@@ -2960,7 +2960,7 @@ void building_t::player_fire_handgun(point const &player_pos, float player_radiu
 }
 
 // adds two back-to-back quads for two sided lighting
-void add_tape_quad(point const &p1, point const &p2, float width, color_wrapper const &color, quad_batch_draw &qbd, vector3d const &wdir=plus_z) {
+void add_tape_quad(point const &p1, point const &p2, float width, color_wrapper const &color, quad_batch_draw_untex &qbd, vector3d const &wdir=plus_z) {
 	vector3d const dir(p2 - p1), wvect(0.5*width*wdir);
 	vector3d normal(cross_product(dir, wdir).get_norm());
 	point pts[4] = {(p1 - wvect), (p1 + wvect), (p2 + wvect), (p2 - wvect)};

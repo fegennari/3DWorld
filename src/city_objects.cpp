@@ -525,9 +525,9 @@ void divider_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_sc
 		// for now we draw posts as cubes rather than cylinders since it's faster and easier, because we can use the existing qbd
 		for (unsigned i = 0; i < num_posts; ++i) { // add posts
 			set_wall_width(post, (bcube.d[!dim][0] + post_hwidth + i*post_spacing), post_hwidth, !dim);
-			dstate.draw_cube(qbds.qbd, post, cw, 1);
+			dstate.draw_cube(qbds.untex_qbd, post, cw, 1);
 		}
-		dstate.draw_cube(qbds.qbd, top, cw, 1);
+		dstate.draw_cube(qbds.untex_qbd, top, cw, 1);
 		return;
 	}
 	if (type != dstate.pass_ix) return; // this type not enabled in this pass
@@ -623,7 +623,7 @@ void swimming_pool_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float d
 				for (unsigned n = 0; n < num_steps; ++n) { // draw steps
 					ladder.z1() = bcube .z1() + n*step_delta + step_offset;
 					ladder.z2() = ladder.z1() + step_height;
-					dstate.draw_cube(qbds.qbd, ladder, step_color, !is_very_close); // skip bottom if not close
+					dstate.draw_cube(qbds.untex_qbd, ladder, step_color, !is_very_close); // skip bottom if not close
 				}
 				if (is_close) { // draw bars
 					float const bars_top(bcube.z1() + ladder_height), bar_radius(0.012*radius);

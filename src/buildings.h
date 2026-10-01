@@ -477,7 +477,7 @@ public:
 	void draw_obj_models(shader_t &s, vector3d const &xlate, bool shadow_only) const;
 };
 
-struct tape_quad_batch_draw : public quad_batch_draw {
+struct tape_quad_batch_draw : public quad_batch_draw_untex {
 	int moving_vert_cyilin_int_tape(point &cur_pos, point const &prev_pos, float z1, float z2, float radius, float slow_amt, bool is_player) const;
 	void split_tape_at(unsigned first_vert, point const &pos, float min_zval);
 };
@@ -491,7 +491,8 @@ struct paint_draw_t {
 };
 struct building_decal_manager_t {
 	paint_draw_t paint_draw[2]; // {interior, exterior}
-	quad_batch_draw blood_qbd[2], tp_qbd, pend_tape_qbd, glass_qbd, burn_qbd, graffiti_qbd; // blood_qbd: {red human blood, bug guts or stains}
+	quad_batch_draw blood_qbd[2], tp_qbd, glass_qbd, burn_qbd, graffiti_qbd; // blood_qbd: {red human blood, bug guts or stains}
+	quad_batch_draw_untex pend_tape_qbd;
 	tape_quad_batch_draw tape_qbd; // for tape, but not pend_tape because it hasn't been placed yet
 	rand_gen_t rgen;
 
