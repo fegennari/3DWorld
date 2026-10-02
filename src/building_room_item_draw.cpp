@@ -189,10 +189,10 @@ void rgeom_mat_t::clear_vbos() {
 
 void update_hashval(rgeom_storage_t::vect_vertex_t const &verts, uint32_t &hash) {
 	static_assert(sizeof(rgeom_storage_t::vertex_t) == 28, "must update hash logic for different vertex layout");
-	unsigned const num_uints(7*verts.size());
+	unsigned const uints_per_vert(sizeof(rgeom_storage_t::vertex_t)/sizeof(unsigned)), num_uints(uints_per_vert*verts.size()), step_sz(2*uints_per_vert);
 	unsigned const *const ptr((unsigned const *)verts.data());
 
-	for (unsigned i = 0; i < num_uints; i += 14) { // should be good enough to process every other vertex
+	for (unsigned i = 0; i < num_uints; i += step_sz) { // should be good enough to process every other vertex
 		hash += ptr[i] + ptr[i+1] + ptr[i+2] + ptr[i+3] + ptr[i+4] + ptr[i+5] + ptr[i+6];
 		hash += hash << 10;
 		hash ^= hash >> 6;
