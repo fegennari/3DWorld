@@ -1868,7 +1868,7 @@ void model3d::load_all_used_tids() {
 void model3d::bind_all_used_tids() {
 
 	load_all_used_tids();
-	set<int> to_invert;
+	static set<int> to_invert;
 		
 	for (material_t &m : materials) {
 		if (!m.mat_is_used()) continue;
@@ -1896,6 +1896,7 @@ void model3d::bind_all_used_tids() {
 		has_alpha_mask   |= m.has_alpha_mask();
 	} // for m
 	for (int tid : to_invert) {tmgr.get_texture(tid).invert_y = 1;}
+	to_invert.clear();
 	calc_tangent_vectors();
 }
 
