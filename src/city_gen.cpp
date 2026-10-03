@@ -2494,7 +2494,7 @@ public:
 			for (unsigned i = rpp.s; i < rpp.e; ++i) { // check parking lots
 				if (city_obj_placer.parking_lots[i].contains_pt_xy(pos)) return i;
 			}
-			if (!inc_driveways) continue;
+			if (!inc_driveways || is_residential) continue; // only looking for driveways leading to parking lots, which aren't in residential cities; conv store parking lots are excluded
 			range_pair_t const &rpd(b->ranges[TYPE_DRIVEWAY]);
 
 			for (unsigned i = rpd.s; i < rpd.e; ++i) { // check driveways
