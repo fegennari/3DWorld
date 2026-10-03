@@ -552,8 +552,7 @@ void kill_current_raytrace_threads() {
 
 void update_lmap_from_temp_copy() {
 	if (!thread_temp_lmap.was_updated) return; // no updates
-	float const blend_weight = 1.0; // TODO: slow blend over time to reduce popping
-	lmap_manager.copy_data(thread_temp_lmap, blend_weight);
+	lmap_manager.copy_data(thread_temp_lmap);
 	thread_temp_lmap.was_updated = 0;
 	lmap_manager.was_updated     = 1;
 }

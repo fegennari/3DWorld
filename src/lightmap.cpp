@@ -248,38 +248,11 @@ void lmap_manager_t::init_from(lmap_manager_t const &src) {
 	copy_data(src);
 }
 
-// *this = blend_weight*dest + (1.0 - blend_weight)*(*this)
-void lmap_manager_t::copy_data(lmap_manager_t const &src, float blend_weight) {
-
+void lmap_manager_t::copy_data(lmap_manager_t const &src) {
 	assert(vlmap && src.vlmap);
 	assert(src.lm_xsize == lm_xsize && src.lm_ysize == lm_ysize && src.lm_zsize == lm_zsize);
 	assert(src.vldata_alloc.size() == vldata_alloc.size());
-	assert(blend_weight >= 0.0);
-	if (blend_weight == 0.0) return; // keep existing dest
-
-	if (blend_weight == 1.0) {
-		vldata_alloc = src.vldata_alloc; // deep copy all lmcell data
-		return;
-	}
-	for (unsigned i = 0; i < lm_ysize; ++i) { // openmp?
-		for (unsigned j = 0; j < lm_xsize; ++j) {
-			if (!vlmap[i][j]) {assert(!src.vlmap[i][j]); continue;}
-			assert(src.vlmap[i][j]);
-			for (unsigned z = 0; z < lm_zsize; ++z) {vlmap[i][j][z].mix_lighting_with(src.vlmap[i][j][z], blend_weight);}
-		}
-	}
-}
-
-
-// *this = val*lmc + (1.0 - val)*(*this)
-void lmcell::mix_lighting_with(lmcell const &lmc, float val) {
-
-	float const omv(1.0 - val); // Note: we ignore the flow values and smoke for now
-	sv = val*lmc.sv + omv*sv;
-	gv = val*lmc.gv + omv*gv;
-	UNROLL_3X(sc[i_] = val*lmc.sc[i_] + omv*sc[i_];)
-	UNROLL_3X(gc[i_] = val*lmc.gc[i_] + omv*gc[i_];)
-	UNROLL_3X(lc[i_] = val*lmc.lc[i_] + omv*lc[i_];)
+	vldata_alloc = src.vldata_alloc; // deep copy all lmcell data
 }
 
 

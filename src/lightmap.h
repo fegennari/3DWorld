@@ -38,7 +38,6 @@ struct lmcell { // size = 52
 	void get_final_color(colorRGB &color, float max_indir, float indir_scale=1.0, float extra_ambient=0.0) const;
 	void get_final_color_local(colorRGB &color) const;
 	void set_outside_colors();
-	void mix_lighting_with(lmcell const &lmc, float val);
 };
 
 
@@ -70,7 +69,7 @@ public:
 	void reset_all(lmcell const &init_lmcell=lmcell());
 	template<typename T> void alloc(unsigned nbins, unsigned xsize, unsigned ysize, unsigned zsize, T **nonempty_bins, lmcell const &init_lmcell);
 	void init_from(lmap_manager_t const &src);
-	void copy_data(lmap_manager_t const &src, float blend_weight=1.0);
+	void copy_data(lmap_manager_t const &src);
 };
 
 
