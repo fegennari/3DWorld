@@ -2486,7 +2486,7 @@ public:
 	int get_parking_lot_ix(point const &pos, bool inc_driveways) const {
 		if (city_obj_placer.parking_lots.empty()) return -1;
 
-		// iterate by tile, which is faster than iterating over parking lots and driveways; should we store maintain and use a plot_ix => parking_lot_ix mapping?
+		// iterate by tile, which is faster than iterating over parking lots and driveways; should we maintain and use a plot_ix => parking_lot_ix mapping?
 		for (auto b = tile_blocks.begin(); b != tile_blocks.end(); ++b) {
 			if (!b->bcube.contains_pt_xy(pos)) continue;
 			range_pair_t const &rpp(b->ranges[TYPE_PARK_LOT]);

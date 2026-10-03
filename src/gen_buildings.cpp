@@ -3912,7 +3912,16 @@ public:
 		point const camera_bs(get_camera_building_space());
 		float const dmax(1.5f*(X_SCENE_SIZE + Y_SCENE_SIZE));
 		if (!get_bcube().closest_dist_less_than(camera_bs, dmax)) return; // too far away
-		buildings.ai_room_update(delta_dir, dmax, camera_bs, ai_rgen);
+		//timer_t timer("Building People Update"); // 0.12ms, mostly iteration overhead, for sparse update with 2-6 people per building (avg for 2 calls city + secondary)
+
+		for (grid_elem_t const &ge : grid_by_tile) {
+			if (!ge.bcube.closest_dist_less_than(camera_bs, dmax)) continue;
+
+			for (cube_with_ix_t const &bc : ge.bc_ixs) {
+				if (!bc.closest_dist_less_than(camera_bs, dmax)) continue;
+				get_building(bc.ix).all_ai_room_update(rgen, delta_dir); // Note: non-const because this updates room lights
+			}
+		} // for ge
 	}
 
 	static void select_person_shadow_shader(shader_t &person_shader) {

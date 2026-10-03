@@ -2834,9 +2834,7 @@ public:
 	bool is_sphere_lit(point const &center, float radius) const;
 }; // end building_t
 
-struct vect_building_t : public vector<building_t> {
-	void ai_room_update(float delta_dir, float dmax, point const &camera_bs, rand_gen_t &rgen);
-};
+struct vect_building_t : public vector<building_t> {};
 
 struct building_draw_utils {
 	static void calc_normals(building_geom_t const &bg, vector<vector3d> &nv, unsigned ndiv);

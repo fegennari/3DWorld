@@ -2539,7 +2539,7 @@ void building_t::register_player_hiding(room_object_t const &hiding_obj) const {
 }
 
 void building_t::all_ai_room_update(rand_gen_t &rgen, float delta_dir) {
-	assert(interior);
+	if (!interior) return;
 
 	for (unsigned i = 0; i < interior->people.size(); ) { // Note: no increment
 		person_t &person(interior->people[i]);
@@ -3565,16 +3565,6 @@ void building_t::move_person_to_not_collide(person_t &person, person_t const &ot
 	if (!point_in_building_or_basement_bcube(person.pos)) { // this can happen on rare occasions, due to fp inaccuracy or multiple collisions
 		//cout << TXT(rsum) << TXT(sep_dist) << TXT(move_dist) << TXT(room_ix) << TXTS(other.pos) << TXTS(person.pos) << TXTS(bcube) << endl;
 		clamp_person_to_building_bcube(person.pos, bcube, person.radius, get_fc_thickness()); // just clamp pos so that it doesn't assert later
-	}
-}
-
-// Note: non-const because this updates room lights
-void vect_building_t::ai_room_update(float delta_dir, float dmax, point const &camera_bs, rand_gen_t &rgen) {
-	//timer_t timer("Building People Update"); // 0.25ms, mostly iteration overhead, for sparse update with 2-6 people per building (avg for 2 calls city + secondary)
-
-	for (iterator b = begin(); b != end(); ++b) {
-		if (!b->has_people() || !b->bcube.closest_dist_less_than(camera_bs, dmax)) continue; // no people or too far away, no updates
-		b->all_ai_room_update(rgen, delta_dir);
 	}
 }
 
