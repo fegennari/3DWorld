@@ -191,7 +191,7 @@ bool bird_t::gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const tile
 float get_butterfly_max_alt() {return 0.10f*(X_SCENE_SIZE + Y_SCENE_SIZE);}
 float get_butterfly_min_alt() {return 0.10f*get_butterfly_max_alt();}
 
-bool butterfly_t::gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const tile) { // Note: tile is unused
+bool butterfly_t::gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const tile) {
 
 	assert(range.is_strictly_normalized());
 	enabled = 0;
