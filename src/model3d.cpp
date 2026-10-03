@@ -1293,17 +1293,17 @@ void material_t::queue_textures_to_load(texture_manager &tmgr) {
 	if (use_spec_map()) {tmgr.add_work_item(ns_tid,   0);} else {ns_tid   = -1;}
 }
 
-void material_t::check_for_tc_invert_y(texture_manager &tmgr) {
+void material_t::check_for_tc_invert_y(texture_manager &tmgr, set<int> &to_invert) {
 
 	if (tcs_checked) return; // already done
 	int const tid(get_render_texture());
 	if (tid < 0) return; // no texture
-	texture_t &texture(tmgr.get_texture(tid));
+	texture_t const &texture(tmgr.get_texture(tid));
 
 	if (texture.is_inverted_y_type() && !texture.invert_y) { // compressed DDS texture, need to invert tex coord in Y
-		geom.invert_tcy();
+		geom    .invert_tcy();
 		geom_tan.invert_tcy();
-		texture.invert_y ^= 1; // already inverted, don't try to invert again (FIXME: doesn't work if used in multiple materials)
+		to_invert.insert(tid); // flag for marking as inverted after processing all materials; use a set in case the same texture is used in multiple materials
 	}
 	tcs_checked = 1;
 }
@@ -1868,10 +1868,11 @@ void model3d::load_all_used_tids() {
 void model3d::bind_all_used_tids() {
 
 	load_all_used_tids();
+	set<int> to_invert;
 		
 	for (material_t &m : materials) {
 		if (!m.mat_is_used()) continue;
-		m.check_for_tc_invert_y(tmgr);
+		m.check_for_tc_invert_y(tmgr, to_invert);
 		tmgr.ensure_tid_bound(m.get_render_texture()); // only one tid for now
 		
 		if (m.use_bump_map()) {
@@ -1894,6 +1895,7 @@ void model3d::bind_all_used_tids() {
 		needs_trans_pass |= m.is_partial_transparent();
 		has_alpha_mask   |= m.has_alpha_mask();
 	} // for m
+	for (int tid : to_invert) {tmgr.get_texture(tid).invert_y = 1;}
 	calc_tangent_vectors();
 }
 

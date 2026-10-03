@@ -503,7 +503,7 @@ struct material_t : public material_params_t {
 	void ensure_textures_loaded(texture_manager &tmgr);
 	void init_textures(texture_manager &tmgr);
 	void queue_textures_to_load(texture_manager &tmgr);
-	void check_for_tc_invert_y(texture_manager &tmgr);
+	void check_for_tc_invert_y (texture_manager &tmgr, set<int> &to_invert);
 	void render(shader_t &shader, texture_manager const &tmgr, int default_tid, bool is_shadow_pass, bool is_z_prepass,
 		int enable_alpha_mask, bool is_bmap_pass, point const *const xlate, bool no_set_min_alpha=0);
 	colorRGBA get_ad_color() const;
