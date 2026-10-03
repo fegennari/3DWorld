@@ -174,7 +174,7 @@ bool building_t::add_room_lockers(rand_gen_t &rgen, room_t const &room, float zv
 {
 	float const floor_spacing(get_window_vspace()), locker_height(0.75*floor_spacing), locker_depth(0.25*locker_height);
 	float locker_width(0.22*locker_height);
-	cube_t place_area(place_area_in), valid_area(room.is_ext_basement() ? room : parts[room.part_id]);
+	cube_t place_area(place_area_in), valid_area(room.is_ext_basement() ? (cube_t)room : parts[room.part_id]);
 	valid_area.expand_by_xy(-get_trim_thickness()); // leave a small gap around exterior walls to prevent Z-fighting
 	if (!place_area.intersects(valid_area)) {cout << TXTS(room) << TXTS(place_area) << TXTS(valid_area) << endl;}
 	assert(place_area.intersects(valid_area));
