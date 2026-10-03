@@ -55,6 +55,8 @@ inline unsigned decode_neg_ix(int ix) {assert(ix < 0); return -(ix+1);}
 inline float rand_hash(float to_hash) {return fract(12345.6789*to_hash);}
 inline float signed_rand_hash(float to_hash) {return 0.5*(rand_hash(to_hash) - 1.0);}
 
+inline unsigned city_ix_to_seq_ix(unsigned city_ix) {return ((city_ix == CONN_CITY_IX) ? 0 : city_ix+1);}
+
 
 struct city_params_t {
 
@@ -215,9 +217,25 @@ struct car_t : public car_base_t, public waiting_obj_t { // size = 136
 struct car_city_vect_t {
 	vector<car_base_t> cars[2][2]; // {dim x dir}
 	vect_cube_with_ix_t parked_car_bcubes, sleeping_car_bcubes, parking_lot_car_bcubes; // stores car bcube + road/plot/driveway index
+	bool used=0;
 	void clear_cars();
 };
-
+class cars_by_city_t : private vector<car_city_vect_t> {
+	car_city_vect_t empty_cars_vect;
+public:
+	size_t size() const {return vector<car_city_vect_t>::size();}
+	void clear() {vector<car_city_vect_t>::clear();}
+	car_city_vect_t const &operator[](size_t ix) const {
+		ix = city_ix_to_seq_ix(ix);
+		return ((ix < size()) ? at(ix) : empty_cars_vect);
+	}
+	bool has_cars(unsigned ix) const {
+		ix = city_ix_to_seq_ix(ix);
+		return (ix < size() && at(ix).used);
+	}
+	car_city_vect_t &get_ref(unsigned ix);
+	void clear_cars();
+};
 
 struct comp_car_road {
 	bool operator()(car_base_t const &c1, car_base_t const &c2) const {return (c1.cur_road < c2.cur_road);}
@@ -873,7 +891,7 @@ public:
 	void finalize_cars();
 	void assign_car_model_size_color(car_t &car, rand_gen_t &local_rgen, bool is_in_garage, unsigned btype=BTYPE_UNSET);
 	void add_helicopters(vect_cube_t const &hp_locs);
-	void extract_car_data(vector<car_city_vect_t> &cars_by_city) const;
+	void extract_car_data(cars_by_city_t &cars_by_city) const;
 	bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm) const;
 	void destroy_cars_in_radius(point const &pos_in, float radius);
 	bool get_color_at_xy(point const &pos, colorRGBA &color, int int_ret) const;
@@ -945,8 +963,7 @@ class ped_manager_t { // pedestrians
 	vector<city_ixs_t> by_city; // first ped/plot index for each city
 	vector<unsigned> by_plot;
 	vector<unsigned char> need_to_sort_city;
-	car_city_vect_t empty_cars_vect;
-	vector<car_city_vect_t> cars_by_city;
+	cars_by_city_t cars_by_city;
 	vector<person_t const *> to_draw;
 	rand_gen_t rgen;
 	ao_draw_state_t dstate;
@@ -967,7 +984,7 @@ class ped_manager_t { // pedestrians
 	void setup_occluders();
 	bool draw_ped(person_base_t const &ped, shader_t &s, pos_dir_up const &pdu, vector3d const &xlate, float def_draw_dist, float draw_dist_sq,
 		bool &in_sphere_draw, bool shadow_only, bool is_dlight_shadows, animation_state_t *anim_state, bool is_in_building);
-	car_city_vect_t const &get_cars_for_city(unsigned city) const {return ((city < cars_by_city.size()) ? cars_by_city[city] : empty_cars_vect);}
+	car_city_vect_t const &get_cars_for_city(unsigned city) const {return cars_by_city[city];}
 public:
 	friend class city_spectate_manager_t;
 	// for use in pedestrian_t, mostly for collisions and path finding
@@ -999,7 +1016,7 @@ public:
 	unsigned get_next_plot(pedestrian_t &ped, int exclude_plot=-1) const;
 	void move_ped_to_next_plot(pedestrian_t &ped);
 	// cars
-	bool has_cars_in_city(unsigned city_ix) const {return (city_ix < cars_by_city.size());}
+	bool has_cars_in_city(unsigned city_ix) const {return cars_by_city.has_cars(city_ix);}
 	bool has_nearby_car(pedestrian_t const &ped, bool road_dim, float delta_time, vect_cube_t *dbg_cubes=nullptr) const;
 	bool has_nearby_car_on_road(pedestrian_t const &ped, bool dim, unsigned road_ix, float delta_time, vect_cube_t *dbg_cubes) const;
 	bool has_car_at_pt(point const &pos, unsigned city, bool is_parked) const;

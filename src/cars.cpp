@@ -1149,19 +1149,28 @@ void car_city_vect_t::clear_cars() { // Note: not clearing parked_car_bcubes()
 	parking_lot_car_bcubes.clear();
 }
 
-void car_manager_t::extract_car_data(vector<car_city_vect_t> &cars_by_city) const { // used for pedestrian update logic
+car_city_vect_t &cars_by_city_t::get_ref(unsigned ix) {
+	ix = city_ix_to_seq_ix(ix);
+	if (ix >= size()) {resize(ix+1);}
+	at(ix).used = 1;
+	return at(ix);
+}
+void cars_by_city_t::clear_cars() {
+	for (car_city_vect_t &v : *this) {v.clear_cars();}
+}
+
+void car_manager_t::extract_car_data(cars_by_city_t &cars_by_city) const { // used for pedestrian update logic
 	if (cars.empty()) return;
 	//timer_t timer("Extract Car Data");
 	// create parked cars vectors on first call; this is used for pedestrian navigation within parking lots;
 	// it won't be rebuilt on car destruction, but that should be okay
-	bool const add_parked_cars(cars_by_city.empty());
-	for (car_city_vect_t &v : cars_by_city) {v.clear_cars();} // clear prev frame's state
+	bool const add_parked_cars(cars_by_city.size() == 0);
+	cars_by_city.clear_cars(); // clear prev frame's state
 
 	for (car_t const &car : cars) {
 		if (car.cur_road_type == TYPE_BUILDING) continue;
 		car_base_t const c(car); // deep copy to avoid assert if the car city changes in the car update thread between now and when it's added to dest
-		if (c.cur_city >= cars_by_city.size()) {cars_by_city.resize(c.cur_city+1);}
-		auto &dest(cars_by_city[c.cur_city]);
+		auto &dest(cars_by_city.get_ref(c.cur_city));
 		
 		if (!c.is_parked()) { // moving on road
 			if (car.in_parking_lot) { // cars in parking lots
