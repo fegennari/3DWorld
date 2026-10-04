@@ -198,9 +198,24 @@ struct vertex_bone_data_t { // Note: must be packed
 struct mesh_bone_data_t {
 	vector<vertex_bone_data_t> vertex_to_bones;
 };
+struct hashed_string {
+	string s;
+	size_t hashval=0;
+
+	hashed_string() {} // for read
+	hashed_string(const char *s_) : s(std::move(s_)) {update_hashval();}
+	hashed_string(string      s_) : s(std::move(s_)) {update_hashval();}
+	void update_hashval() {hashval = std::hash<std::string>{}(s);}
+	bool operator==(hashed_string const &hs) const {return (hashval == hs.hashval && s == hs.s);}
+};
+namespace std {
+	template<> struct hash<hashed_string> {
+		size_t operator()(hashed_string const &hs) const {return hs.hashval;}
+	};
+}
 
 struct model_anim_t {
-	unordered_map<string, unsigned> bone_name_to_index_map;
+	unordered_map<hashed_string, unsigned> bone_name_to_index_map;
 	vector<xform_matrix> bone_transforms, bone_offset_matrices;
 	xform_matrix global_inverse_transform, root_transform;
 	string model_name; // for debug printouts
@@ -209,7 +224,7 @@ struct model_anim_t {
 	struct anim_node_t {
 		int bone_index=-1; // cached to avoid bone_name_to_index_map lookup; -1 is no bone
 		mutable bool no_anim_data=0;
-		string name;
+		hashed_string name;
 		xform_matrix transform;
 		vector<unsigned> children; // indexes into anim_nodes
 		anim_node_t() {} // for read()
@@ -238,12 +253,12 @@ struct model_anim_t {
 	struct animation_t {
 		float ticks_per_sec=25.0, duration=1.0; // duration is in ticks
 		string name;
-		unordered_map<string, anim_data_t> anim_data; // per bone
+		unordered_map<hashed_string, anim_data_t> anim_data; // per bone
 		animation_t(string const &name_="") : name(name_) {}
 	};
 	vector<animation_t> animations;
 
-	unsigned get_bone_id(string const &bone_name);
+	unsigned get_bone_id(hashed_string const &bone_name);
 	void transform_node_hierarchy_recur(float anim_time, animation_t const &animation, unsigned node_ix, xform_matrix const &parent_transform);
 	void get_bone_transforms(unsigned anim_id, float cur_time);
 	bool check_anim_wrapped(unsigned anim_id, float old_time, float new_time) const;

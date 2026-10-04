@@ -2507,8 +2507,8 @@ bool model_anim_t::write(ostream &out) const {
 	write_uint(out, bone_name_to_index_map.size());
 
 	for (auto const &kv : bone_name_to_index_map) {
-		write_string(out, kv.first );
-		write_uint  (out, kv.second);
+		write_string(out, kv.first.s);
+		write_uint  (out, kv.second );
 	}
 	if (!out.good()) return 0;
 	// transforms
@@ -2523,7 +2523,7 @@ bool model_anim_t::write(ostream &out) const {
 
 	for (anim_node_t const &n : anim_nodes) { // Note: no_anim_data is not written
 		write_val   (out, n.bone_index);
-		write_string(out, n.name);
+		write_string(out, n.name.s);
 		write_val   (out, n.transform);
 		write_vector(out, n.children);
 	}
@@ -2538,7 +2538,7 @@ bool model_anim_t::write(ostream &out) const {
 		write_uint  (out, a.anim_data.size());
 
 		for (auto const &kv : a.anim_data) {
-			write_string(out, kv.first );
+			write_string(out, kv.first.s  );
 			anim_data_t const &d(kv.second);
 			write_val   (out, d.uses_scale);
 			write_vector(out, d.pos);
@@ -2573,9 +2573,10 @@ bool model_anim_t::read(istream &in) {
 
 	for (anim_node_t &n : anim_nodes) {
 		read_val   (in, n.bone_index);
-		read_string(in, n.name);
-		read_val   (in, n.transform);
-		read_vector(in, n.children);
+		read_string(in, n.name.s    );
+		read_val   (in, n.transform );
+		read_vector(in, n.children  );
+		n.name.update_hashval();
 	}
 	if (!in.good()) return 0;
 	// animations

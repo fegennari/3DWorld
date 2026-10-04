@@ -23,7 +23,7 @@ void model_anim_t::anim_data_t::init(unsigned np, unsigned nr, unsigned ns) {
 	scale.reserve(ns);
 }
 
-unsigned model_anim_t::get_bone_id(string const &bone_name) {
+unsigned model_anim_t::get_bone_id(hashed_string const &bone_name) {
 	auto it(bone_name_to_index_map.find(bone_name));
 	if (it != bone_name_to_index_map.end()) {return it->second;}
 	unsigned const bone_id(bone_name_to_index_map.size()); // allocate an index for a new bone
@@ -70,7 +70,7 @@ template<typename T> T calc_interpolated_val(float time, vector<model_anim_t::an
 }
 xform_matrix model_anim_t::apply_anim_transform(float anim_time, animation_t const &animation, anim_node_t const &node) const {
 	if (node.no_anim_data) return node.transform; // no animation data; flag is not per-animation, but should still agree across animations
-	auto it(animation.anim_data.find(node.name)); // found about half the time
+	auto it(animation.anim_data.find(node.name)); // found about half the time on initial call, but cached so it won't be called again
 	if (it == animation.anim_data.end()) {node.no_anim_data = 1; return node.transform;} // defaults to node transform
 	anim_data_t const &A(it->second);
 	xform_matrix node_transform; // identity
@@ -102,7 +102,7 @@ void model_anim_t::transform_node_hierarchy_recur(float anim_time, animation_t c
 	for (unsigned i : node.children) {transform_node_hierarchy_recur(anim_time, animation, i, global_transform);}
 }
 void model_anim_t::get_bone_transforms(unsigned anim_id, float cur_time) {
-	//highres_timer_t timer("get_bone_transforms");  // 0.011ms
+	//highres_timer_t timer("get_bone_transforms");  // 0.0095ms
 	unsigned const num_anims(animations.size());
 	assert(num_anims > 0);
 
@@ -217,7 +217,7 @@ void model_anim_t::merge_from(model_anim_t const &anim) {
 		// anim.bone_name_to_index_map can have fewer entries than bone_name_to_index_map, but the names must match
 		for (auto const &kv : anim.bone_name_to_index_map) {
 			auto it(bone_name_to_index_map.find(kv.first));
-			if (it == bone_name_to_index_map.end()) {cout << "Warning: Merging animation with unknown bone name '" << kv.first << "'";}
+			if (it == bone_name_to_index_map.end()) {cout << "Warning: Merging animation with unknown bone name '" << kv.first.s << "'";}
 			else if(it->second != kv.second) {} // index is different - what do we do here?
 		}
 		// what about bone_transforms, bone_offset_matrices, and bone_name_to_index_map values? they're different in my test models but still work, so maybe they don't need to agree
@@ -401,16 +401,16 @@ class file_reader_assimp {
 		return NULL;
 	}
 	unsigned extract_animation_data_recur(aiScene const *const scene, aiNode const *const node, model_anim_t &model_anim) {
-		string const node_name(node->mName.data);
+		hashed_string const node_name(node->mName.data);
 		unsigned const node_ix(model_anim.anim_nodes.size());
 		int bone_index(-1); // starts unset
 		auto it(model_anim.bone_name_to_index_map.find(node_name));
 		if (it != model_anim.bone_name_to_index_map.end()) {bone_index = it->second;} // found
-		model_anim.anim_nodes.emplace_back(node_name, aiMatrix4x4_to_xform_matrix(node->mTransformation), bone_index);
+		model_anim.anim_nodes.emplace_back(node_name.s, aiMatrix4x4_to_xform_matrix(node->mTransformation), bone_index);
 
 		for (unsigned a = 0; a < scene->mNumAnimations; ++a) {
 			aiAnimation const *const animation(scene->mAnimations[a]);
-			aiNodeAnim  const *const node_anim(find_node_anim(animation, node_name));
+			aiNodeAnim  const *const node_anim(find_node_anim(animation, node_name.s));
 			if (!node_anim) continue; // no animation for this node
 			model_anim_t::anim_data_t& A(model_anim.animations[a].anim_data[node_name]);
 			A.init(node_anim->mNumPositionKeys, node_anim->mNumRotationKeys, node_anim->mNumScalingKeys);
