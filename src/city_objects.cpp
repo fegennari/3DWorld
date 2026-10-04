@@ -510,7 +510,7 @@ plot_divider_type_t plot_divider_types[DIV_NUM_TYPES] = {
 }
 void divider_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
 	if (dstate.pass_ix == DIV_NUM_TYPES && type == DIV_CHAINLINK) { // add chainlink fence posts
-		if (!dstate.check_cube_visible(bcube, 1.5*dist_scale)) return;
+		if (!dstate.check_cube_visible(bcube, 1.5*dist_scale, 1)) return; // is_likely=1
 		float const length(get_width()), height(bcube.dz()), thickness(get_depth());
 		float const post_hwidth(1.5*thickness), post_width(2.0*post_hwidth), top_width(1.5*thickness);
 		unsigned const num_sections(ceil(0.3*length/height)), num_posts(num_sections + 1);
@@ -532,7 +532,7 @@ void divider_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_sc
 	}
 	if (type != dstate.pass_ix) return; // this type not enabled in this pass
 	if (type == DIV_CHAINLINK) {dist_scale *= 0.5;} // less visible
-	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
+	if (!dstate.check_cube_visible(bcube, dist_scale, 1)) return; // is_likely=1
 	assert(dstate.pass_ix < DIV_NUM_TYPES);
 
 	if (type != DIV_HOUSE_WALL) { // house walls are not drawn

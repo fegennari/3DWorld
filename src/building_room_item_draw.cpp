@@ -380,7 +380,7 @@ void rgeom_mat_t::draw(tid_nm_pair_dstate_t &state, brg_batch_draw_t *bbd, int s
 	if (num_verts == 0) return; // Note: should only happen when reusing materials and all objects using this material were removed
 	// VFC test for sparse materials that have their bcubes calculated; mostly helps with backrooms;
 	// we don't add xlate to bcube in the shadow pass because it's the location of a light source that's already in building space, not camera space
-	if (!bcube.is_all_zeros() && !camera_pdu.cube_visible(bcube + (shadow_only ? zero_vector : draw_bcube_xlate))) return;
+	if (!bcube.is_all_zeros() && !camera_pdu.cube_visible_likely(bcube + (shadow_only ? zero_vector : draw_bcube_xlate))) return;
 	vao_setup(shadow_only); // create VAO if needed
 
 	// Note: the shadow pass doesn't normally bind textures and set uniforms, so we don't need to combine those calls into batches

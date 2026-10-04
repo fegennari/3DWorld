@@ -179,7 +179,7 @@ void draw_state_t::draw_and_clear_light_flares() {
 	set_std_blend_mode();
 	disable_blend();
 }
-bool draw_state_t::check_cube_visible(cube_t const &bc, float dist_scale) const {
+bool draw_state_t::check_cube_visible(cube_t const &bc, float dist_scale, bool is_likely) const {
 	if (!camera_pdu.valid) return 1;
 	cube_t const bcx(bc + xlate);
 
@@ -187,7 +187,7 @@ bool draw_state_t::check_cube_visible(cube_t const &bc, float dist_scale) const 
 		float const dmax(shadow_only ? camera_pdu.far_ : dist_scale*draw_tile_dist);
 		if (!bcx.closest_dist_less_than(camera_pdu.pos, dmax)) return 0;
 	}
-	return camera_pdu.cube_visible(bcx);
+	return (is_likely ? camera_pdu.cube_visible_likely(bcx) : camera_pdu.cube_visible(bcx));
 }
 /*static*/ void draw_state_t::set_cube_pts(cube_t const &c, float z1f, float z1b, float z2f, float z2b, bool d, bool D, point p[8]) {
 	p[0][!d] = p[4][!d] = c.d[!d][1]; p[0][d] = p[4][d] = c.d[d][ D]; p[0].z = z1f; p[4].z = z2f; // front right
