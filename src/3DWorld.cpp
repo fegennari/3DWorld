@@ -180,6 +180,7 @@ void toggle_city_spectate_mode();
 float get_tt_building_sound_gain();
 void regen_buildings();
 void openal_next_frame();
+void show_gpu_mem_info();
 
 
 // all OpenGL error handling goes through these functions
@@ -233,6 +234,7 @@ void quit_3dworld() { // called once at the end for proper cleanup
 	}
 	glutExit();
 	//_CrtDumpMemoryLeaks();
+	//_heapchk();
 	exit(0); // quit
 }
 
@@ -2385,6 +2387,7 @@ int main(int argc, char** argv) {
 	if (init_core_context) {init_debug_callback();}
 	//glEnable(GL_FRAMEBUFFER_SRGB);
 	cout << ".GL Initialized." << endl;
+	show_gpu_mem_info();
 	uevent_advance_frame();
 	--frame_counter;
 
