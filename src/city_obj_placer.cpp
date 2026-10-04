@@ -1832,8 +1832,9 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 			float const front_wall_pos(back_wall_pos + dsign*cs_depth), parking_lot_int_edge(front_wall_pos + dsign*front_gap);
 			bool const ent_dir(plot.get_center_dim(!sdim) < i->get_center_dim(!sdim));
 			float const edsign(ent_dir ? 1.0 : -1.0);
-			cube_t subplot_inner(*i);
+			cube_t subplot_inner(*i), plot_pad(plot);
 			subplot_inner.d[!sdim][!ent_dir] += edsign*hwidth; // clip off space for side plot divider
+			plot_pad.expand_in_dim(!sdim, -get_sidewalk_width()); // add extra space at the sides of the plot for pedestrians to walk
 			float const sp_width(subplot_inner.get_sz_dim(!sdim));
 			unsigned const num_spaces(sp_width/park_space_width);
 			if (num_spaces == 0) continue; // shouldn't happen
@@ -1878,6 +1879,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 
 			for (unsigned n = 0; n < num_spaces; ++n) {
 				set_wall_width(driveway, (parking_lot.d[!sdim][0] + (n + 0.5)*park_space_width), 0.5*park_space_width, !sdim);
+				if (!plot_pad.contains_cube(driveway)) continue; // skip end spots to avoid cars blocking pedestrians
 				driveways.emplace_back(driveway, sdim, sdir, plot_ix, -1); // no parking_lot_ix
 				driveways.back().is_parking_space = 1;
 			}
