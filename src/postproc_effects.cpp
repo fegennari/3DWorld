@@ -182,12 +182,13 @@ void add_vignette(colorRGBA const &color) {
 	color_buffer_frame = 0; // reset to invalidate buffer
 }
 
-void postproc_convert_to_grayscale(unsigned xsize, unsigned ysize) {
+void postproc_convert_colors(unsigned xsize, unsigned ysize, bool to_grayscale, bool night_vision) {
 
+	assert(to_grayscale != night_vision); // must set exactly one
 	bind_frame_buffer_RGB();
 	shader_t s;
 	s.set_vert_shader("no_lighting_tex_coord");
-	s.set_frag_shader("convert_to_grayscale");
+	s.set_frag_shader(to_grayscale ? "convert_to_grayscale" : "night_vision");
 	s.begin_shader();
 	// since the screen resolution may be different, we have to scale the texture coordinates
 	s.add_uniform_float("xscale", float(xsize)/float(window_width ));
@@ -195,6 +196,8 @@ void postproc_convert_to_grayscale(unsigned xsize, unsigned ysize) {
 	fill_screen_white_and_end_shader(s);
 	color_buffer_frame = 0; // reset to invalidate buffer
 }
+void postproc_convert_to_grayscale(unsigned xsize, unsigned ysize) {postproc_convert_colors(xsize, ysize, 1, 0);}
+void postproc_night_vision() {postproc_convert_colors(window_width, window_height, 0, 1);}
 
 void add_sphere_refract_effect(sphere_t const &sphere, float intensity) {
 
@@ -356,6 +359,7 @@ void run_postproc_effects() {
 		else if (have_buildings() && is_night()) {add_2d_bloom();} // allow bloom for building windows at night in TT mode
 	}
 	if (enable_postproc_recolor) {add_color_only_effect("recolor", 0.0);} // add recolor at the very end
+	//if (display_mode & 0x20    ) {postproc_night_vision();}
 	if (vignette_color.A > 0.0 ) {add_vignette(vignette_color);}
 }
 

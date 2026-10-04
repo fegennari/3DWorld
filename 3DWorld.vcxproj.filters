@@ -1623,6 +1623,9 @@
     <None Include="shaders\lava_plane.frag">
       <Filter>Shaders\frag</Filter>
     </None>
+    <None Include="shaders\night_vision.frag">
+      <Filter>Shaders\frag\Fullscreen</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Script1.rc">
