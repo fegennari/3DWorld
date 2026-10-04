@@ -327,13 +327,28 @@ void brg_batch_draw_t::next_tile(cube_t const &bcube) {
 	ext_by_tile.emplace_back(bcube); // create a new slot
 }
 void brg_batch_draw_t::add_material(rgeom_mat_t const &m, bool is_ext_tile) {
-	if (is_ext_tile) {assert(cur_tile_slot < ext_by_tile.size());}
-	vector<mat_entry_t>& dest(is_ext_tile ? ext_by_tile[cur_tile_slot].to_draw : to_draw);
+	if (is_ext_tile) {
+		assert(cur_tile_slot < ext_by_tile.size());
+		vector<mat_entry_t>& dest(is_ext_tile ? ext_by_tile[cur_tile_slot].to_draw : to_draw);
 
-	for (auto &i : dest) { // check all existing materials for a matching texture, etc.
-		if (i.tex.is_compat_ignore_shadowed(m.tex)) {i.mats.push_back(&m); return;} // found existing material
+		for (auto &i : dest) { // check all existing materials for a matching texture, etc.
+			if (i.tex.is_compat_ignore_shadowed(m.tex)) {i.mats.push_back(&m); return;} // found existing material
+		}
+		dest.emplace_back(m); // add a new material entry
+		return;
 	}
-	dest.emplace_back(m); // add a new material entry
+	unsigned const slot_ix(max(0, min(512, m.tex.tid+1))); // map tid=-1 to 0 and FONT_TEXTURE_ID, etc. to 512
+	auto i(to_draw.begin());
+	if (slot_ix >= tid_to_first_mat_map.size()) {tid_to_first_mat_map.resize(slot_ix+1, -1);}
+	if (tid_to_first_mat_map[slot_ix] > 0) {i += tid_to_first_mat_map[slot_ix];} // start at first slot for this tid
+	assert(i <= to_draw.end());
+
+	for (; i < to_draw.end(); ++i) {
+		if (i->tex.is_compat_ignore_shadowed(m.tex)) {i->mats.push_back(&m); return;} // found existing material
+	}
+	if (slot_ix >= tid_to_first_mat_map.size()) {tid_to_first_mat_map.resize(slot_ix+1, -1);}
+	tid_to_first_mat_map[slot_ix] = min(size_t(tid_to_first_mat_map[slot_ix]), to_draw.size()); // Note: init value of -1 will wrap to max_int and return dest.size()
+	to_draw.emplace_back(m); // add a new material entry
 }
 void brg_batch_draw_t::draw_and_clear_batch(vector<mat_entry_t> &batch, tid_nm_pair_dstate_t &state) {
 	for (auto &i : batch) {
@@ -450,7 +465,7 @@ void building_materials_t::create_vbos(building_t const &building) { // up to ~1
 }
 void building_materials_t::draw(brg_batch_draw_t *bbd, shader_t &s, int shadow_only, int reflection_pass, bool exterior_geom) {
 	if (!valid) return; // pending generation of data, don't draw yet
-	//highres_timer_t timer("Draw Materials"); // 0.0168
+	//highres_timer_t timer("Draw Materials"); // 0.001
 	tid_nm_pair_dstate_t state(s);
 	for (rgeom_mat_t &m : *this) {m.draw(state, bbd, shadow_only, reflection_pass, exterior_geom);}
 }
