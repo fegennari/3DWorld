@@ -385,7 +385,7 @@ void brg_batch_draw_t::clear_ext_tile_bboxes() {
 }
 
 // shadow_only: 0=non-shadow pass, 1=shadow pass, 2=shadow pass with alpha mask texture
-void rgeom_mat_t::draw(tid_nm_pair_dstate_t &state, brg_batch_draw_t *bbd, int shadow_only, int reflection_pass, bool exterior_geom) {
+void rgeom_mat_t::draw(tid_nm_pair_dstate_t &state, brg_batch_draw_t *bbd, int shadow_only, int reflection_pass, bool check_clip_cube, bool exterior_geom) {
 	assert(!(exterior_geom && shadow_only)); // exterior geom shadows are not yet supported
 	if (shadow_only && !tex.shadowed)           return; // shadows not enabled for this material (picture, whiteboard, rug, etc.)
 	if (shadow_only && tex.emissive == 1.0)     return; // assume this is a light source and shouldn't produce shadows
@@ -395,7 +395,10 @@ void rgeom_mat_t::draw(tid_nm_pair_dstate_t &state, brg_batch_draw_t *bbd, int s
 	if (num_verts == 0) return; // Note: should only happen when reusing materials and all objects using this material were removed
 	// VFC test for sparse materials that have their bcubes calculated; mostly helps with backrooms;
 	// we don't add xlate to bcube in the shadow pass because it's the location of a light source that's already in building space, not camera space
-	if (!bcube.is_all_zeros() && !camera_pdu.cube_visible_likely(bcube + (shadow_only ? zero_vector : draw_bcube_xlate))) return;
+	if (!bcube.is_all_zeros()) {
+		if (check_clip_cube && !(shadow_only ? (smap_light_clip_cube - draw_bcube_xlate) : reflection_clip_cube).intersects(bcube)) return;
+		if (!camera_pdu.cube_visible_likely(bcube + (shadow_only ? zero_vector : draw_bcube_xlate))) return;
+	}
 	vao_setup(shadow_only); // create VAO if needed
 
 	// Note: the shadow pass doesn't normally bind textures and set uniforms, so we don't need to combine those calls into batches
@@ -426,7 +429,7 @@ void rgeom_mat_t::vao_setup(bool shadow_only) {
 void rgeom_mat_t::upload_draw_and_clear(tid_nm_pair_dstate_t &state) { // Note: called by draw_interactive_player_obj() and water_draw_t
 	if (empty()) return; // nothing to do; can this happen?
 	create_vbo_inner();
-	draw(state, nullptr, 0, 0, 0); // no brg_batch_draw_t, shadow=reflection=exterior=0
+	draw(state, nullptr, 0, 0, 0, 0); // no brg_batch_draw_t, shadow=reflection=exterior=0
 	clear();
 	indexed_vao_manager_with_shadow_t::post_render();
 }
@@ -463,11 +466,11 @@ void building_materials_t::create_vbos(building_t const &building) { // up to ~1
 	for (rgeom_mat_t &m : *this) {m.create_vbo(building);}
 	valid = 1;
 }
-void building_materials_t::draw(brg_batch_draw_t *bbd, shader_t &s, int shadow_only, int reflection_pass, bool exterior_geom) {
+void building_materials_t::draw(brg_batch_draw_t *bbd, shader_t &s, int shadow_only, int reflection_pass, bool check_clip_cube, bool exterior_geom) {
 	if (!valid) return; // pending generation of data, don't draw yet
 	//highres_timer_t timer("Draw Materials"); // 0.001
 	tid_nm_pair_dstate_t state(s);
-	for (rgeom_mat_t &m : *this) {m.draw(state, bbd, shadow_only, reflection_pass, exterior_geom);}
+	for (rgeom_mat_t &m : *this) {m.draw(state, bbd, shadow_only, reflection_pass, check_clip_cube, exterior_geom);}
 }
 void building_materials_t::upload_draw_and_clear(shader_t &s) {
 	tid_nm_pair_dstate_t state(s);
@@ -1610,7 +1613,7 @@ void building_t::gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, shad
 		if (!any_part_visible) {
 			// exterior geometry such as roof vents and chimney caps may still be visible even if no parts are visible, so draw them
 			if (is_house && !reflection_pass && has_room_geom()) {
-				interior->room_geom->mats_exterior.draw(bbd, s, 0, 0, 1);
+				interior->room_geom->mats_exterior.draw(bbd, s, 0, 0, 0, 1); // exterior_geom=1
 				indexed_vao_manager_with_shadow_t::post_render(); // required to avoid random crashes when VAO is created and VBOs are left bound
 			}
 			return;
@@ -1928,24 +1931,26 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	if (inc_small   && !mats_dynamic.valid) {create_dynamic_vbos(building, camera_bs, xlate, update_clocks);} // create dynamic materials if needed (no limit)
 	if (!mats_doors.valid) {create_door_vbos(building);} // create door materials if needed (no limit)
 	if (!shadow_only) {enable_blend();} // needed for rugs and book text
-	bool const cube_map_ref(reflection_pass && is_cube_map_reflection);
+	bool const cube_map_ref(reflection_pass && is_cube_map_reflection), is_rotated(building.is_rotated());
 	int const ref_pass(reflection_pass ? (cube_map_ref ? 2 : 1) : 0); // set ref_pass=1 for cube maps to disable some small objects
+	bool check_clip_cube(shadow_only && !is_rotated && !smap_light_clip_cube.is_all_zeros()); // check clip cube for shadow pass; not implemented for rotated buildings
+	check_clip_cube |= (reflection_pass && !reflection_clip_cube.is_all_zeros()); // handle reflection clip cube as well
 	assert(s.is_setup());
 	if (player_in_building_or_doorway && !shadow_only) {draw_and_update_lava(building, camera_bs, s);} // draw lava on the floor, first so that alpha blending with rugs works
-	if (!draw_ext_only) {mats_static .draw(bbd, s, shadow_only, ref_pass);}
-	if (draw_lights)    {mats_lights .draw(bbd, s, shadow_only, ref_pass);}
-	if (inc_small  )    {mats_dynamic.draw(bbd, s, shadow_only, ref_pass);}
-	if (draw_detail_objs && inc_small >= 3) {mats_detail.draw(bbd, s, shadow_only, ref_pass);} // now included in the shadow pass
+	if (!draw_ext_only) {mats_static .draw(bbd, s, shadow_only, ref_pass, check_clip_cube);}
+	if (draw_lights)    {mats_lights .draw(bbd, s, shadow_only, ref_pass, check_clip_cube);}
+	if (inc_small  )    {mats_dynamic.draw(bbd, s, shadow_only, ref_pass, check_clip_cube);}
+	if (draw_detail_objs && inc_small >= 3) {mats_detail.draw(bbd, s, shadow_only, ref_pass, check_clip_cube);} // now included in the shadow pass
 	
 	// draw exterior geom; shadows not supported; always use bbd;
 	// skip in reflection pass because that control flow doesn't work and is probably not needed (except for L-shaped house?)
 	if (!shadow_only && !reflection_pass && player_in_basement < 2) { // skip for player fully in the basement
 		// is there a way to incrementally blend/dither this geometry in? it's not drawn in the correct order for alpha blending to work
-		mats_exterior.draw(bbd_in, s, shadow_only, ref_pass, 1); // exterior_geom=1
-		if (draw_detail_objs) {mats_ext_detail.draw(bbd_in, s, shadow_only, ref_pass, 1);} // exterior_geom=1
+		mats_exterior.draw(bbd_in, s, shadow_only, ref_pass, check_clip_cube, 1); // exterior_geom=1
+		if (draw_detail_objs) {mats_ext_detail.draw(bbd_in, s, shadow_only, ref_pass, check_clip_cube, 1);} // exterior_geom=1
 	}
-	if (!draw_ext_only) {mats_doors.draw(bbd, s, shadow_only, ref_pass);}
-	if (inc_small     ) {mats_small.draw(bbd, s, shadow_only, ref_pass);}
+	if (!draw_ext_only) {mats_doors.draw(bbd, s, shadow_only, ref_pass, check_clip_cube);}
+	if (inc_small     ) {mats_small.draw(bbd, s, shadow_only, ref_pass, check_clip_cube);}
 
 	if (0 && player_in_building && !shadow_only && !reflection_pass && (display_mode & 0x20)) {
 		cout << "static: " << mats_static.count_all_verts() << endl;
@@ -1970,11 +1975,11 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		if (shadow_only) {
 			if (!amask_shader.is_setup()) {amask_shader.begin_simple_textured_shader(0.9);} // need to use texture with alpha test
 			else {amask_shader.make_current();} // min_alpha should be left at 0.9 from the previous call
-			mats_amask.draw(nullptr, amask_shader, 2, 0); // shadow pass with alpha mask; no brg_batch_draw
+			mats_amask.draw(nullptr, amask_shader, 2, 0, check_clip_cube); // shadow pass with alpha mask; no brg_batch_draw
 			s.make_current(); // switch back to the normal shader
 		}
 		else if (reflection_pass) {
-			mats_amask.draw(nullptr, s, 0, 1); // no brg_batch_draw
+			mats_amask.draw(nullptr, s, 0, 1, check_clip_cube); // no brg_batch_draw
 		}
 		else if (inc_small >= 2 && !mats_amask.empty()) {
 			// expensive: only enable for main draw pass and skip for buildings the player isn't in/near; further for industrial metal grates and restaurant plants
@@ -1997,12 +2002,12 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 					amask_shader.make_current();
 					amask_shader.add_uniform_float("min_alpha", min_alpha); // set min_alpha in case it changed
 				}
-				mats_amask.draw(nullptr, amask_shader, 0, 0); // no brg_batch_draw
+				mats_amask.draw(nullptr, amask_shader, 0, 0, check_clip_cube); // no brg_batch_draw
 				s.make_current(); // switch back to the normal shader
 			}
 		}
 	}
-	if (draw_int_detail_objs) {mats_text.draw(bbd, s, shadow_only, ref_pass);} // text must be drawn last; drawn as interior detail objects
+	if (draw_int_detail_objs) {mats_text.draw(bbd, s, shadow_only, ref_pass, check_clip_cube);} // text must be drawn last; drawn as interior detail objects
 	if (!shadow_only) {disable_blend();}
 	indexed_vao_manager_with_shadow_t::post_render();
 	
@@ -2017,11 +2022,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	water_sound_manager_t water_sound_manager(camera_bs);
 	rgeom_mat_t monitor_screens_mat, onscreen_text_mat=rgeom_mat_t(tid_nm_pair_t(FONT_TEXTURE_ID));
 	string onscreen_text;
-	bool const is_rotated(building.is_rotated()), is_player_building(&building == player_building), has_pri_hall(building.has_pri_hall());
-	bool check_clip_cube(shadow_only && !is_rotated && !smap_light_clip_cube.is_all_zeros()); // check clip cube for shadow pass; not implemented for rotated buildings
-	check_clip_cube |= (reflection_pass && !reflection_clip_cube.is_all_zeros()); // handle reflection clip cube as well
 	bool const skip_interior_objs(!player_in_building_or_doorway && !shadow_only), has_windows(building.has_windows());
-	bool const player_in_industrial(building.point_in_industrial(camera_bs));
+	bool const player_in_industrial(building.point_in_industrial(camera_bs)), is_player_building(&building == player_building), has_pri_hall(building.has_pri_hall());
 	bool const player_in_this_basement(player_in_building && player_in_basement >= 2), player_above_this_basement(player_in_building && player_in_basement == 0);
 	float const one_floor_above(camera_bs.z + floor_spacing);
 	float two_floors_below(camera_bs.z - 2.0*floor_spacing);
@@ -2403,8 +2405,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	}
 	if (!shadow_only) { // draw last; not shadow casters
 		// for shower glass, interior windows, etc.; always use bbd so that these are drawn after people
-		mats_alpha.draw(bbd_in, s, shadow_only, reflection_pass);
-		if (inc_small && !cube_map_ref) {mats_alpha_sm.draw(bbd_in, s, shadow_only, reflection_pass);} // bottles, fishtanks, etc.
+		mats_alpha.draw(bbd_in, s, shadow_only, reflection_pass, check_clip_cube);
+		if (inc_small && !cube_map_ref) {mats_alpha_sm.draw(bbd_in, s, shadow_only, reflection_pass, check_clip_cube);} // bottles, fishtanks, etc.
 		indexed_vao_manager_with_shadow_t::post_render();
 	}
 	draw_bcube_xlate = zero_vector;
