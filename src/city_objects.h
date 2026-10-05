@@ -1036,7 +1036,7 @@ public:
 	void add_city_ug_elevator_entrances(vect_ug_elev_info_t const &uges);
 	static bool subdivide_plot_for_residential(cube_t const &plot, vector<road_t> const &roads, float plot_subdiv_sz,
 		unsigned parent_plot_ix, unsigned city_ix, vect_city_zone_t &sub_plots, cube_t &inner_space);
-	void draw_detail_objects(draw_state_t &dstate, bool shadow_only, bool reflection_pass);
+	void draw_detail_objects(draw_state_t &dstate, int shadow_only, bool reflection_pass);
 	void draw_transparent_objects(draw_state_t &dstate);
 	void add_lights(vector3d const &xlate, cube_t &lights_bcube) const;
 	bool proc_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, vector3d *cnorm, bool for_player) const;

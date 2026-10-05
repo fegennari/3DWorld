@@ -1539,7 +1539,7 @@ public:
 	static void set_road_normal_map  () {select_texture_nmap(get_texture_by_name("normal_maps/dirt_normal.jpg", 1));}
 	static void reset_road_normal_map() {bind_default_flat_normal_map();} // no normal map
 
-	void draw(road_draw_state_t &dstate, bool shadow_only, bool is_connector_road, bool reflection_pass) {
+	void draw(road_draw_state_t &dstate, int shadow_only, bool is_connector_road, bool reflection_pass) {
 		if (reflection_pass && !bcube.contains_pt_xy(dstate.camera_bs)) return; // wrong city
 		city_obj_placer.draw_detail_objects(dstate, shadow_only, reflection_pass); // always drawn; does its own VFC and distance test
 		if (!empty()) {draw_roads_and_plots(dstate, shadow_only, is_connector_road, reflection_pass);}
@@ -3232,7 +3232,7 @@ public:
 		}
 		return global_rn.have_animations();
 	}
-	void draw(int trans_op_mask, vector3d const &xlate, bool use_dlights, bool shadow_only, bool reflection_pass) { // non-const because dstate/qbd is modified
+	void draw(int trans_op_mask, vector3d const &xlate, bool use_dlights, int shadow_only, bool reflection_pass) { // non-const because dstate/qbd is modified
 		if (road_networks.empty() && global_rn.empty()) return;
 
 		if (trans_op_mask & 1) { // opaque pass, should be first
@@ -3247,7 +3247,7 @@ public:
 			}
 			if (!reflection_pass && have_animations()) {enable_animations_for_shader(dstate.s);} // needed for birds
 			if (!shadow_only) {enable_dlight_bcubes |= city_lights_custom_bcube;}
-			if (!shadow_only) {drew_car_wash_water = 0;} // reset for this frame
+			if (!shadow_only) {drew_car_wash_water   = 0;} // reset for this frame
 			bool const enable_reflect(enable_cube_map_city(nullptr) && !shadow_only); // only needed for commercial cities, but we're drawing them all here
 			dstate.pre_draw(xlate, use_dlights, shadow_only, 1, 1, enable_reflect); // always_setup_shader=1, enable_occlusion=1
 			assert(dstate.s.is_setup());
@@ -3766,7 +3766,7 @@ public:
 		if (!shadow_only && !reflection_pass && draw_opaque) {setup_city_lights(xlate);} // setup lights on first (opaque) non-shadow pass
 		bool const use_dlights(enable_lights()), is_dlight_shadows(shadow_only == 2);
 		// roads don't cast shadows/aren't reflected in water, but stoplights cast shadows
-		if (reflection_pass == 0) {road_gen.draw(trans_op_mask, xlate, use_dlights, (shadow_only != 0), reflection_pass);}
+		if (reflection_pass == 0) {road_gen.draw(trans_op_mask, xlate, use_dlights, shadow_only, reflection_pass);}
 		if (player_in_basement >= 2) return; // cars/people/labels are not even drawn when visible from a mall skylight because they're slower and usually not in view
 		car_manager.draw(trans_op_mask, xlate, use_dlights, (shadow_only != 0), is_dlight_shadows);
 		if (draw_opaque) {ped_manager.draw(xlate, use_dlights, (shadow_only != 0), is_dlight_shadows);} // opaque

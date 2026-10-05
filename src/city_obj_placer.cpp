@@ -3142,10 +3142,12 @@ void city_obj_placer_t::next_frame() {
 	}
 }
 
-void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_only, bool reflection_pass) {
+void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, int shadow_only, bool reflection_pass) {
 	// small distance scale for player in mall since only cur city is visible through skylight; lower distance scale for reflections
 	float const dist_scale((player_in_basement >= 2) ? 0.1 : (reflection_pass ? 0.4 : 1.0));
 	if (!dstate.check_cube_visible(all_objs_bcube, dist_scale)) return; // check bcube
+	bool const is_dlight_shadows(shadow_only == 2);
+	//highres_timer_t timer(is_dlight_shadows ? "DL Shadows" : (shadow_only ? "SM Shadows" : "Normal Draw"));
 	dstate.pass_ix = 0;
 	draw_objects(walkways, walkway_groups, dstate, 0.25, shadow_only, 1);
 
@@ -3163,35 +3165,37 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	draw_objects(fhydrants, fhydrant_groups, dstate, 0.06, shadow_only, 1);
 	draw_objects(sstations, sstation_groups, dstate, 0.15, shadow_only, 1);
 	draw_objects(fountains, fountain_groups, dstate, 0.20, shadow_only, 1);
-	draw_objects(wfounts,   wfount_groups,   dstate, 0.06, shadow_only, 1);
 	draw_objects(statues,   statue_groups,   dstate, 0.12, shadow_only, 1);
 	draw_objects(mboxes,    mbox_groups,     dstate, 0.04, shadow_only, 1);
 	draw_objects(ppoles,    ppole_groups,    dstate, 0.20, shadow_only, 0);
 	draw_objects(signs,     sign_groups,     dstate, 0.25, shadow_only, 1, 1); // draw_qbd_as_quads=1
-	draw_objects(flags,     flag_groups,     dstate, 0.18, shadow_only, 1, 0, 0.75, 60.0, 0.5); // specular painted metal
 	draw_objects(tcones,    tcone_groups,    dstate, 0.08, shadow_only, 1);
 	draw_objects(sculptures,sculpt_groups,   dstate, 0.18, shadow_only, 1);
 	draw_objects(swings,    swing_groups,    dstate, 0.06, shadow_only, 1);
 	draw_objects(tramps,    tramp_groups,    dstate, 0.10, shadow_only, 1);
 	draw_objects(umbrellas, umbrella_groups, dstate, 0.18, shadow_only, 1);
-	draw_objects(bikes,     bike_groups,     dstate, 0.025,shadow_only, 1);
 	draw_objects(dumpsters, dumpster_groups, dstate, 0.15, shadow_only, 1);
-	draw_objects(plants,    plant_groups,    dstate, 0.04, shadow_only, 1);
-	draw_objects(flowers,   flower_groups,   dstate, 0.06, shadow_only, 1);
 	draw_objects(picnics,   picnic_groups,   dstate, 0.14, shadow_only, 1);
 	draw_objects(bb_hoops,  bb_hoop_groups,  dstate, 0.10, shadow_only, 1);
-	draw_objects(chairs,    chair_groups,    dstate, 0.10, shadow_only, 1);
 	draw_objects(elevators, wwe_groups,      dstate, 0.15, shadow_only, 0); // draw first pass opaque geometry
 	draw_objects(ug_elevs,  uge_groups,      dstate, 0.20, shadow_only, 0);
-	draw_objects(bballs,    bball_groups,    dstate, 0.12, shadow_only, 1);
-	draw_objects(pfloats,   pfloat_groups,   dstate, 0.15, shadow_only, 1);
 	draw_objects(bike_racks,brack_groups,    dstate, 0.08, shadow_only, 1);
 	draw_objects(gstations, gass_groups,     dstate, 0.25, shadow_only, 1);
 	draw_objects(bldgs,     bldg_groups,     dstate, 0.25, shadow_only, 1);
 	draw_objects(park_wfs,  park_wf_groups,  dstate, 0.08, shadow_only, 1);
-	draw_objects(ppaths,    ppath_groups,    dstate, 0.25, shadow_only, 0, 1); // draw_qbd_as_quads=1; paths only, not creeks; not always drawn in the shadow pass
 	draw_objects(ponds,     pond_groups,     dstate, 0.08, shadow_only, 1); // draw lily pads and cat tails; dist_scale=0.08, has_immediate_draw=1
 	
+	if (!is_dlight_shadows) { // objects that don't cast shadows for dynamic lights (streetlights and car headlights)
+		draw_objects(wfounts,   wfount_groups,   dstate, 0.06, shadow_only, 1);
+		draw_objects(flags,     flag_groups,     dstate, 0.18, shadow_only, 1, 0, 0.75, 60.0, 0.5); // specular painted metal
+		draw_objects(bikes,     bike_groups,     dstate, 0.025,shadow_only, 1);
+		draw_objects(plants,    plant_groups,    dstate, 0.04, shadow_only, 1);
+		draw_objects(flowers,   flower_groups,   dstate, 0.06, shadow_only, 1);
+		draw_objects(chairs,    chair_groups,    dstate, 0.10, shadow_only, 1);
+		draw_objects(bballs,    bball_groups,    dstate, 0.12, shadow_only, 1);
+		draw_objects(pfloats,   pfloat_groups,   dstate, 0.15, shadow_only, 1);
+		draw_objects(ppaths,    ppath_groups,    dstate, 0.25, shadow_only, 0, 1); // draw_qbd_as_quads=1; paths only, not creeks; not always drawn in the shadow pass
+	}
 	if (!shadow_only) { // non shadow casting objects
 		for (park_heightmap_t &h : park_hmaps) {h.draw(dstate, 1, 0);} // terrain only
 		draw_objects(hcaps,    hcap_groups,    dstate, 0.12, shadow_only, 0);
