@@ -4390,7 +4390,7 @@ public:
 						bool const camera_not_near_building(!camera_near_building && !ext_basement_conn_visible);
 						if (!reflection_pass) {b.register_open_ext_door_state(!camera_not_near_building, camera_bs, door_open_dist);} // for door handle draw and doorbell sound
 						// draw interior detail objects if player is in the building (inc ext basement), even if far from the building center
-						bool const lower_detail(b.is_house && b.is_in_city && (display_mode & 0x10));
+						bool const lower_detail(b.is_house && b.is_in_city);
 						if (lower_detail) {ddist_scale *= 0.5;} // ~0.7x
 						unsigned inc_small(bdist_sq < ddist_scale*rgeom_sm_draw_dist_sq || mall_elevator_visible);
 						if (ddist_scale && bdist_sq > ddist_scale*rgeom_draw_dist_sq) {inc_small = 4;} // only exterior detail objects
