@@ -275,7 +275,7 @@ void rgeom_mat_t::create_vbo_inner() {
 	bind_vbo(0);
 	check_gl_error(475);
 
-	if (num_verts >= 32) {dir_mask = 63;} // too many verts, assume all orients
+	if (num_verts >= 64) {dir_mask = 63;} // too many verts, assume all orients
 	else {
 		dir_mask = 0;
 		for (unsigned n = 0; n < 2; ++n) {
@@ -286,13 +286,9 @@ void rgeom_mat_t::create_vbo_inner() {
 			}
 		} // for n
 	}
-	// calculate bcube; only enable for small blocks to reduce runtime overhead, plus they're more likely to be occluded
-	if (num_verts >= 20000) {bcube.set_to_zeros();}
-	else {
-		bcube.set_from_point(itri_verts.empty() ? quad_verts.front().v : itri_verts.front().v);
-		for (auto const &v : itri_verts) {bcube.union_with_pt(v.v);}
-		for (auto const &v : quad_verts) {bcube.union_with_pt(v.v);}
-	}
+	bcube.set_from_point(itri_verts.empty() ? quad_verts.front().v : itri_verts.front().v);
+	for (auto const &v : itri_verts) {bcube.union_with_pt(v.v);}
+	for (auto const &v : quad_verts) {bcube.union_with_pt(v.v);} // we can almost iterate over every other quad vert, but it's not 100% correct
 }
 
 bool brg_batch_draw_t::has_ext_geom() const {
@@ -395,10 +391,9 @@ void rgeom_mat_t::draw(tid_nm_pair_dstate_t &state, brg_batch_draw_t *bbd, int s
 	if (num_verts == 0) return; // Note: should only happen when reusing materials and all objects using this material were removed
 	// VFC test for sparse materials that have their bcubes calculated; mostly helps with backrooms;
 	// we don't add xlate to bcube in the shadow pass because it's the location of a light source that's already in building space, not camera space
-	if (!bcube.is_all_zeros()) {
-		if (check_clip_cube && !(shadow_only ? (smap_light_clip_cube - draw_bcube_xlate) : reflection_clip_cube).intersects(bcube)) return;
-		if (!camera_pdu.cube_visible_likely(bcube + (shadow_only ? zero_vector : draw_bcube_xlate))) return;
-	}
+	assert(!bcube.is_all_zeros());
+	if (check_clip_cube && !(shadow_only ? (smap_light_clip_cube - draw_bcube_xlate) : reflection_clip_cube).intersects(bcube)) return;
+	if (!camera_pdu.cube_visible_likely(bcube + (shadow_only ? zero_vector : draw_bcube_xlate))) return;
 	vao_setup(shadow_only); // create VAO if needed
 
 	// Note: the shadow pass doesn't normally bind textures and set uniforms, so we don't need to combine those calls into batches
