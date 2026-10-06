@@ -2,6 +2,8 @@
 // by Frank Gennari
 // 1/5/20
 
+class shader_t;
+
 struct vert_norm { // size = 24
 	point v;
 	vector3d n;
@@ -253,6 +255,7 @@ struct vert_norm_comp_tc_color : public vert_norm_comp_tc, public color_wrapper 
 		v = v_; set_norm(n_); t[0] = ts; t[1] = tt; copy_color(cw);
 	}
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
+	static void set_vertex_array_attribs(shader_t const &s, unsigned vao, unsigned binding_index=0);
 };
 
 

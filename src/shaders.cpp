@@ -968,17 +968,39 @@ void shader_t::set_vertex_ptr(unsigned stride, void const *const ptr) const {
 	assert(vnct_locs[0] >= 0); // vertex must always be available
 	glVertexAttribPointer(vnct_locs[0], 3, GL_FLOAT, GL_FALSE, stride, ptr);
 }
-
 void shader_t::set_normal_ptr(unsigned stride, void const *const ptr, bool compressed) const {
 	if (vnct_locs[1] >= 0) {glVertexAttribPointer(vnct_locs[1], 3, (compressed ? GL_BYTE          : GL_FLOAT), compressed, stride, ptr);}
 }
-
 void shader_t::set_color4_ptr(unsigned stride, void const *const ptr, bool compressed) const {
 	if (vnct_locs[2] >= 0) {glVertexAttribPointer(vnct_locs[2], 4, (compressed ? GL_UNSIGNED_BYTE : GL_FLOAT), compressed, stride, ptr);}
 }
-
 void shader_t::set_tcoord_ptr(unsigned stride, void const *const ptr, bool compressed) const {
 	if (vnct_locs[3] >= 0) {glVertexAttribPointer(vnct_locs[3], 2, (compressed ? GL_SHORT         : GL_FLOAT), compressed, stride, ptr);}
+}
+
+void shader_t::set_vertex_attrib(unsigned vao, unsigned offset, unsigned binding_index) const {
+	assert(vnct_locs[0] >= 0); // vertex must always be available
+	glEnableVertexArrayAttrib (vao, vnct_locs[0]);
+	glVertexArrayAttribFormat (vao, vnct_locs[0], 3, GL_FLOAT, GL_FALSE, offset);
+	glVertexArrayAttribBinding(vao, vnct_locs[0], binding_index);
+}
+void shader_t::set_normal_attrib(unsigned vao, unsigned offset, bool compressed, unsigned binding_index) const {
+	if (vnct_locs[1] < 0) return;
+	glEnableVertexArrayAttrib (vao, vnct_locs[1]);
+	glVertexArrayAttribFormat (vao, vnct_locs[1], 3, (compressed ? GL_BYTE          : GL_FLOAT), compressed, offset);
+	glVertexArrayAttribBinding(vao, vnct_locs[1], 0);
+}
+void shader_t::set_color4_attrib(unsigned vao, unsigned offset, bool compressed, unsigned binding_index) const {
+	if (vnct_locs[2] < 0) return;
+	glEnableVertexArrayAttrib (vao, vnct_locs[2]);
+	glVertexArrayAttribFormat (vao, vnct_locs[2], 4, (compressed ? GL_UNSIGNED_BYTE : GL_FLOAT), compressed, offset);
+	glVertexArrayAttribBinding(vao, vnct_locs[2], 0);
+}
+void shader_t::set_tcoord_attrib(unsigned vao, unsigned offset, bool compressed, unsigned binding_index) const {
+	if (vnct_locs[3] < 0) return;
+	glEnableVertexArrayAttrib (vao, vnct_locs[3]);
+	glVertexArrayAttribFormat (vao, vnct_locs[3], 2, (compressed ? GL_SHORT         : GL_FLOAT), compressed, offset);
+	glVertexArrayAttribBinding(vao, vnct_locs[3], 0);
 }
 
 void shader_t::set_cur_color(colorRGBA const &color) const {

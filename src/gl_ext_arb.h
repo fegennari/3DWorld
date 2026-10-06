@@ -152,11 +152,8 @@ struct vao_wrap_t {
 
 	bool is_valid() const {return (vao != 0);}
 	void clear() {delete_and_zero_vao(vao);}
-
-	void ensure_vao_bound() {
-		if (!vao) {vao = create_vao();}
-		enable_vao();
-	}
+	void ensure_vao_created() {if (!vao) {vao = create_vao();}}
+	void ensure_vao_bound() {ensure_vao_created(); enable_vao();}
 	void enable_vao() const {check_bind_vao(vao);}
 	static void disable_vao() {bind_vao(0);}
 

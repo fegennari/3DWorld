@@ -146,6 +146,13 @@ void vert_norm_comp_tc_color::set_vbo_arrays(bool set_state, void const *vbo_ptr
 	cur_shader->set_tcoord_ptr(stride, ptr_add(vbo_ptr_offset, sizeof(vert_norm_comp)), 0);
 	cur_shader->set_color4_ptr(stride, ptr_add(vbo_ptr_offset, sizeof(vert_norm_comp_tc)), 1);
 }
+void vert_norm_comp_tc_color::set_vertex_array_attribs(shader_t const &s, unsigned vao, unsigned binding_index) {
+	assert(s.is_setup());
+	s.set_vertex_attrib(vao, 0, binding_index);
+	s.set_normal_attrib(vao, sizeof(point),             1, binding_index);
+	s.set_tcoord_attrib(vao, sizeof(vert_norm_comp),    0, binding_index);
+	s.set_color4_attrib(vao, sizeof(vert_norm_comp_tc), 1, binding_index);
+}
 
 void vert_norm_comp_tc_comp_color::set_vbo_arrays(bool set_state, void const *vbo_ptr_offset) {
 	set_array_client_state(1, 1, 1, 1, set_state);

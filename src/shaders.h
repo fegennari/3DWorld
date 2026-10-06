@@ -122,6 +122,10 @@ public:
 	void set_normal_ptr(unsigned stride, void const *const ptr, bool compressed) const;
 	void set_color4_ptr(unsigned stride, void const *const ptr, bool compressed) const;
 	void set_tcoord_ptr(unsigned stride, void const *const ptr, bool compressed) const;
+	void set_vertex_attrib(unsigned vao, unsigned offset, unsigned binding_index=0) const;
+	void set_normal_attrib(unsigned vao, unsigned offset, bool compressed, unsigned binding_index=0) const;
+	void set_color4_attrib(unsigned vao, unsigned offset, bool compressed, unsigned binding_index=0) const;
+	void set_tcoord_attrib(unsigned vao, unsigned offset, bool compressed, unsigned binding_index=0) const;
 	void set_cur_color(colorRGBA const &color) const;
 	void set_cur_normal(vector3d const &normal) const;
 
