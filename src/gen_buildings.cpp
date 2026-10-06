@@ -5726,7 +5726,7 @@ public:
 
 	void get_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state, bool cur_building_only=0) const {
 		state.init(pdu.pos, get_camera_coord_space_xlate());
-		if (cur_building_only) return; // no grid/buildings iteration
+		if (cur_building_only || grid.empty()) return; // no grid/buildings iteration
 		cube_t xy_range(pdu.pos);
 		xy_range.expand_by_xy(pdu.far_);
 		unsigned ixr[2][2];
