@@ -1822,5 +1822,8 @@
     <Text Include="text_data\store_names.txt">
       <Filter>Input Files\text_data</Filter>
     </Text>
+    <Text Include="scene_config\building_materials_datacenter.txt">
+      <Filter>Input Files\config</Filter>
+    </Text>
   </ItemGroup>
 </Project>

@@ -19,6 +19,7 @@ buildings place_radius 80.0 # for secondary buildings
 #buildings flatten_mesh 0 # doesn't work well with rotations in TT mode?
 buildings max_rot_angle 0.0 # terrain flatten doesn't work well for rotated buildings because it uses their unrotated bbox
 include building_materials.txt
+#include building_materials_datacenter.txt
 buildings tt_only 1
 buildings show_player_model 0 # works, but we can see down the neck and the shoulders are clipped off
 

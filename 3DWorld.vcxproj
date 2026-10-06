@@ -1393,6 +1393,7 @@
     <Text Include="mapx\plant.txt" />
     <Text Include="scene_config\buildings.txt" />
     <Text Include="scene_config\building_materials.txt" />
+    <Text Include="scene_config\building_materials_datacenter.txt" />
     <Text Include="scene_config\building_params.txt" />
     <Text Include="scene_config\config.txt" />
     <Text Include="scene_config\config_berkeley.txt" />

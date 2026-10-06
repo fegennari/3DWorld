@@ -255,7 +255,10 @@ buildings apartment_prob 0.0
 # concrete and metal buildings - slightly larger
 buildings house_prob 0.0 # no more houses
 buildings no_city 1 # not used in cities
+buildings add_windows 1 # brick/block buildings need windows
+buildings add_window_lights 1
 buildings window_xscale 5.0
+buildings window_yscale 10.5
 buildings min_levels 1
 buildings max_levels 5
 buildings split_prob 0.60 # 60%

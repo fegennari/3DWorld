@@ -1,0 +1,189 @@
+# shapes
+buildings min_sides 4 # cubes
+buildings max_sides 4
+buildings round_prob 0.0
+buildings dome_roof  0 # doesn't look very good on office buildings
+buildings onion_roof 0 # doesn't look very good on office buildings
+
+# windows
+buildings window_width  0.44
+buildings window_height 0.55
+buildings window_xspace 0.56
+buildings window_yspace 0.45
+buildings window_color 1.0 1.0 1.0 1.0 # white
+buildings max_floorplan_window_xscale 7.5
+buildings max_floorplan_window_yscale 11.0
+
+# consistency probabilities of houses for cities and blocks
+buildings house_same_mat_prob       0.50
+buildings house_same_size_prob      0.50
+buildings house_same_geom_prob      0.25
+buildings house_same_per_city_prob  0.00
+buildings office_same_mat_prob      0.25
+buildings office_same_size_prob     0.50
+buildings office_same_geom_prob     0.00
+buildings office_same_per_city_prob 0.00
+
+# interiors
+buildings wall_color  1.0 1.0 1.0 1.0 # white
+buildings ceil_color  1.0 1.0 1.0 1.0 # white
+buildings floor_color 1.0 1.0 1.0 1.0 # white - using carpet textures
+buildings wall_tscale  32.0
+buildings ceil_tscale  16.0
+buildings floor_tscale 16.0
+buildings wall_tid stucco.jpg
+buildings wall_nm_tid normal_maps/stucco_NRM.jpg
+buildings floor_tid plaster.png # default
+buildings floor_nm_tid none
+buildings ceil_tid particleb.png
+buildings ceil_nm_tid normal_maps/particleb_NRM.jpg
+buildings wall_specular  0.15 60.0
+buildings ceil_specular  0.20 40.0
+buildings floor_specular 0.0 0.0 # carpet, not specular
+
+# interior detail rug textures
+buildings add_rug_texture carpet/rug1.jpg
+buildings add_rug_texture carpet/rug2.jpg
+buildings add_rug_texture carpet/rug3.png
+buildings add_rug_texture carpet/rug4.png
+buildings add_rug_texture carpet/rug5.png
+
+# interior detail picture textures
+buildings add_picture_texture skybox/water_scene/back.jpg
+# 3DWorld screenshots - not committed to git repo, but should be nonfatal if not found
+buildings add_picture_texture pictures/forest.jpg
+buildings add_picture_texture pictures/gas_giant.jpg
+buildings add_picture_texture pictures/mirror_balls.jpg
+buildings add_picture_texture pictures/mountain.jpg
+buildings add_picture_texture pictures/museum.jpg
+buildings add_picture_texture pictures/nebula.jpg
+buildings add_picture_texture pictures/planet.jpg
+buildings add_picture_texture pictures/san_miguel.jpg
+buildings add_picture_texture pictures/spheres.jpg
+buildings add_picture_texture pictures/sponza.jpg
+
+# flag textures for placing on buildings
+buildings add_flag_texture flags/american_flag_indexed.png
+buildings add_flag_texture flags/centerstar_flag_indexed.png
+buildings add_flag_texture flags/city_flag_indexed.png
+buildings add_flag_texture flags/eye_flag_indexed.png
+buildings add_flag_texture flags/flow_flag_indexed.png
+buildings add_flag_texture flags/flowstar_flag_indexed.png
+buildings add_flag_texture flags/lotus_flag_indexed.png
+buildings add_flag_texture flags/military_flag_indexed.png
+buildings add_flag_texture flags/social_flag_indexed.png
+buildings add_flag_texture flags/swoosh_flag_indexed.png
+
+# computer monitor desktop textures
+buildings add_desktop_texture pictures/fg_desktop.png
+buildings add_desktop_texture pictures/Ubuntu.jpg
+buildings add_desktop_texture pictures/ascii_art.png
+buildings add_desktop_texture pictures/macos_mojave.jpg
+buildings add_desktop_texture pictures/windows_vm.png
+buildings add_desktop_texture pictures/windows_messy.jpg
+buildings add_desktop_texture pictures/macos_sierra.jpg
+
+# interior detail sheet textures
+# Note: fabrics directory is not part of the git repo
+buildings add_sheet_texture white.png
+buildings add_sheet_texture fabrics/blanket1.tif
+buildings add_sheet_texture fabrics/blanket2.tif # assigned to multiple colors
+buildings add_sheet_texture fabrics/medieval.tif
+buildings add_sheet_texture fabrics/flannel.tif
+buildings add_sheet_texture fabrics/flowers.jpg # assigned to multiple colors, not tileable
+
+# sheet of paper textures
+# Note: papers directory is not part of the git repo
+buildings add_paper_texture white.png # blank white paper
+buildings add_paper_texture papers/notebook_paper_plain.jpeg # blank lined paper
+buildings add_paper_texture papers/source_code.jpeg
+buildings add_paper_texture papers/credit_report.jpeg
+buildings add_paper_texture papers/estate_planning.jpeg
+buildings add_paper_texture papers/install_log.jpeg
+buildings add_paper_texture papers/notebook_paper_plain.jpeg # add lined paper again to make it more common (will be uniqued)
+buildings add_paper_texture papers/calendar.jpeg
+buildings add_paper_texture papers/field_day.jpeg
+buildings add_paper_texture papers/report_card.jpeg
+buildings add_paper_texture papers/welcome_letter.jpeg
+buildings add_paper_texture papers/handwritten.jpeg
+
+buildings add_metal_texture metals/60_scratch_metal.jpg
+buildings add_metal_texture metals/217_industrial_aluminium_metal_plate.jpg
+buildings add_metal_texture metals/61_scratch_eroded_metal.jpg
+buildings add_metal_texture metals/225_industrial_aluminium_metal_plate.jpg
+buildings add_metal_texture metals/67_rusty_dirty_metal.jpg
+buildings add_metal_texture metals/65_Painted_dirty_metal.jpg
+buildings add_metal_texture metals/249_iron_metal_plate.jpg
+buildings add_metal_texture metals/214_industrial_aluminium_metal_plate.jpg
+buildings add_metal_texture metals/203_industrial_iron_metal_plate.jpg
+buildings add_metal_texture metals/metal_plate_diff.jpg
+buildings set_nmap_texture  metals/metal_plate_normal.jpg # for previous metal texture
+
+buildings add_food_box_texture food_boxes/cracker_box.png "box of crackers"
+buildings add_food_box_texture food_boxes/pianos_cereal.png "Pianos Cereal"
+buildings add_food_box_texture food_boxes/froot_loop_bars.jpg "Froot Loop Bars"
+
+# house ceilings and floors
+buildings house_ceil_color  1.0 1.0 1.0 1.0 # white
+buildings house_floor_color 1.0 1.0 1.0 1.0 # white
+buildings house_ceil_tscale  32.0
+buildings house_floor_tscale 32.0
+buildings house_floor_tid fence.jpg
+buildings house_floor_nm_tid normal_maps/fence_NRM.jpg
+buildings basement_floor_tscale 16.0
+buildings basement_floor_tid roads/concrete.jpg
+buildings house_ceil_tid stucco.jpg
+buildings house_ceil_nm_tid normal_maps/stucco_NRM.jpg
+buildings house_ceil_specular  0.15 60.0
+buildings house_floor_specular 0.10 50.0
+
+
+# concrete and metal buildings
+buildings house_prob 0.0 # no houses
+buildings no_city 1 # not used in cities
+buildings add_windows 1 # brick/block buildings need windows
+buildings add_window_lights 1
+buildings window_xscale 5.0
+buildings window_yscale 10.5
+buildings min_levels 1
+buildings max_levels 1
+buildings split_prob 0.0
+buildings size_range 0.8 1.2  0.8 1.2  0.5 0.6
+
+buildings side_tscale 16.0
+buildings side_tid cblock.png
+buildings side_nm_tid normal_maps/cblock_NRM.jpg
+buildings roof_tscale 2.0
+buildings roof_tid mossy_rock.jpg
+buildings roof_nm_tid -1
+buildings side_color_min 0.55 0.40 0.30 1.0
+buildings side_color_max 0.60 0.45 0.35 1.0
+buildings floor_tid carpet/office_carpet1.jpg # nice, even has a normal map, but low contrast with walls
+buildings floor_nm_tid carpet/office_carpet1_nrm.jpg
+buildings add_material
+
+buildings window_color 0.02 0.02 0.02 1.0 # near black for higher contrast
+buildings side_color 0.7 0.7 0.7 1.0
+buildings add_material
+buildings window_color 0.9 0.9 0.9 1.0 # near white for higher contrast
+buildings side_color 0.4 0.4 0.4 1.0
+buildings add_material
+
+buildings side_tscale 16.0
+buildings side_tid cblock2.jpg
+buildings side_nm_tid normal_maps/cblock2_NRM.jpg
+buildings window_color 0.7 0.7 0.7 1.0 # light gray for higher contrast
+buildings roof_tscale 6.0
+buildings roof_tid snow2.jpg
+buildings roof_nm_tid -1
+buildings floor_tid carpet/office_carpet3.jpg # pretty good
+buildings floor_nm_tid none
+
+buildings side_color 0.55 0.55 0.55 1.0
+buildings add_material
+buildings side_color 0.7 0.7 0.7 1.0
+buildings add_material
+buildings side_color 0.4 0.4 0.4 1.0
+buildings add_material
+buildings window_color 0.5 0.5 0.5 1.0 # gray
+
