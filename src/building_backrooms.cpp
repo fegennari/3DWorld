@@ -640,12 +640,15 @@ unsigned building_t::setup_multi_floor_room(extb_room_t &room, door_t const &doo
 		float const room_height(room.dz()), elevator_width(1.5*door_width), front_spacing(elevator_width); // elevator depth == elevator_width
 		cube_t elevator_area(room);
 		elevator_area.expand_by_xy(-max(front_spacing, wall_spacing)); // shrink to keep away from walls and avoid exit doors
-		gen_xy_pos_for_cube_obj(elevator_bc, elevator_area, vector3d(0.5*elevator_width, 0.5*elevator_width, room_height), room_height, elevator_rgen, 1); // place_at_z1=1
-		min_eq(elevator_bc.z2(), ground_floor_z1); // clip to ground floor to prevent problems with trim
-		assert(interior->ext_basement_hallway_room_id >= 0);
-		bool const edim(elevator_rgen.rand_bool()), edir(elevator_rgen.rand_bool());
-		interior->elevators.emplace_back(elevator_bc, interior->ext_basement_hallway_room_id, edim, edir, 0, 1, 0, 1); // at_edge=0, interior_room=1, in_mall=0, in_br=1
-		avoid.push_back(interior->elevators.back().get_bcube_padded(front_spacing)); // avoid overlapping/blocking stairs
+
+		if (elevator_area.get_size_xy().get_min_val() > 2.0*elevator_width) { // add elevator if there's enough space
+			gen_xy_pos_for_cube_obj(elevator_bc, elevator_area, vector3d(0.5*elevator_width, 0.5*elevator_width, room_height), room_height, elevator_rgen, 1); // place_at_z1=1
+			min_eq(elevator_bc.z2(), ground_floor_z1); // clip to ground floor to prevent problems with trim
+			assert(interior->ext_basement_hallway_room_id >= 0);
+			bool const edim(elevator_rgen.rand_bool()), edir(elevator_rgen.rand_bool());
+			interior->elevators.emplace_back(elevator_bc, interior->ext_basement_hallway_room_id, edim, edir, 0, 1, 0, 1); // at_edge=0, interior_room=1, in_mall=0, in_br=1
+			avoid.push_back(interior->elevators.back().get_bcube_padded(front_spacing)); // avoid overlapping/blocking stairs
+		}
 	}
 	// add stairs, floors, and ceilings
 	cube_t door_avoid(door.get_clearance_bcube());
