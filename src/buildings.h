@@ -418,6 +418,7 @@ public:
 	void pre_draw(int shadow_only) const;
 	void draw_geom() const;
 	void draw_inner(int shadow_only) const;
+	void bind_buffers_and_draw(unsigned layout_vao) const;
 	void upload_draw_and_clear(tid_nm_pair_dstate_t &state);
 }; // rgeom_mat_t
 
@@ -458,6 +459,7 @@ class brg_batch_draw_t {
 	vector<mat_entry_t> to_draw; // interior objects
 	vector<tile_block_t> ext_by_tile; // exterior objects, stored by tile for shadow mapping
 	vector<int> tid_to_first_mat_map; // -1 is unset
+	vao_wrap_t layout_vao;
 	unsigned cur_tile_slot=0;
 
 	void draw_and_clear_batch(vector<mat_entry_t> &batch, tid_nm_pair_dstate_t &state);

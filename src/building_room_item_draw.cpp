@@ -347,13 +347,26 @@ void brg_batch_draw_t::add_material(rgeom_mat_t const &m, bool is_ext_tile) {
 	to_draw.emplace_back(m); // add a new material entry
 }
 void brg_batch_draw_t::draw_and_clear_batch(vector<mat_entry_t> &batch, tid_nm_pair_dstate_t &state) {
+	//highres_timer_t timer("draw_and_clear_batch"); // 0.038ms start, 0.07 city entrance ground, 0.125 above city corner => 0.031, 0.044, 0.063
+	bool const use_layout_vao(1); // seems to be faster
+
+	if (use_layout_vao) {
+		bool const is_new_vao(!layout_vao.vao);
+		layout_vao.ensure_vao_bound();
+		if (is_new_vao) {rgeom_storage_t::vertex_t::set_vertex_array_attribs(state.s, layout_vao.vao, 0);} // binding_index=0
+	}
 	for (auto &i : batch) {
 		if (i.mats.empty()) continue; // empty slot
 		i.tex.set_gl(state);
-		for (auto const &m : i.mats) {assert(m); m->draw_inner(0);} // shadow_only=0
+
+		for (auto const &m : i.mats) {
+			assert(m);
+			if (use_layout_vao) {m->bind_buffers_and_draw(layout_vao.vao);}
+			else {m->draw_inner(0);} // shadow_only=0
+		}
 		i.tex.unset_gl(state);
 		i.mats.clear(); // clear mats but not batch
-	}
+	} // for i
 }
 void brg_batch_draw_t::draw_and_clear(shader_t &s) {
 	if (to_draw.empty()) return;
@@ -416,6 +429,11 @@ void rgeom_mat_t::draw_geom() const {
 }
 void rgeom_mat_t::draw_inner(int shadow_only) const {
 	pre_draw(shadow_only);
+	draw_geom();
+}
+void rgeom_mat_t::bind_buffers_and_draw(unsigned layout_vao) const {
+	glBindVertexBuffer(0, vao_mgr.vbo, 0, sizeof(rgeom_storage_t::vertex_t)); // binding_index=0, offset=0
+	glVertexArrayElementBuffer(layout_vao, vao_mgr.ivbo);
 	draw_geom();
 }
 void rgeom_mat_t::vao_setup(bool shadow_only) {
