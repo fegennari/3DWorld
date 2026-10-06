@@ -678,11 +678,11 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 		for (unsigned i = bat_start; i != bat_end; ++i) {
 			room_object_t const &bat(objs[i]);
 			assert(bat.type == TYPE_KITCH_APP);
+			batteries_bcube.assign_or_union_with_cube(bat);
 			float const bat_lo(bat.d[!dim][0]), bat_hi(bat.d[!dim][1]);
 			set_wall_width(v_conduit, (wall_pos                  - 0.2*dsign*bat.get_depth()), v_conduit_radius,  dim); // further toward the back wall
 			set_wall_width(v_conduit, (bat.d[!dim][conduit_side] - 0.1*csign*bat.get_width()), v_conduit_radius, !dim); // off to one side
 			objs.emplace_back(v_conduit, TYPE_PIPE, room_id, 0, 1, conduit_flags, tot_light_amt, SHAPE_CYLIN, GRAY_BLACK); // vertical, with shadows
-			batteries_bcube.assign_or_union_with_cube(bat);
 
 			// connect adjacent batteries with conduits if possible
 			if (hc_start != 0.0 && bat_lo - hc_start < doorway_width) { // not blocked by a door
