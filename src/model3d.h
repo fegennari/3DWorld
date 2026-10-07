@@ -293,9 +293,9 @@ public:
 	void make_private_copy() {vbo = ivbo = 0;} // Note: to be called *only* after a deep copy
 	void calc_bounding_volumes();
 	void ensure_bounding_volumes() {if (bsphere.radius == 0.0) {calc_bounding_volumes();}}
-	cube_t get_bcube () const {return get_polygon_bbox(*this);}
-	point get_center () const {return bsphere.pos;}
-	float get_bradius() const {return bsphere.radius;}
+	cube_t get_bcube  () const {return get_polygon_bbox(*this);}
+	point get_center  () const {return bsphere.pos;}
+	float get_bradius () const {return bsphere.radius;}
 	size_t get_gpu_mem() const {return (vbo_valid() ? size()*sizeof(T) : 0);}
 	void optimize(unsigned npts) {remove_excess_cap();}
 	void remove_excess_cap() {if (20*size() < 19*this->capacity()) {this->shrink_to_fit();}}
@@ -307,7 +307,7 @@ public:
 template<typename T> class indexed_vntc_vect_t : public vntc_vect_t<T> {
 public:
 	typedef unsigned index_type_t;
-	vector<unsigned> indices; // needs to be public for merging operation
+	vector<index_type_t> indices; // needs to be public for merging operation
 	mesh_bone_data_t bone_data;
 	bool has_bones() const {return !bone_data.vertex_to_bones.empty();}
 private:
@@ -320,8 +320,6 @@ private:
 		geom_block_t() {}
 		geom_block_t(unsigned s, unsigned n, cube_t const &bc) : start_ix(s), num(n), bcube(bc) {}
 	};
-	vector<geom_block_t> blocks;
-
 	struct lod_block_t {
 		unsigned start_ix=0, num=0;
 		float tri_area=0.0;
@@ -329,7 +327,8 @@ private:
 		lod_block_t(unsigned s, unsigned n, float a) : start_ix(s), num(n), tri_area(a) {}
 		unsigned get_end_ix() const {return (start_ix + num);}
 	};
-	vector<lod_block_t> lod_blocks;
+	vector<geom_block_t> blocks;
+	vector<lod_block_t > lod_blocks;
 	unsigned get_block_ix(float area) const;
 
 public:
@@ -486,7 +485,6 @@ struct material_params_t { // Warning: changing this struct will invalidate the 
 	bool skip=0, is_used=0, no_blend=0, unused_field=0; // unused bool to pad the struct
 }; // must be padded
 
-
 struct material_t : public material_params_t {
 
 	bool might_have_alpha_comp=0, tcs_checked=0, no_lod_cull=0;
@@ -531,7 +529,7 @@ struct material_t : public material_params_t {
 
 
 struct voxel_params_t; // forward declaration
-class voxel_manager; // forward declaration
+class voxel_manager;   // forward declaration
 
 class model3d {
 	// read/write options

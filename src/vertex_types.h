@@ -20,7 +20,6 @@ struct vert_norm { // size = 24
 	static void unset_attrs() {}
 };
 
-
 struct norm_comp { // size = 4
 	char n[3];
 	char pad=0; // unused padding
@@ -37,7 +36,6 @@ struct norm_comp { // size = 4
 	void invert_normal() {UNROLL_3X(invert_normal_dim(i_);)}
 };
 
-
 struct vert_wrap_t { // size = 12; so we can put the vertex first
 	point v;
 	vert_wrap_t() {}
@@ -45,7 +43,6 @@ struct vert_wrap_t { // size = 12; so we can put the vertex first
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
 	static void unset_attrs() {}
 };
-
 
 struct vert_tc_t : public vert_wrap_t { // size = 20
 	float t[2]={};
@@ -58,7 +55,6 @@ struct vert_tc_t : public vert_wrap_t { // size = 20
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
 };
 
-
 struct vert_norm_comp : public vert_wrap_t, public norm_comp { // size = 16
 	typedef norm_comp normal_type;
 	vert_norm_comp() {}
@@ -69,7 +65,6 @@ struct vert_norm_comp : public vert_wrap_t, public norm_comp { // size = 16
 	void swap_dims(unsigned d1, unsigned d2) {assert(d1 < 3 && d2 < 3); swap(v[d1], v[d2]); swap(n[d1], n[d2]);}
 	void invert_dim(unsigned d) {assert(d < 3); v[d] = -v[d]; invert_normal_dim(d);}
 };
-
 
 struct vert_norm_comp_tc : public vert_norm_comp { // size = 24
 	float t[2]={};
@@ -83,7 +78,6 @@ struct vert_norm_comp_tc : public vert_norm_comp { // size = 24
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
 };
 
-
 struct vert_norm_comp_tc_comp : public vert_norm_comp { // size = 20
 	short t[2]={}; // could even use char
 	vert_norm_comp_tc_comp() {}
@@ -91,7 +85,6 @@ struct vert_norm_comp_tc_comp : public vert_norm_comp { // size = 20
 	void set_tcs(float ts, float tt) {t[0] = 32767*ts; t[1] = 32767*tt;}
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
 };
-
 
 struct vert_norm_tc : public vert_norm { // size = 32
 	float t[2]={};
@@ -113,8 +106,8 @@ struct vert_norm_tc : public vert_norm { // size = 32
 	}
 	bool operator==(vert_norm_tc const &p) const {return (v == p.v && n == p.n && t[0] == p.t[0] && t[1] == p.t[1]);}
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
+	static void set_vertex_array_attribs(shader_t const &s, unsigned vao, unsigned binding_index=0);
 };
-
 
 struct vert_norm_tc_tan : public vert_norm_tc { // size = 48
 	vector4d tangent;
@@ -135,9 +128,9 @@ struct vert_norm_tc_tan : public vert_norm_tc { // size = 48
 		return (tangent < p.tangent);
 	}
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
+	static void set_vertex_array_attribs(shader_t const &s, unsigned vao, unsigned binding_index=0);
 	static void unset_attrs();
 };
-
 
 struct color_wrapper { // size = 4, can be used in a union
 	unsigned char c[4]={}; // Note: c[3] (alpha component) is not used in all cases
@@ -172,7 +165,6 @@ struct color_wrapper_float { // size = 16
 	static bool is_compressed() {return 0;}
 };
 
-
 struct vert_color : public color_wrapper { // size = 16
 	point v;
 	typedef point non_color_class;
@@ -185,7 +177,6 @@ struct vert_color : public color_wrapper { // size = 16
 	static void unset_attrs() {}
 };
 
-
 struct vert_norm_color : public vert_norm, public color_wrapper { // size = 28
 	typedef vert_norm non_color_class;
 	vert_norm_color() {}
@@ -197,7 +188,6 @@ struct vert_norm_color : public vert_norm, public color_wrapper { // size = 28
 	void assign(point const &v_, vector3d const &n_, color_wrapper const &cw) {v = v_; n = n_; copy_color(cw);}
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
 };
-
 
 struct vert_norm_comp_color : public vert_norm_comp, public color_wrapper { // size = 20
 	typedef vert_norm_comp non_color_class; // non-compressed type
@@ -216,7 +206,6 @@ struct vert_norm_comp_color : public vert_norm_comp, public color_wrapper { // s
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
 };
 
-
 struct vert_norm_tc_color : public vert_norm_tc, public color_wrapper { // size = 36
 	typedef vert_norm_tc non_color_class;
 	vert_norm_tc_color() {}
@@ -233,7 +222,6 @@ struct vert_norm_tc_color : public vert_norm_tc, public color_wrapper { // size 
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
 };
 
-
 struct vert_tc_color : public vert_tc_t, public color_wrapper { // size = 24
 	typedef vert_tc_t non_color_class;
 	vert_tc_color() {}
@@ -241,7 +229,6 @@ struct vert_tc_color : public vert_tc_t, public color_wrapper { // size = 24
 	vert_tc_color(point const &v_, float ts, float tt, unsigned char const  c_[4]) : vert_tc_t(v_, ts, tt) {UNROLL_4X(c[i_] = c_[i_];)}
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
 };
-
 
 struct vert_norm_comp_tc_color : public vert_norm_comp_tc, public color_wrapper { // size = 28
 	typedef vert_norm_tc non_color_class;
@@ -258,7 +245,6 @@ struct vert_norm_comp_tc_color : public vert_norm_comp_tc, public color_wrapper 
 	static void set_vertex_array_attribs(shader_t const &s, unsigned vao, unsigned binding_index=0);
 };
 
-
 struct vert_norm_comp_tc_comp_color : public vert_norm_comp_tc_comp, public color_wrapper { // size = 24
 	typedef vert_norm_tc non_color_class;
 	vert_norm_comp_tc_comp_color() {}
@@ -269,14 +255,12 @@ struct vert_norm_comp_tc_comp_color : public vert_norm_comp_tc_comp, public colo
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
 };
 
-
 struct vert_norm_color_tangent : public vert_norm_color {
 	vector3d t;
 
 	vert_norm_color_tangent() {}
 	template<typename C> vert_norm_color_tangent(point const &v_, vector3d const &n_, C const &c_, vector3d const &t_) : vert_norm_color(v_, n_, c_), t(t_) {}
 };
-
 
 struct texgen_params_t { // size = 32
 	float st[2][4]={};

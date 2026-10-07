@@ -82,6 +82,12 @@ void vert_norm_tc::set_vbo_arrays(bool set_state, void const *vbo_ptr_offset) {
 	set_vn_ptrs(stride, 0, vbo_ptr_offset);
 	cur_shader->set_tcoord_ptr(stride, ptr_add(vbo_ptr_offset, sizeof(vert_norm)), 0);
 }
+void vert_norm_tc::set_vertex_array_attribs(shader_t const &s, unsigned vao, unsigned binding_index) {
+	assert(s.is_setup());
+	s.set_vertex_attrib(vao, 0, binding_index);
+	s.set_normal_attrib(vao, sizeof(point),     0, binding_index);
+	s.set_tcoord_attrib(vao, sizeof(vert_norm), 0, binding_index);
+}
 
 void vert_norm_tc_tan::set_vbo_arrays(bool set_state, void const *vbo_ptr_offset) {
 	set_array_client_state(1, 1, 1, 0, set_state);
@@ -95,8 +101,12 @@ void vert_norm_tc_tan::set_vbo_arrays(bool set_state, void const *vbo_ptr_offset
 		glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, stride, ptr_add(vbo_ptr_offset, sizeof(vert_norm_tc)));
 	}
 }
-
-void vert_norm_tc_tan::unset_attrs() {
+void vert_norm_tc_tan::set_vertex_array_attribs(shader_t const &s, unsigned vao, unsigned binding_index) {
+	vert_norm_tc::set_vertex_array_attribs(s, vao, binding_index);
+	int const loc(cur_shader->attrib_loc_by_ix(TANGENT_ATTR, 1)); // okay if fails
+	if (loc >= 0) {enable_and_set_vertex_attrib(vao, loc, 4, GL_FLOAT, sizeof(vert_norm_tc), binding_index);}
+}
+void vert_norm_tc_tan::unset_attrs() { // required because set_array_client_state() doesn't have a tangent field
 	assert(cur_shader);
 	int const loc(cur_shader->attrib_loc_by_ix(TANGENT_ATTR, 1)); // okay if fails
 	if (loc >= 0) {glDisableVertexAttribArray(loc);}

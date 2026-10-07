@@ -978,29 +978,26 @@ void shader_t::set_tcoord_ptr(unsigned stride, void const *const ptr, bool compr
 	if (vnct_locs[3] >= 0) {glVertexAttribPointer(vnct_locs[3], 2, (compressed ? GL_SHORT         : GL_FLOAT), compressed, stride, ptr);}
 }
 
+void enable_and_set_vertex_attrib(unsigned vao, int attrib_loc, unsigned ncomp, int data_type, unsigned offset, unsigned binding_index) {
+	assert(ncomp >= 1 && ncomp <= 4);
+	if (attrib_loc < 0) return;
+	bool const normalized(data_type != GL_FLOAT);
+	glEnableVertexArrayAttrib (vao, attrib_loc);
+	glVertexArrayAttribFormat (vao, attrib_loc, ncomp, data_type, normalized, offset);
+	glVertexArrayAttribBinding(vao, attrib_loc, binding_index);
+}
 void shader_t::set_vertex_attrib(unsigned vao, unsigned offset, unsigned binding_index) const {
 	assert(vnct_locs[0] >= 0); // vertex must always be available
-	glEnableVertexArrayAttrib (vao, vnct_locs[0]);
-	glVertexArrayAttribFormat (vao, vnct_locs[0], 3, GL_FLOAT, GL_FALSE, offset);
-	glVertexArrayAttribBinding(vao, vnct_locs[0], binding_index);
+	enable_and_set_vertex_attrib(vao, vnct_locs[0], 3, GL_FLOAT, offset, binding_index);
 }
 void shader_t::set_normal_attrib(unsigned vao, unsigned offset, bool compressed, unsigned binding_index) const {
-	if (vnct_locs[1] < 0) return;
-	glEnableVertexArrayAttrib (vao, vnct_locs[1]);
-	glVertexArrayAttribFormat (vao, vnct_locs[1], 3, (compressed ? GL_BYTE          : GL_FLOAT), compressed, offset);
-	glVertexArrayAttribBinding(vao, vnct_locs[1], 0);
+	enable_and_set_vertex_attrib(vao, vnct_locs[1], 3, (compressed ? GL_BYTE          : GL_FLOAT), offset, binding_index);
 }
 void shader_t::set_color4_attrib(unsigned vao, unsigned offset, bool compressed, unsigned binding_index) const {
-	if (vnct_locs[2] < 0) return;
-	glEnableVertexArrayAttrib (vao, vnct_locs[2]);
-	glVertexArrayAttribFormat (vao, vnct_locs[2], 4, (compressed ? GL_UNSIGNED_BYTE : GL_FLOAT), compressed, offset);
-	glVertexArrayAttribBinding(vao, vnct_locs[2], 0);
+	enable_and_set_vertex_attrib(vao, vnct_locs[2], 4, (compressed ? GL_UNSIGNED_BYTE : GL_FLOAT), offset, binding_index);
 }
 void shader_t::set_tcoord_attrib(unsigned vao, unsigned offset, bool compressed, unsigned binding_index) const {
-	if (vnct_locs[3] < 0) return;
-	glEnableVertexArrayAttrib (vao, vnct_locs[3]);
-	glVertexArrayAttribFormat (vao, vnct_locs[3], 2, (compressed ? GL_SHORT         : GL_FLOAT), compressed, offset);
-	glVertexArrayAttribBinding(vao, vnct_locs[3], 0);
+	enable_and_set_vertex_attrib(vao, vnct_locs[3], 2, (compressed ? GL_SHORT         : GL_FLOAT), offset, binding_index);
 }
 
 void shader_t::set_cur_color(colorRGBA const &color) const {

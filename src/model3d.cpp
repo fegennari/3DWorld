@@ -791,6 +791,7 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 	else if (has_bones()) {setup_bones(shader, is_shadow_pass);}
 	else {this->create_and_upload(*this, indices, is_shadow_pass, 0, 1);} // dynamic_level=0, setup_pointers=1
 	this->pre_render(is_shadow_pass);
+	// what about calling T::set_vertex_array_attribs() with a shared VAO?
 	check_mvm_update();
 	
 	if (is_shadow_pass || blocks.empty() || no_vfc || camera_pdu.sphere_completely_visible_test(bsphere.pos, bsphere.radius)) { // draw the entire range
