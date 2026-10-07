@@ -2125,7 +2125,7 @@ void building_t::add_trim_for_door_or_int_window(cube_t const &c, colorRGBA cons
 	float side_twidth, float top_twidth, float side_texp, float floor_spacing, float extra_top_gap)
 {
 	float const trim_thickness(get_trim_thickness());
-	float const top_z_adj(draw_top_edge ? (side_twidth - top_twidth) : 0.0); // higher when top edge is drawn since door is below ceiling
+	float const top_z_adj(draw_top_edge ? max(0.0f, (side_twidth - top_twidth - extra_top_gap)) : 0.0); // higher when top edge is drawn since door is below ceiling
 	unsigned const bot_flags(RO_FLAG_NOCOLL | RO_FLAG_ADJ_BOT);
 	vect_room_object_t &objs(interior->room_geom->trim_objs);
 	cube_t trim(c);
@@ -2212,15 +2212,17 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		}
 	} // for room
 	// add vertical strips on each side + strip on top of interior doors
+	float const door_top_gap(fc_gap - get_int_door_height()), door_top_twidh(max(trim_thickness, door_top_gap));
+
 	for (door_stack_t const &ds : interior->door_stacks) {
 		if (ds.on_stairs || ds.is_bars()) continue; // no frame for stairs or jail bars door; skip
-		bool const draw_top(ds.get_mult_floor());
+		bool const draw_top(ds.get_mult_floor() || door_top_gap > door_top_twidh);
 
 		if (ds.type == DOOR_TYPE_METAL) { // freezer door; add thin rubber lining
-			add_trim_for_door_or_int_window(ds, BLACK, ds.dim, draw_top, 1, 0.25*door_trim_width, trim_thickness, 0.25*door_trim_exp, window_vspacing); // draw_bot_trim=1
+			add_trim_for_door_or_int_window(ds, BLACK, ds.dim, draw_top, 1, 0.25*door_trim_width, door_top_twidh, 0.25*door_trim_exp, window_vspacing, 0.0); // draw_bot_trim=1
 		}
 		else {
-			add_trim_for_door_or_int_window(ds, trim_color, ds.dim, draw_top, 0, door_trim_width, trim_thickness, door_trim_exp, window_vspacing); // draw_bot_trim=0
+			add_trim_for_door_or_int_window(ds, trim_color, ds.dim, draw_top, 0, door_trim_width, door_top_twidh, door_trim_exp, window_vspacing, 0.0); // draw_bot_trim=0
 		}
 	}
 	// handle interior windows similar to interior doors, except we also draw bottom trim

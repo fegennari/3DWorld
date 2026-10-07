@@ -14,7 +14,7 @@ void building_t::add_interior_door(door_t &door, bool is_bathroom, bool make_unl
 	assert(interior);
 	interior->door_stacks.emplace_back(door, interior->doors.size());
 	if (door.on_stairs) {add_interior_door_for_floor(door, is_bathroom, make_unlocked); return;} // add a single door across all floors
-	float const floor_spacing(get_window_vspace()), door_height(get_floor_ceil_gap());
+	float const floor_spacing(get_window_vspace()), door_height((door.type == DOOR_TYPE_BARS) ? get_floor_ceil_gap() : get_int_door_height()); // jail bars are full ceil height
 
 	// Note: door.dz() should be an exact multiple of floor_spacing except for an extra floor thickness at the bottom
 	for (float zval = door.z1(); zval + 0.5f*floor_spacing < door.z2(); zval += floor_spacing) { // continue until we don't have enough space left to add a door

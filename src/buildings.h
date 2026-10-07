@@ -1820,7 +1820,8 @@ struct building_t : public building_geom_t {
 	float get_window_trim_thick() const {return (is_prison() ? 4.0 : 1.0)*get_trim_thickness();}
 	float get_trim_height    () const {return 0.04*get_window_vspace ();}
 	float get_floor_ceil_gap () const {return (get_window_vspace() - get_floor_thickness());}
-	float get_door_height    () const {return 0.95f*get_floor_ceil_gap();} // set height based on window spacing, 95% of ceiling height (may be too large)
+	float get_door_height    () const {return 0.95f*get_floor_ceil_gap();} // for exterior doors; set height based on window spacing, 95% of ceiling height (may be too large)
+	float get_int_door_height() const {return 0.97f*get_floor_ceil_gap();}
 	float get_office_bldg_door_height() const {return 1.06*get_door_height();} // a bit taller
 	float get_attic_beam_depth()const {return 0.08*get_window_vspace();}
 	float get_min_wall_len   () const {return 2.0 *get_window_vspace();}

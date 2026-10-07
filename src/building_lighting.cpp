@@ -2308,7 +2308,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		}
 		if (camera_in_building && !is_in_elevator && !is_in_attic && !floor_is_above && !floor_is_below) {
 			if (i->room_id != last_room_ix) { // new room
-				last_room_closed = all_room_int_doors_closed(i->room_id, lpos.z);
+				last_room_closed = all_room_int_doors_closed(i->room_id, (lpos.z - 0.5*fc_gap));
 				last_room_ix     = i->room_id;
 			}
 			// if either the camera or the light are in different rooms with closed doors,

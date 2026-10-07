@@ -697,6 +697,7 @@ unsigned get_closet_cubes(room_object_t const &c, cube_t cubes[5], bool for_coll
 	}
 	doors.d[c.dim][ c.dir] -= (c.dir ? 1.0 : -1.0)*0.2*wall_thick; // shift in slightly
 	doors.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*(depth - 0.8*wall_thick); // make it narrow
+	//doors.z2() -= 0.03*doors.dz(); // not all the way to the ceiling
 	cubes[4] = doors;
 	return 5;
 }
