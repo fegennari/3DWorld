@@ -374,6 +374,12 @@ public:
 		else { // straight stairs: entrances are on opposite ends
 			entry_u.d[dim][ dir] = entry_u.d[dim][!dir] + extend; // shrink to extend length at the entrance to the stairs when going up
 			entry_d.d[dim][!dir] = entry_d.d[dim][ dir] - extend; // shrink to extend length at the entrance to the stairs when going down
+			cube_t const &room_bc(get_node(room).bcube);
+			
+			if (room_bc.contains_cube_xy(s)) { // room contains these stairs; clip entry areas to room; likely not needed, but should be safer
+				entry_u.intersect_with_cube_xy(room_bc);
+				entry_d.intersect_with_cube_xy(room_bc);
+			}
 		}
 		get_node(room).add_conn_room(node_ix2, -1, entry_u, entry_d); // Note: entry_u and entry_d are denormalized here
 		n2.add_conn_room(room, -1, entry_u, entry_d);
@@ -3198,8 +3204,11 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 			else {clip_cube = basement;} // basement only
 		}
 		else {clip_cube = bcube;} // above ground
-		// make sure person stays within building bcube; can't clip to room because person may be exiting it
-		clip_cube.expand_by_xy(-coll_dist); // shrink
+		// make sure person stays within building bcube; can't clip to room because person may be exiting it;
+		// use a small shrink for fixed path to avoid getting stuck at the end of stairs close to a wall
+		bool use_small_dist(person.on_fixed_path()); // currently on a fixed path
+		use_small_dist |= (!person.path.empty() && person.path.back().fixed && dist_xy_less_than(new_pos, person.path.back(), coll_dist)); // soon to be on a fixed path
+		clip_cube.expand_by_xy(-(use_small_dist ? 0.25 : 1.0)*coll_dist);
 		clamp_person_to_building_bcube(new_pos, clip_cube, radius, fc_thick);
 	}
 	if (!is_cube() && !person.on_fixed_path() && !check_cube_within_part_sides(person.get_bcube() + (new_pos - person.pos))) { // outside the building
