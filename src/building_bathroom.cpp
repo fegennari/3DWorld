@@ -35,7 +35,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 	place_area.expand_by(-0.5*wall_thickness);
 	vector2d const place_area_sz(place_area.dx(), place_area.dy());
 	float const min_room_dim(min(place_area_sz.x, place_area_sz.y));
-	if (min_room_dim < 0.7*floor_spacing) return 0; // room is too small (should be rare)
+	if (min_room_dim < 0.74*floor_spacing) return 0; // room is too small (should be rare)
 	bool const have_toilet(building_obj_model_loader.is_model_valid(OBJ_MODEL_TOILET)), have_sink(building_obj_model_loader.is_model_valid(OBJ_MODEL_SINK));
 	vect_room_object_t &objs(interior->room_geom->objs);
 
