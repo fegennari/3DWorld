@@ -2049,10 +2049,13 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 							if (cpos_dim > s.d[s.dim][0] && cpos_dim < s.d[s.dim][1]) {can_only_see_up = 0;}
 						}
 						if (can_only_see_up) { // facing upwards stairs
-							cut_mask = 2; // floor below not visible
-							cube_t vis_region(bcube); // start with full building bcube
-							vis_region.d[s.dim][!s.dir] = center_val;
-							floor_above_region.assign_or_union_with_cube(vis_region); // floor above may be visible
+							if (s.shape == SHAPE_WALLED_SIDES && s.stairs_door_ix >= 0) {saw_open_stairs = 1;} // looking up basement stairs with railing and no walls at the top
+							else {
+								cut_mask = 2; // floor below not visible
+								cube_t vis_region(bcube); // start with full building bcube
+								vis_region.d[s.dim][!s.dir] = center_val;
+								floor_above_region.assign_or_union_with_cube(vis_region); // floor above may be visible
+							}
 						}
 					}
 					else {saw_open_stairs = 1;}
