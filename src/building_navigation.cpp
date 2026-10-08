@@ -1252,6 +1252,7 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 		}
 	}
 	if (!goal.is_valid()) return 0; // no player or sound
+	assert(goal.room_ix >= 0);
 	unsigned const cand_room(goal.room_ix);
 	room_t const &room(get_room(cand_room)); // target room
 	if (!interior->nav_graph->is_room_connected_to(loc.room_ix, cand_room, *interior, person.pos.z, person.has_key)) return 0; // unreachable
@@ -1942,7 +1943,7 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 	if (loc1.part_ix < 0 || loc2.part_ix < 0 || loc1.room_ix < 0 || loc2.room_ix < 0) return 0; // not in a room
 	unsigned const num_rooms(interior->rooms.size());
 	assert((unsigned)loc1.part_ix < parts.size() && (unsigned)loc2.part_ix < parts.size());
-	assert((unsigned)loc1.room_ix < num_rooms && (unsigned)loc2.room_ix < num_rooms);
+	assert((unsigned)loc1.room_ix < num_rooms    && (unsigned)loc2.room_ix < num_rooms);
 	float const height(person.get_height());
 	vect_cube_t &avoid(reused_avoid_cubes[0]);
 
@@ -1974,10 +1975,8 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 		// if both the person and target (player) are in an extended basement room, clamp dest to walkable room bounds;
 		// since these rooms aren't packed together, it's possible for the player to be unreachable, for example when crossing through a connector hallway
 		if (to.z < ground_floor_z1) { // in the basement
-			room_t const &room(get_room(loc1.room_ix));
-
-			if (room.is_ext_basement()) { // extended basement room; room.is_ext_basement_conn()? or does it need to apply to the other adj room as well?
-				cube_t valid_area(room);
+			if (start_room.is_ext_basement()) { // extended basement room; room.is_ext_basement_conn()? or does it need to apply to the other adj room as well?
+				cube_t valid_area(start_room);
 				valid_area.expand_by_xy(-radius);
 				valid_area.clamp_pt_xy(dest);
 			}
@@ -3442,16 +3441,6 @@ void building_t::add_poi_dim_dir(cube_t const &c, unsigned room_id, bool dim, bo
 }
 bool building_t::room_has_poi(unsigned room_id) const {
 	return (has_room_geom() && !interior->room_geom->pois.empty() && get_room(room_id).get_has_pois());
-}
-bool building_t::is_pos_in_poi(point const &pos, unsigned room_id, bool not_in_look_area) const {
-	if (!room_has_poi(room_id)) return 0;
-	
-	for (point_of_interest_t const &p : interior->room_geom->pois) {
-		if (p.room_id != room_id || !p.act_area .contains_pt(pos)) continue;
-		if (not_in_look_area &&      p.look_area.contains_pt(pos)) continue;
-		return 1;
-	}
-	return 0;
 }
 void building_t::get_poi_stand_areas_for_room(unsigned room_id, float radius, float zval, vect_cube_t &stand_areas) const {
 	if (!room_has_poi(room_id)) return;

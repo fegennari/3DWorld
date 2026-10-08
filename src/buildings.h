@@ -2157,7 +2157,6 @@ private:
 	void set_look_dir(person_t &person) const;
 public:
 	bool room_has_poi(unsigned room_id) const;
-	bool is_pos_in_poi(point const &pos, unsigned room_id, bool not_in_look_area) const;
 	void get_poi_stand_areas_for_room(unsigned room_id, float radius, float zval, vect_cube_t &stand_areas) const;
 	bool select_person_poi(unsigned room_id, float radius, point &pos, rand_gen_t &rgen) const;
 	// animals
