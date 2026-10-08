@@ -252,8 +252,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					test_cube.expand_by_xy(floor_thickness);
 					if (test_cube.intersects(get_fireplace())) continue;
 				}
+				unsigned const num_int_doors(count_num_int_doors(*r));
+				if (num_int_doors > 1 && max(r->dx(), r->dy()) < 1.5*MIN_BATHROOM_SZ*window_vspacing) continue; // too small for multi-door BR
 				float score(r->dx() + r->dy()); // starts as half the perimeter
-				score *= (1.0 + 10.0*(max(count_num_int_doors(*r), 1U) - 1U)); // mult by a large value if there are mult doors so we only choose this if there are no alternatives
+				score *= (1.0 + 10.0*(max(num_int_doors, 1U) - 1U)); // mult by a large value if there are mult doors so we only choose this if there are no alternatives
 
 				for (unsigned f = 0; f < num_floors; ++f) {
 					if (is_room_adjacent_to_ext_door(*r, (r->z1() + f*window_vspacing))) {score *= 2.0;} // penalty for ext doors on another floor; helps with multi family homes
