@@ -1043,6 +1043,24 @@ void building_room_geom_t::add_phone(room_object_t const &c) { // is_small=1
 	if (!screen.is_all_zeros()) {get_material(get_phone_tex(c), 0, 1).add_cube_to_verts(screen, WHITE, zero_vector, ~EF_Z2, c.dim, (c.dim ^ c.dir ^ 1), c.dir);}
 }
 
+void building_room_geom_t::add_night_vis_goggles(room_object_t const &c) {
+	float const radius(0.25*c.dz());
+	colorRGBA const color(apply_light_color(c));
+	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
+
+	for (unsigned d = 0; d < 2; ++d) { // each eyepiece
+		cube_t ep(c);
+		ep.z2() = c.zc(); // bottom half
+		ep.d[!c.dim][d] = c.d[!c.dim][d] - (d ? 1.0 : -1.0)*radius; // shift to the side
+		mat.add_ortho_cylin_to_verts(ep, color, c.dim, 1, 1); // draw both ends
+	} // for d
+	cube_t top(c);
+	top.z1() += radius;
+	top.expand_in_dim( c.dim, -0.25*c.get_length());
+	top.expand_in_dim(!c.dim, -radius);
+	mat.add_cube_to_verts_untextured(top, color, 0); // draw all faces
+}
+
 void building_room_geom_t::add_vert_roll_to_material(room_object_t const &c, rgeom_mat_t &mat, float sz_ratio, bool player_held) { // TP and tape
 	bool const is_tape(c.type == TYPE_TAPE);
 	float const hole_shrink(is_tape ? 0.24 : 0.3);

@@ -13,7 +13,7 @@ float const ALERT_THRESH   = 0.08; // min sound alert level for AIs
 float const PLAYER_RESPAWN = 5.0; // in seconds
 
 bool do_room_obj_pickup(0), use_last_pickup_object(0), show_bldg_pickup_crosshair(0), player_near_toilet(0), player_attracts_flies(0), player_wait_respawn(0);
-bool city_action_key(0), can_do_building_action(0), has_loaded_gun(0);
+bool city_action_key(0), can_do_building_action(0), has_loaded_gun(0), enable_night_vision(0);
 int can_pickup_bldg_obj(0), player_in_elevator(0); // player_in_elevator: 0=no, 1=in, 2=in + doors closed, 3=moving
 float office_chair_rot_rate(0.0), cur_building_sound_level(0.0);
 point debug_event_pos;
@@ -237,6 +237,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_BOILER    ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2,  0.0,  0.0,   "boiler");
 	bldg_obj_types[TYPE_ROCK_WALL ] = bldg_obj_type_t(1, 0, 0, 0, 1, 0, 2,  0.0,  0.0,   "rock wall");
 	bldg_obj_types[TYPE_TV_REMOTE ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,  16.0, 0.1,   "TV remote");
+	bldg_obj_types[TYPE_NV_GOGGLES] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 500.0, 1.0,   "night vision goggles");
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");

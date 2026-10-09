@@ -8,7 +8,7 @@
 #include "transform_obj.h"
 
 
-extern bool water_is_lava, enable_postproc_recolor, enable_ssao;
+extern bool water_is_lava, enable_postproc_recolor, enable_ssao, enable_night_vision;
 extern unsigned depth_tid, frame_buffer_RGB_tid;
 extern int frame_counter, display_mode, show_fog, camera_coll_id, window_width, window_height, animate2;
 extern float NEAR_CLIP, FAR_CLIP, fticks, dist_to_fire_sq, water_plane_z, CAMERA_RADIUS;
@@ -359,7 +359,7 @@ void run_postproc_effects() {
 		else if (have_buildings() && is_night()) {add_2d_bloom();} // allow bloom for building windows at night in TT mode
 	}
 	if (enable_postproc_recolor) {add_color_only_effect("recolor", 0.0);} // add recolor at the very end
-	//if (display_mode & 0x20    ) {postproc_night_vision();}
+	if (enable_night_vision    ) {postproc_night_vision();}
 	if (vignette_color.A > 0.0 ) {add_vignette(vignette_color);}
 }
 
