@@ -2438,6 +2438,8 @@ private:
 	void add_trash_to_trashcan(rand_gen_t &rgen, cube_t const &tc, unsigned room_id, float tot_light_amt);
 	void add_wet_floor_sign_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	bool add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement);
+	void place_books_on_floor(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
+		unsigned num_books, point const &center=all_zeros, float place_dist=0.0);
 	bool add_desk_to_room    (rand_gen_t rgen, room_t const &room, vect_cube_t const &blockers, colorRGBA const &chair_color, float zval, unsigned room_id, float tot_light_amt,
 		unsigned objs_start, bool is_basement, unsigned desk_ix=0, bool no_computer=0, bool force_computer=0, bool add_phone=0, bool not_tall=0, int against_window_mode=2);
 	void add_desk_objects(rand_gen_t &rgen, unsigned desk_obj_ix, colorRGBA const &chair_color, room_t const &room,
@@ -2530,6 +2532,7 @@ private:
 	void make_door_out_of_order(room_t const &room, float zval, unsigned room_id, door_stack_t const &ds);
 	bool add_kitchen_objs    (rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt,
 		unsigned objs_start, bool allow_adj_ext_door, light_ix_assign_t &light_ix_assign);
+	void add_banana_peel_on_floor(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, cube_t const &place_area);
 	void add_objects_in_sink (rand_gen_t &rgen, cube_t const &sink, bool dim, bool dir, unsigned room_id, float tot_light_amt);
 	void add_commercial_kitchen_app_post(unsigned obj_ix, unsigned app_type, cube_t &hood, unsigned cclass_counts[3], rand_gen_t &rgen, bool is_kitchen=1);
 	bool add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, unsigned floor_ix, float light_amt,
@@ -2566,7 +2569,7 @@ private:
 	void replace_prison_cell_with_ext_door(float door_height, bool for_courtyard, rand_gen_t &rgen);
 	void add_garage_objs     (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	void add_floor_clutter_objs(rand_gen_t  rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
-	void add_floor_clutter_objs(rand_gen_t &rgen, room_t const &room, cube_t place_area, float zval, unsigned room_id,
+	void add_floor_clutter_and_trash(rand_gen_t &rgen, room_t const &room, cube_t place_area, float zval, unsigned room_id,
 		float tot_light_amt, unsigned objs_start, bool add_bottles, bool add_trash, bool add_papers, bool add_glass, bool add_cigarettes);
 	void add_basement_clutter_objs(rand_gen_t  rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	unsigned add_water_heaters (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool single_only=0);

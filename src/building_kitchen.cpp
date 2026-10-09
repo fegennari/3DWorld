@@ -384,27 +384,29 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float &zv
 		add_mwave_on_table (rgen, room, zval, room_id, tot_light_amt, objs_start, place_area);
 		add_vending_machine(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area);
 	}
-	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_BAN_PEEL) && rgen.rand_bool()) { // maybe place a banana peel on the floor
-		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_BAN_PEEL));
-		float length(0.083*vspace), width(length*sz.y/sz.x), height(length*sz.z/sz.x);
-		cube_t valid_area(place_area);
-		valid_area.expand_by_xy(-0.25*vspace); // not too close to a wall
-		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random orientation
-		vector3d size(0.5*length, 0.5*width, height);
-		if (dim) {swap(size.x, size.y);}
-
-		if (valid_area.dx() > 2.0*size.x && valid_area.dy() > 2.0*size.y) { // should always be true
-			for (unsigned n = 0; n < 4; ++n) { // make 4 attempts to place the object
-				cube_t c(gen_xy_pos_in_area(valid_area, size, rgen, zval));
-				c.expand_by_xy(size);
-				c.z2() += height;
-				if (overlaps_other_room_obj(c, objs_start) || is_obj_placement_blocked(c, room, 1)) continue; // bad placement
-				objs.emplace_back(c, TYPE_BAN_PEEL, room_id, dim, dir, RO_FLAG_RAND_ROT, tot_light_amt);
-				break; // done
-			} // for n
-		}
-	}
+	if (rgen.rand_bool()) {add_banana_peel_on_floor(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area);} // maybe place a banana peel on the floor
 	return 1;
+}
+
+void building_t::add_banana_peel_on_floor(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, cube_t const &place_area) {
+	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_BAN_PEEL)) return;
+	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_BAN_PEEL));
+	float const vspace(get_window_vspace()), length(0.083*vspace), width(length*sz.y/sz.x), height(length*sz.z/sz.x);
+	cube_t valid_area(place_area);
+	valid_area.expand_by_xy(-0.25*vspace); // not too close to a wall
+	bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random orientation
+	vector3d size(0.5*length, 0.5*width, height);
+	if (dim) {swap(size.x, size.y);}
+	if (valid_area.dx() < 2.0*size.x || valid_area.dy() < 2.0*size.y) return; // shouldn't fail
+
+	for (unsigned n = 0; n < 4; ++n) { // make 4 attempts to place the object
+		cube_t c(gen_xy_pos_in_area(valid_area, size, rgen, zval));
+		c.expand_by_xy(size);
+		c.z2() += height;
+		if (overlaps_other_room_obj(c, objs_start) || is_obj_placement_blocked(c, room, 1)) continue; // bad placement
+		interior->room_geom->objs.emplace_back(c, TYPE_BAN_PEEL, room_id, dim, dir, RO_FLAG_RAND_ROT, tot_light_amt);
+		break; // done
+	} // for n
 }
 
 void building_t::add_objects_in_sink(rand_gen_t &rgen, cube_t const &sink, bool dim, bool dir, unsigned room_id, float tot_light_amt) {

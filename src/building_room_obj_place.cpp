@@ -466,31 +466,33 @@ bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, floa
 		if (is_basement) { // maybe add scattered books on the floor
 			unsigned num_books(rgen.rand() % 16); // 0-15, but many will fail to be placed
 			if (flags & RO_FLAG_ON_FLOOR) {num_books = max(4U, 2U*num_books);} // more books on floor if bookcase has fallen over
-			
-			if (num_books > 0) {
-				float const place_dist(1.0*height);
-				point const center(c.get_cube_center());
-				cube_t place_area;
-				place_area.set_from_sphere(center, place_dist); // zvals are ignored
-				place_area.intersect_with_cube(room_bounds);
-
-				for (unsigned n = 0; n < num_books; ++n) {
-					point const pos(gen_xy_pos_in_area(place_area, 0.05*vspace, rgen, zval));
-					if (!dist_xy_less_than(pos, center, place_dist)) continue;
-					bool const dim(rgen.rand_bool()), dir(rgen.rand_bool());
-					cube_t const book(get_book_bcube(rgen, pos, vspace, dim, dir));
-					float const dx(book.dx()), dy(book.dy()), exp(0.5*sqrt(dx*dx + dy*dy)); // book is randomly rotated, to expand to capture all bcubes
-					cube_t const bc(pos.x-exp, pos.x+exp, pos.y-exp, pos.y+exp, book.z1(), book.z2());
-					if (!room_bounds.contains_cube_xy(bc) || is_obj_placement_blocked(bc, room, 1) || overlaps_other_room_obj(bc, objs_start, 1)) continue;
-					colorRGBA const color(book_colors[rgen.rand() % NUM_BOOK_COLORS]);
-					objs.emplace_back(book, TYPE_BOOK, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT | RO_FLAG_ON_FLOOR), tot_light_amt, SHAPE_CUBE, color);
-					set_obj_id(objs);
-				} // for n
-			}
+			if (num_books > 0) {place_books_on_floor(rgen, room, zval, room_id, tot_light_amt, objs_start, num_books, c.get_cube_center(), 1.0*height);}
 		}
 		return 1; // done/success
 	} // for n
 	return 0; // not placed
+}
+void building_t::place_books_on_floor(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start,
+	unsigned num_books, point const &center, float place_dist)
+{
+	float const vspace(get_window_vspace());
+	cube_t const room_bounds(get_room_bounds_inside_trim(room));
+	cube_t place_area;
+	place_area.set_from_sphere(center, place_dist); // zvals are ignored
+	place_area.intersect_with_cube(room_bounds);
+
+	for (unsigned n = 0; n < num_books; ++n) {
+		point const pos(gen_xy_pos_in_area(place_area, 0.05*vspace, rgen, zval));
+		if (!dist_xy_less_than(pos, center, place_dist)) continue;
+		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool());
+		cube_t const book(get_book_bcube(rgen, pos, vspace, dim, dir));
+		float const dx(book.dx()), dy(book.dy()), exp(0.5*sqrt(dx*dx + dy*dy)); // book is randomly rotated, to expand to capture all bcubes
+		cube_t const bc(pos.x-exp, pos.x+exp, pos.y-exp, pos.y+exp, book.z1(), book.z2());
+		if (!room_bounds.contains_cube_xy(bc) || is_obj_placement_blocked(bc, room, 1) || overlaps_other_room_obj(bc, objs_start, 1)) continue;
+		colorRGBA const color(book_colors[rgen.rand() % NUM_BOOK_COLORS]);
+		interior->room_geom->objs.emplace_back(book, TYPE_BOOK, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT | RO_FLAG_ON_FLOOR), tot_light_amt, SHAPE_CUBE, color);
+		set_obj_id(interior->room_geom->objs);
+	} // for n
 }
 
 bool building_t::room_has_stairs_or_elevator(room_t const &room, float zval, unsigned floor) const {
@@ -1072,7 +1074,7 @@ void building_t::add_lounge_objs(rand_gen_t rgen, room_t const &room, float zval
 	}
 	if (is_prison()) { // add objects on the floor
 		bool const add_bottles(0), add_trash(rgen.rand_float() < 0.6), add_papers(0), add_glass(0), add_cigarettes(rgen.rand_float() < 0.8);
-		add_floor_clutter_objs(rgen, room, place_area, zval, room_id, tot_light_amt, objs_start, add_bottles, add_trash, add_papers, add_glass, add_cigarettes);
+		add_floor_clutter_and_trash(rgen, room, place_area, zval, room_id, tot_light_amt, objs_start, add_bottles, add_trash, add_papers, add_glass, add_cigarettes);
 	}
 	else { // add 1-4 plants
 		unsigned const num_plants(1 + (rgen.rand() & 3));
@@ -1359,6 +1361,22 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t &room, vect_cube_t &bl
 			if (i->type == type) {already_on_bed = 1; break;}
 		}
 		if (!already_on_bed) {place_shirt_pants_on_floor(rgen, room, zval, room_id, tot_light_amt, place_area, objs_start, type);}
+	}
+	if (rgen.rand_float() < 0.1) { // create a messy room 10% of the time
+		unsigned const num_shirt_pants(5 + (rgen.rand() % 4)); // 5-8, in addition to whatever was placed above
+
+		for (unsigned n = 0; n < num_shirt_pants; ++n) {
+			place_shirt_pants_on_floor(rgen, room, zval, room_id, tot_light_amt, place_area, objs_start, (rgen.rand_bool() ? TYPE_PANTS : TYPE_TEESHIRT));
+		}
+		add_boxes_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, 5); // max_num=5
+		// add a cluster of books, then place other clutter
+		unsigned const num_books(3 + (rgen.rand() % 5)); // 3-7
+		point const books_center(gen_xy_pos_in_area(place_area, 0.05*window_vspacing, rgen, zval));
+		place_books_on_floor(rgen, room, zval, room_id, tot_light_amt, objs_start, num_books, books_center, 0.45*window_vspacing);
+		add_ball_to_room(rgen, room, place_area, zval, room_id, tot_light_amt, objs_start); // add another ball
+		if (rgen.rand_bool()) {add_banana_peel_on_floor(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area);}
+		bool const add_bottles(1), add_trash(1), add_paper(1), add_glass(rgen.rand_float() < 0.25), add_cigarettes(rgen.rand_float() < 0.33);
+		add_floor_clutter_and_trash(rgen, room, place_area, zval, room_id, tot_light_amt, objs_start, add_bottles, add_trash, add_paper, add_glass, add_cigarettes);
 	}
 	return 1; // success
 } // end add_bedroom_objs()
@@ -2612,9 +2630,9 @@ void building_t::add_basement_clutter_objs(rand_gen_t rgen, room_t const &room, 
 	bool const add_cigarettes(is_prison() ? (rgen.rand_float() < 0.5) : 0);
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-get_trim_thickness()); // add some extra padding
-	add_floor_clutter_objs(rgen, room, place_area, zval, room_id, tot_light_amt, objs_start, add_bottles, add_trash, add_papers, add_glass, add_cigarettes);
+	add_floor_clutter_and_trash(rgen, room, place_area, zval, room_id, tot_light_amt, objs_start, add_bottles, add_trash, add_papers, add_glass, add_cigarettes);
 }
-void building_t::add_floor_clutter_objs(rand_gen_t &rgen, room_t const &room, cube_t place_area, float zval, unsigned room_id,
+void building_t::add_floor_clutter_and_trash(rand_gen_t &rgen, room_t const &room, cube_t place_area, float zval, unsigned room_id,
 	float tot_light_amt, unsigned objs_start, bool add_bottles, bool add_trash, bool add_papers, bool add_glass, bool add_cigarettes)
 {
 	vect_room_object_t &objs(interior->room_geom->objs);
