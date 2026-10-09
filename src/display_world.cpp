@@ -1206,7 +1206,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 		camera_surf_collide = 1;
 	}
 	camera_view = 0;
-	if (camera_surf_collide) {check_player_tiled_terrain_collision();}
+	if (camera_surf_collide && !camera_in_building) {check_player_tiled_terrain_collision();}
 	follow_city_actor(); // after collision detection so that it doesn't apply to the actor we're following
 	update_temperature(0);
 	apply_camera_offsets(get_camera_pos());
