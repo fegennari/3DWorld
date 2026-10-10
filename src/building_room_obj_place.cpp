@@ -3899,6 +3899,7 @@ bool building_t::place_nvgog_on_obj(rand_gen_t &rgen, cube_t const &place_on, un
 	cube_t nvgog;
 	gen_xy_pos_for_cube_obj(nvgog, place_on, vector3d(0.5*width, 0.5*width, 0.0), 0.5*width, rgen);
 	if (has_bcube_int(nvgog, avoid)) return 0; // only make one attempt
+	nvgog.translate_dim(2, 0.01*width); // translate up slightly so that table/desk surface doesn't clip through the bottom of the hollow cylinders
 	bool const dim(rgen.rand_bool()), dir(rgen.rand_bool());
 	interior->room_geom->objs.emplace_back(nvgog, TYPE_NV_GOGGLES, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, BKGRAY); // Note: invalidates place_on reference
 	return 1;

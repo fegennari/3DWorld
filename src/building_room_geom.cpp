@@ -1044,26 +1044,37 @@ void building_room_geom_t::add_phone(room_object_t const &c) { // is_small=1
 }
 
 void building_room_geom_t::add_night_vis_goggles(room_object_t const &c) {
+	bool const dim(c.dim);
 	float const height(c.dz()), radius(0.35*height), length(c.get_length());
-	colorRGBA const color(apply_light_color(c));
+	colorRGBA const color(apply_light_color(c)), lens_color(apply_light_color(c, colorRGBA(0.5, 0.2, 1.0)));
 	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
+	rgeom_mat_t &glass_mat(get_transparent_material(GLASS_IOR, 1)); // small=1
 
 	for (unsigned d = 0; d < 2; ++d) { // each eyepiece
 		cube_t ep(c);
 		ep.z2() -= (height - 2.0*radius); // bottom part
-		set_wall_width(ep, (c.d[!c.dim][d] - (d ? 1.0 : -1.0)*radius), radius, !c.dim); // shift to the side
-		mat.add_ortho_cylin_to_verts(ep, color, c.dim, 1, 1); // draw both ends
+		set_wall_width(ep, (c.d[!dim][d] - (d ? 1.0 : -1.0)*radius), radius, !dim); // shift to the side
+		mat.add_ortho_cylin_to_verts(ep, color, dim, 0, 0, 1); // hollow, 2 sided
+		point const center(ep.get_cube_center());
+
+		for (unsigned e = 0; e < 2; ++e) { // lenses at each end
+			point lens_pos(center);
+			lens_pos[dim] += (e ? 1.0 : -1.0)*0.48*length;
+			vector3d const dir(vector_from_dim_dir(dim, e));
+			glass_mat.add_disk_to_verts(lens_pos, radius, dir, lens_color); // lens
+			mat      .add_disk_to_verts(center,   radius, dir,      color); // center blocker so that player can't see through the tube
+		}
 	} // for d
 	cube_t bar(c), top(c);
 	bar.z1() += 0.4*height;
 	bar.z2() -= 0.2*height;
-	bar.expand_in_dim( c.dim, -0.25*length);
-	bar.expand_in_dim(!c.dim, -radius);
+	bar.expand_in_dim( dim, -0.25*length);
+	bar.expand_in_dim(!dim, -radius);
 	mat.add_cube_to_verts_untextured(bar, color, 0); // draw all faces
 	top.z1() += 0.7*height;
-	top.expand_in_dim( c.dim, -0.20*length);
-	set_wall_width(top, c.get_center_dim(!c.dim), 0.7*radius, !c.dim);
-	mat.add_ortho_cylin_to_verts(top, color, c.dim, 1, 1); // draw both ends
+	top.expand_in_dim( dim, -0.20*length);
+	set_wall_width(top, c.get_center_dim(!dim), 0.7*radius, !dim);
+	mat.add_ortho_cylin_to_verts(top, color, dim, 1, 1); // draw both ends
 }
 
 void building_room_geom_t::add_vert_roll_to_material(room_object_t const &c, rgeom_mat_t &mat, float sz_ratio, bool player_held) { // TP and tape
