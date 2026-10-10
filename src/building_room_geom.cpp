@@ -1044,21 +1044,26 @@ void building_room_geom_t::add_phone(room_object_t const &c) { // is_small=1
 }
 
 void building_room_geom_t::add_night_vis_goggles(room_object_t const &c) {
-	float const radius(0.25*c.dz());
+	float const height(c.dz()), radius(0.35*height), length(c.get_length());
 	colorRGBA const color(apply_light_color(c));
 	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
 
 	for (unsigned d = 0; d < 2; ++d) { // each eyepiece
 		cube_t ep(c);
-		ep.z2() = c.zc(); // bottom half
-		ep.d[!c.dim][d] = c.d[!c.dim][d] - (d ? 1.0 : -1.0)*radius; // shift to the side
+		ep.z2() -= (height - 2.0*radius); // bottom part
+		set_wall_width(ep, (c.d[!c.dim][d] - (d ? 1.0 : -1.0)*radius), radius, !c.dim); // shift to the side
 		mat.add_ortho_cylin_to_verts(ep, color, c.dim, 1, 1); // draw both ends
 	} // for d
-	cube_t top(c);
-	top.z1() += radius;
-	top.expand_in_dim( c.dim, -0.25*c.get_length());
-	top.expand_in_dim(!c.dim, -radius);
-	mat.add_cube_to_verts_untextured(top, color, 0); // draw all faces
+	cube_t bar(c), top(c);
+	bar.z1() += 0.4*height;
+	bar.z2() -= 0.2*height;
+	bar.expand_in_dim( c.dim, -0.25*length);
+	bar.expand_in_dim(!c.dim, -radius);
+	mat.add_cube_to_verts_untextured(bar, color, 0); // draw all faces
+	top.z1() += 0.7*height;
+	top.expand_in_dim( c.dim, -0.20*length);
+	set_wall_width(top, c.get_center_dim(!c.dim), 0.7*radius, !c.dim);
+	mat.add_ortho_cylin_to_verts(top, color, c.dim, 1, 1); // draw both ends
 }
 
 void building_room_geom_t::add_vert_roll_to_material(room_object_t const &c, rgeom_mat_t &mat, float sz_ratio, bool player_held) { // TP and tape

@@ -893,6 +893,7 @@ public:
 	bool  player_holding_lit_candle    () const {return (!carried.empty() && carried.back().type == TYPE_CANDLE     &&  carried.back().is_lit   ());}
 	bool  player_holding_lit_flashlight() const {return (!carried.empty() && carried.back().type == TYPE_FLASHLIGHT &&  carried.back().is_lit   ());}
 	bool  player_holding_loaded_gun    () const {return (!carried.empty() && carried.back().type == TYPE_HANDGUN    && !carried.back().is_broken());}
+	bool  player_using_night_vision    () const {return (!carried.empty() && carried.back().type == TYPE_NV_GOGGLES);}
 	bool  was_room_stolen_from(unsigned room_id) const {return (rooms_stolen_from.find(room_id) != rooms_stolen_from.end());}
 	void  refill_thirst() {thirst = 1.0;}
 	void recharge_flashlight() {flashlight_battery = 1.0; charged_flashlight = 1;} // print onscreen text?
@@ -966,6 +967,7 @@ public:
 			for (auto i = carried.begin(); i+1 != carried.end(); ++i) {have_second_handgun |= (i->type == TYPE_HANDGUN);} // skip last item
 			if (have_second_handgun) {carried.pop_back();}
 		}
+		if (carried.size() == 1) {carried.emplace_back(); swap(carried[0], carried[1]);} // add null item that we can switch to
 		if (carried.size() <= 1) return; // no other item to switch to
 		if (dir) {std::rotate(carried.begin(), carried.begin()+1, carried.end());}
 		else     {std::rotate(carried.begin(), carried.end  ()-1, carried.end());}
@@ -1411,11 +1413,13 @@ public:
 	void next_frame() {
 		if (player_wait_respawn) {
 			if (tfticks > respawn_time) {player_respawn();}
+			enable_night_vision = 0;
 			return;
 		}
 		show_stats();
 		phone_manager.next_frame(); // even if not in gameplay mode?
 		lava_manager .next_frame();
+		enable_night_vision = player_using_night_vision();
 		float const fticks_clamped(min(fticks, 0.25f*TICKS_PER_SECOND)); // limit to 250ms so that the player doesn't die when un-paused
 		float const elapsed_ticks(animate2 ? fticks_clamped : 0.0), elapsed_secs(elapsed_ticks/TICKS_PER_SECOND); // no time elapsed when time is paused
 		
@@ -3448,8 +3452,8 @@ bool room_object_t::can_use() const { // excludes dynamic objects
 	if (is_medicine()) return 1; // medicine can be carried in the inventory and used later
 	if (type == TYPE_TPROLL) {return (taken_level == 0);} // can only use the TP roll, not the holder
 	if (type == TYPE_BOX && !is_open() && !was_expanded()) return 1; // unopened box; not from a shelf
-	return (type == TYPE_SPRAYCAN || type == TYPE_MARKER || type == TYPE_BOOK || type == TYPE_PHONE || type == TYPE_TAPE || type == TYPE_RAT ||
-		type == TYPE_FIRE_EXT || type == TYPE_CANDLE || type == TYPE_ERASER || type == TYPE_FLASHLIGHT || type == TYPE_HANDGUN || type == TYPE_TV_REMOTE);
+	return (type == TYPE_SPRAYCAN || type == TYPE_MARKER || type == TYPE_BOOK || type == TYPE_PHONE || type == TYPE_TAPE || type == TYPE_RAT || type == TYPE_FIRE_EXT ||
+		type == TYPE_CANDLE || type == TYPE_ERASER || type == TYPE_FLASHLIGHT || type == TYPE_HANDGUN || type == TYPE_TV_REMOTE || type == TYPE_NV_GOGGLES);
 }
 bool room_object_t::can_place_onto() const { // Note: excludes flat objects such as TYPE_RUG and TYPE_BLANKET
 	return (type == TYPE_TABLE || type == TYPE_DESK || type == TYPE_DRESSER || type == TYPE_NIGHTSTAND || type == TYPE_COUNTER || type == TYPE_KSINK ||

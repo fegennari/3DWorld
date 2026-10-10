@@ -360,6 +360,7 @@ void run_postproc_effects() {
 	}
 	if (enable_postproc_recolor) {add_color_only_effect("recolor", 0.0);} // add recolor at the very end
 	if (enable_night_vision    ) {postproc_night_vision();}
+	if (enable_night_vision    ) {add_vignette(BLACK);}
 	if (vignette_color.A > 0.0 ) {add_vignette(vignette_color);}
 }
 

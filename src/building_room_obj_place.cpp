@@ -3893,13 +3893,22 @@ bool building_t::place_laptop_on_obj(rand_gen_t &rgen, room_object_t const &plac
 	interior->room_geom->objs.emplace_back(laptop, TYPE_LAPTOP, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT), tot_light_amt); // Note: invalidates place_on reference
 	return 1;
 }
-
+bool building_t::place_nvgog_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid) {
+	float const width(0.08*get_window_vspace());
+	if (min(place_on.dx(), place_on.dy()) < 1.2*width) return 0; // place_on is too small
+	cube_t nvgog;
+	gen_xy_pos_for_cube_obj(nvgog, place_on, vector3d(0.5*width, 0.5*width, 0.0), 0.5*width, rgen);
+	if (has_bcube_int(nvgog, avoid)) return 0; // only make one attempt
+	bool const dim(rgen.rand_bool()), dir(rgen.rand_bool());
+	interior->room_geom->objs.emplace_back(nvgog, TYPE_NV_GOGGLES, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, BKGRAY); // Note: invalidates place_on reference
+	return 1;
+}
 bool building_t::place_pizza_on_obj(rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid) {
 	float const width(0.15*get_window_vspace()); // square
 	if (min(place_on.dx(), place_on.dy()) < 1.2*width) return 0; // place_on is too small
 	cube_t pizza;
 	gen_xy_pos_for_cube_obj(pizza, place_on, vector3d(0.5*width, 0.5*width, 0.0), 0.1*width, rgen);
-	bool const dim(rgen.rand_bool()), dir(rgen.rand_bool());
+	bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // before return case so that each call is different
 	if (has_bcube_int(pizza, avoid)) return 0; // only make one attempt
 	interior->room_geom->objs.emplace_back(pizza, TYPE_PIZZA_BOX, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT), tot_light_amt); // Note: invalidates place_on reference
 	set_obj_id(interior->room_geom->objs);
@@ -4870,7 +4879,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 		bool const is_table(obj.type == TYPE_TABLE || obj.type == TYPE_CONF_TABLE); // for eating, and directionless (meaning objects can have any orient)
 		bool const is_eating_table(is_table && (rtype == RTYPE_KITCHEN || rtype == RTYPE_DINING) && rgen.rand_bool());
 		if (is_eating_table && place_eating_items_on_table(rgen, i)) continue; // no other items to place
-		float book_prob(0.0), bottle_prob(0.0), cup_prob(0.0), plant_prob(0.0), laptop_prob(0.0), pizza_prob(0.0), toy_prob(0.0), banana_prob(0.0);
+		float book_prob(0.0), bottle_prob(0.0), cup_prob(0.0), plant_prob(0.0), laptop_prob(0.0), pizza_prob(0.0), toy_prob(0.0), banana_prob(0.0), nvgog_prob(0.0);
 		static vect_cube_t avoid; // reuse across buildings
 		avoid.clear();
 
@@ -4889,6 +4898,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 				}
 			}
 			if ((is_house || (is_apartment() && !not_private)) && !is_kitchen) {toy_prob = 0.5;} // toys are in houses and private apartments rooms only; not on kitchen tables
+			nvgog_prob  = (is_basement ? 0.3 : 0.0); // basement only
 		}
 		else if (obj.type == TYPE_CONF_TABLE) {
 			book_prob   = 0.3*place_book_prob;
@@ -4906,6 +4916,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 			laptop_prob = 0.7*place_laptop_prob;
 			pizza_prob  = 0.4*place_pizza_prob;
 			banana_prob = 0.2*place_banana_prob;
+			nvgog_prob  = (is_basement ? 0.4 : 0.0); // basement only
 		}
 		else if (obj.type == TYPE_RDESK) { // reception desk
 			book_prob   = 0.4*place_book_prob;
@@ -4960,7 +4971,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 				if (obj2.type == TYPE_PEN || obj2.type == TYPE_PENCIL) {avoid.push_back(obj2);}
 			}
 		}
-		unsigned const num_obj_types = 7;
+		unsigned const num_obj_types = 8;
 		unsigned const obj_type_start(rgen.rand() % num_obj_types); // select a random starting point to remove bias toward objects checked first
 		bool placed(0);
 
@@ -4973,6 +4984,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 			case 4: placed = (rgen.rand_probability(banana_prob) && place_banana_on_obj(rgen, surface, room_id, tot_light_amt, avoid)); break;
 			case 5: placed = (!is_basement && rgen.rand_probability(plant_prob) && place_plant_on_obj(rgen, surface, room_id, tot_light_amt, 0.7, avoid)); break; // sz_scale=0.7
 			case 6: placed = (rgen.rand_probability(toy_prob)    && place_toy_on_obj   (rgen, surface, room_id, tot_light_amt, avoid)); break;
+			case 7: placed = (rgen.rand_probability(nvgog_prob ) && place_nvgog_on_obj (rgen, surface, room_id, tot_light_amt, avoid)); break;
 			}
 		} // for n
 		if (placed && objs[i].type == TYPE_RDESK) {objs[i].item_flags |= (1 << sel_ix);} // mark this surface of the reception desk as occupied

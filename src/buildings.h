@@ -2712,6 +2712,7 @@ private:
 		vect_cube_t const &avoid=vect_cube_t(), bool place_at_z1=0, unsigned max_type=DRINK_CAN_TYPE_BEER);
 	bool place_plant_on_obj  (rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, float sz_scale, vect_cube_t const &avoid=vect_cube_t());
 	bool place_laptop_on_obj (rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid=vect_cube_t(), bool use_dim_dir=0);
+	bool place_nvgog_on_obj  (rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid=vect_cube_t());
 	bool place_pizza_on_obj  (rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid=vect_cube_t());
 	bool place_plate_on_obj  (rand_gen_t &rgen, cube_t const &place_on, unsigned room_id, float tot_light_amt, vect_cube_t const &avoid=vect_cube_t(),
 		bool is_bowl=0, bool is_deep=0, bool no_food=0);
