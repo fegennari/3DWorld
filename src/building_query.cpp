@@ -1525,7 +1525,7 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 	if (room.is_backrooms() && room.dz() > 1.5*floor_spacing) return 0; // multi-floor backrooms: assume lit as this is too difficult to determine
 	unsigned const floor_ix(room.is_single_floor ? 0 : max(0.0f, (pos.z - room.z1()))/floor_spacing);
 	if (room.get_has_skylight() && pos.z > (room.z2() - floor_spacing)) return 0; // top floor of room with a skylight
-	// assume light can come from stairs (not in ext basement) or open elevator; also handles the has_clipped_wall case
+	// assume light can come from stairs (not in ext basement) or open elevator; also handles the has_clipped_wall case; ignores closed doors of basement stairs
 	if (room.has_elevator || (!room.is_ext_basement() && room.has_stairs_on_floor(floor_ix))) return 0;
 
 	if (pos.z > ground_floor_z1 && (pos.z < ground_floor_z1 + floor_spacing || !walkways.empty())) { // on the ground floor or have walkways
@@ -1602,6 +1602,7 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 	}
 	if (room.has_cut_wall()) { // check light through open wall sections
 		for (wall_seg_t const &w : interior->missing_wall_segs) {
+			if (!w.has_conn_room()) continue; // not connected to an adjacent room
 			if (w.room_ix      == (unsigned)room_id && !check_pos_in_unlit_room_recur(pos, rooms_visited, w.conn_room_ix)) return 0;
 			if (w.conn_room_ix == (unsigned)room_id && !check_pos_in_unlit_room_recur(pos, rooms_visited, w.room_ix     )) return 0;
 		}

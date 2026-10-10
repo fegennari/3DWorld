@@ -872,7 +872,8 @@ public:
 			if (in_building_gameplay_mode())        return 1; // zombies can use wall gaps
 			if (from_room >= interior.rooms.size()) return 0; // from_room is not a valid room; error?
 			assert(door_ix < interior.missing_wall_segs.size()); // missing wall seg
-			return (interior.missing_wall_segs[door_ix].conn_room_ix == from_room); // non-zombies can only exit secret rooms, not enter them
+			wall_seg_t const &wseg(interior.missing_wall_segs[door_ix]);
+			return (wseg.has_conn_room() && wseg.conn_room_ix == from_room); // non-zombies can only exit secret rooms, not enter them
 		}
 		//if (global_building_params.ai_opens_doors && has_key) return 1; // locked door won't stop us; incorrect because door may not cover z-range (for multi-floor backrooms)
 		door_t const &first_door(interior.doors[door_ix]);
@@ -1024,7 +1025,7 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 		} // for d
 		for (unsigned i = 0; i < interior->missing_wall_segs.size(); ++i) {
 			wall_seg_t const &w(interior->missing_wall_segs[i]);
-			if (!w.is_connected_to_room(r)) continue; // door not connected to this room
+			if (!w.has_conn_room() || !w.is_connected_to_room(r)) continue; // gap not connected to this room
 			unsigned const r2(w.get_conn_room(r)), dix(i + interior->doors.size()); // offset by the number of doors
 			if (r2 > r) {ng.connect_rooms(r, r2, dix, w);}
 		}
