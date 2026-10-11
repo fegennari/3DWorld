@@ -1525,9 +1525,25 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 	if (room.is_backrooms() && room.dz() > 1.5*floor_spacing) return 0; // multi-floor backrooms: assume lit as this is too difficult to determine
 	unsigned const floor_ix(room.is_single_floor ? 0 : max(0.0f, (pos.z - room.z1()))/floor_spacing);
 	if (room.get_has_skylight() && pos.z > (room.z2() - floor_spacing)) return 0; // top floor of room with a skylight
-	// assume light can come from stairs (not in ext basement) or open elevator; also handles the has_clipped_wall case; ignores closed doors of basement stairs
-	if (room.has_elevator || (!room.is_ext_basement() && room.has_stairs_on_floor(floor_ix))) return 0;
+	
+	if (room.has_elevator) { // check for light from open elevator
+		for (elevator_t const &e : interior->elevators) {
+			if (!e.get_bcube_padded(floor_spacing).intersects_no_adj(room)) continue;
+			if (e.open_amt > 0.0) return 0;
+		}
+	}
+	// assume light can come from stairs (not in ext basement); also handles the has_clipped_wall case; ignores closed doors of basement stairs
+	if (!room.is_ext_basement() && room.has_stairs_on_floor(floor_ix)) {
+		if (pos.z > ground_floor_z1) return 0; // not in basement
+		bool has_stairs_without_closed_door(0);
 
+		for (stairwell_t const &s : interior->stairwells) {
+			if (!s.intersects_no_adj(room)) continue;
+			if (s.stairs_door_ix < 0) {has_stairs_without_closed_door = 1; break;}
+			if (get_door(s.stairs_door_ix).open_amt > 0.0) {has_stairs_without_closed_door = 1; break;}
+		}
+		if (has_stairs_without_closed_door) return 0;
+	}
 	if (pos.z > ground_floor_z1 && (pos.z < ground_floor_z1 + floor_spacing || !walkways.empty())) { // on the ground floor or have walkways
 		// handle windowless office building open exterior doors; we don't really have a floor zval to pass into the first query
 		if (is_room_adjacent_to_ext_door(room) && point_near_ext_door(pos)) return 0;
