@@ -1338,7 +1338,7 @@ public:
 				oss << "Cur $" << cur_value << " / " << cur_weight << " lbs  Total $" << tot_value << " / " << tot_weight
 					<< " lbs  Best $" << best_value << "  Damage $" << round_fp(damage_done); // print damage to nearest dollar
 				
-				if (!carried.empty()) {
+				if (!carried.empty() && player_held_object.type != TYPE_NONE) {
 					bldg_obj_type_t const otype(get_taken_obj_type(player_held_object));
 					unsigned const capacity(otype.capacity);
 					oss << "  [" << otype.name; // print the name of the throwable object
