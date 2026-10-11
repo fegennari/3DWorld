@@ -743,20 +743,6 @@ template<typename T> void indexed_vntc_vect_t<T>::unset_bone_attrs() {
 	glDisableVertexAttribArray(BONE_WEIGHTS_LOC);
 }
 
-struct model3d_vao_mgr_t {
-	vao_wrap_t vao_vntc, vao_tan, vao_shadow;
-
-	template<typename T> void bind(shader_t &shader, bool is_shadow_pass) {
-		bool const has_tangents(sizeof(T) == sizeof(vert_norm_tc_tan));
-		vao_wrap_t &vao(is_shadow_pass ? vao_shadow : (has_tangents ? vao_tan : vao_vntc));
-		bool const is_new_vao(!vao.vao);
-		vao.ensure_vao_bound();
-		if (is_new_vao) {T::set_vertex_array_attribs(shader, vao.vao, 0);} // binding_index=0
-	}
-};
-model3d_vao_mgr_t model3d_vao_mgr;
-bool const use_shared_vao = 0;
-
 // Note: non-const due to VBO caching
 template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool is_shadow_pass, point const *const xlate, unsigned npts, bool no_vfc) {
 
@@ -805,10 +791,6 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 	else if (has_bones()) {setup_bones(shader, is_shadow_pass);}
 	else {this->create_and_upload(*this, indices, is_shadow_pass, 0, 1);} // dynamic_level=0, setup_pointers=1
 	bool const draw_all(is_shadow_pass || blocks.empty() || no_vfc || camera_pdu.sphere_completely_visible_test(bsphere.pos, bsphere.radius));
-
-	if (use_shared_vao && draw_all) {
-		// TODO
-	}
 	this->pre_render(is_shadow_pass);
 	check_mvm_update();
 	
@@ -822,8 +804,6 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 		}
 	}
 	//this->post_render(); // now called after drawing all materials
-	//T::unset_attrs(); // needed to unset tangent attrs
-	//if (has_bones()) {unset_bone_attrs();}
 }
 
 
