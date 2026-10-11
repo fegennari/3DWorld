@@ -5,7 +5,8 @@
 #include "buildings.h"
 #include "city.h" // for object_model_loader_t
 
-float const MIN_BATHROOM_SZ = 0.9; // relative to floor spacing
+bool const ADD_WALL_ABOVE_DOOR = 0; // disabled for now; requires shorter doors and updating logic for clipping wall trim above doors
+float const MIN_BATHROOM_SZ    = 0.9; // relative to floor spacing
 
 extern int world_mode;
 extern object_model_loader_t building_obj_model_loader;
@@ -2126,13 +2127,15 @@ cube_t get_trim_cube(cube_t const &c, bool dim, bool dir, float trim_thickness) 
 void building_t::add_trim_for_door_or_int_window(cube_t const &c, colorRGBA const &color, bool dim, bool draw_top_edge, bool draw_bot_trim,
 	float side_twidth, float top_twidth, float side_texp, float floor_spacing, float extra_top_gap)
 {
-	float const trim_thickness(get_trim_thickness());
+	float const trim_thickness(get_trim_thickness()), fc_gap(floor_spacing*(1.0 - get_floor_thick_val()) - extra_top_gap);
+	unsigned const num_floors(max(1U, calc_num_floors(c, floor_spacing, get_floor_thickness())));
 	float const top_z_adj(draw_top_edge ? max(0.0f, (side_twidth - top_twidth - extra_top_gap)) : 0.0); // higher when top edge is drawn since door is below ceiling
 	unsigned const bot_flags(RO_FLAG_NOCOLL | RO_FLAG_ADJ_BOT);
 	vect_room_object_t &objs(interior->room_geom->trim_objs);
 	cube_t trim(c);
 	set_wall_width(trim, trim.get_center_dim(dim), side_texp, dim);
 	if (is_industrial()) {min_eq(trim.z2(), (ground_floor_z1 + floor_spacing - get_fc_thickness()));} // constrain to bottom floor of industrial room
+	min_eq(trim.z2(), (c.z1() + (num_floors-1)*floor_spacing + fc_gap));
 	trim.z2() += top_z_adj;
 	if (top_z_adj == 0.0) {trim.z2() -= 0.01*trim_thickness;} // shift top down oh so slightly to prevent z-fighting with top of wall when drawn under a skylight
 
@@ -2148,8 +2151,6 @@ void building_t::add_trim_for_door_or_int_window(cube_t const &c, colorRGBA cons
 		return;
 	}
 	// add trim at top and maybe bottom of door or int window
-	unsigned const num_floors(max(1U, calc_num_floors(c, floor_spacing, get_floor_thickness())));
-	float const fc_gap(floor_spacing*(1.0 - get_floor_thick_val()) - extra_top_gap);
 	float z(c.z1());
 	trim.d[!dim][0] = c.d[!dim][0] + trim_thickness;
 	trim.d[!dim][1] = c.d[!dim][1] - trim_thickness;
@@ -2214,17 +2215,19 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		}
 	} // for room
 	// add vertical strips on each side + strip on top of interior doors
-	float const door_top_gap(fc_gap - get_int_door_height()), door_top_twidh(max(trim_thickness, door_top_gap));
+	float const door_ceil_gap(fc_gap - get_int_door_height());
+	float const extra_top_gap(ADD_WALL_ABOVE_DOOR ? 0.5*door_ceil_gap : 0.0);
+	float const door_top_gap(door_ceil_gap - extra_top_gap), door_top_twidth(max(trim_thickness, door_top_gap));
 
 	for (door_stack_t const &ds : interior->door_stacks) {
 		if (ds.on_stairs || ds.is_bars()) continue; // no frame for stairs or jail bars door; skip
-		bool const draw_top(ds.get_mult_floor() || door_top_gap > door_top_twidh);
+		bool const draw_top(ds.get_mult_floor() || door_top_gap > door_top_twidth);
 
 		if (ds.type == DOOR_TYPE_METAL) { // freezer door; add thin rubber lining
-			add_trim_for_door_or_int_window(ds, BLACK, ds.dim, draw_top, 1, 0.25*door_trim_width, door_top_twidh, 0.25*door_trim_exp, window_vspacing, 0.0); // draw_bot_trim=1
+			add_trim_for_door_or_int_window(ds, BLACK, ds.dim, draw_top, 1, 0.25*door_trim_width, door_top_twidth, 0.25*door_trim_exp, window_vspacing, 0.0); // draw_bot_trim=1
 		}
 		else {
-			add_trim_for_door_or_int_window(ds, trim_color, ds.dim, draw_top, 0, door_trim_width, door_top_twidh, door_trim_exp, window_vspacing, 0.0); // draw_bot_trim=0
+			add_trim_for_door_or_int_window(ds, trim_color, ds.dim, draw_top, 0, door_trim_width, door_top_twidth, door_trim_exp, window_vspacing, extra_top_gap); // draw_bot_trim=0
 		}
 	}
 	// handle interior windows similar to interior doors, except we also draw bottom trim
@@ -3944,6 +3947,17 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		objs.back().drawer_flags = num_floors; // store the number of floors in drawer_flags; used for drawing
 		objs.back().item_flags   = cur_floor;
 	} // for i
+	// maybe add wall slice above doors if there's space
+	float const door_ceil_gap(fc_gap - get_int_door_height());
+
+	if (ADD_WALL_ABOVE_DOOR && door_ceil_gap > get_trim_thickness()) {
+		for (door_t const &d : interior->doors) {
+			cube_t wall_seg(d);
+			set_cube_zvals(wall_seg, d.z2(), d.z2()+door_ceil_gap);
+			wall_seg.expand_in_dim(d.dim, 0.5*get_wall_thickness());
+			objs.emplace_back(wall_seg, TYPE_STAIR_WALL, d.conn_room[0], d.dim, 0, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, wall_color);
+		}
+	}
 }
 
 int building_t::get_ext_door_dir(cube_t const &door_bcube, bool dim) const { // erturn value of 2 means 'not found'

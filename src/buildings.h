@@ -1798,7 +1798,7 @@ struct building_t : public building_geom_t {
 	cube_t const &get_first_part () const {assert(!parts.empty()); return parts.front();}
 	cube_t const &get_retail_part() const {assert(has_retail()); return get_first_part();} // always the first part
 	cube_t const &get_industrial_area() const {assert(is_industrial()); return get_first_part();}
-	cube_t const &get_basement   () const {assert(has_basement()); return parts[basement_part_ix   ];}
+	cube_t const &get_basement   () const {assert(has_basement()); return parts[basement_part_ix];}
 	cube_t const &get_attic_part () const;
 	bool get_retail_long_dim     () const;
 	int check_player_in_basement(point const &pos) const;
