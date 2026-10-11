@@ -1696,6 +1696,7 @@ struct building_t : public building_geom_t {
 	uint8_t floor_ext_door_mask=0; // used for multi-family houses
 	uint8_t next_unit_id=1; // for apartments and hotels
 	uint8_t next_room_num=0; // room numbers per floor
+	uint8_t num_part_levels=1, split_shape=0;
 	building_type_t btype=BTYPE_UNSET;
 	bool is_house=0, has_garage=0, has_shed=0, has_int_garage=0, has_courtyard=0, has_complex_floorplan=0, has_helipad=0, has_ac=0, has_fake_roof_door=0;
 	bool has_tline_conn=0, has_smokestack=0, has_antenna=0, has_radiators=0, was_custom_placed=0, mw_restroom_side=0;

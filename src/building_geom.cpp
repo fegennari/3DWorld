@@ -308,6 +308,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 	}
 	if (mat.min_level_height > 0.0) {num_levels = max(mat.min_levels, min(num_levels, unsigned(bcube.dz()/mat.min_level_height)));}
 	max_eq(num_levels, 1U); // min_levels can be zero to apply more weight to 1 level buildings
+	num_part_levels = min(num_levels, 255U);
 	bool const do_split(num_levels < 4 && is_cube() && !was_custom_placed && rgen.rand_probability(mat.split_prob)); // don't split if >= 4 levels, non-cubes, or custom placed
 	float const height(base.dz()), floor_spacing(get_window_vspace());
 
@@ -530,13 +531,12 @@ void building_t::finish_gen_geometry(rand_gen_t &rgen, bool has_overlapping_cube
 
 void building_t::split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen) {
 
-	// generate L, T, U, H, +, O shape
+	// generate L, T, U, H, +, O shape for either base or top level
 	point const llc(seed_cube.get_llc());
 	vector2d const sz(seed_cube.get_size_xy());
 	bool const allow_courtyard(seed_cube.dx() < 1.6*seed_cube.dy() && seed_cube.dy() < 1.6*seed_cube.dx()); // AR < 1.6:1
 	int const shape(rgen.rand()%(allow_courtyard ? 10 : 9)); // 0-9
-	bool const has_hole(shape == 9);
-	bool const is_hpo(shape >= 7);
+	bool const has_hole(shape == 9), is_hpo(shape >= 7);
 	bool const dim(rgen.rand_bool()); // {x,y}
 	bool const dir(is_hpo ? 1 : rgen.rand_bool()); // {neg,pos} - H/+/O shapes are symmetric and always pos
 	float const smin(0.2), smax(has_hole ? 0.35 : 0.4); // outer and inner split sizes
@@ -553,21 +553,25 @@ void building_t::split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen) {
 	switch (shape) {
 	case 0: case 1: case 2: case 3: // L
 		parts[start+1].d[!dim][shape>>1] = ((shape&1) ? spos2 : spos1);
+		split_shape = SPLIT_SHAPE_L;
 		break;
 	case 4: case 5: // T
 		parts[start+1].d[!dim][0] = spos1;
 		parts[start+1].d[!dim][1] = spos2;
+		split_shape = SPLIT_SHAPE_T;
 		break;
 	case 6: // U
 		parts[start+2].d[ dim][!dir] = dpos; // partial width part
 		parts[start+1].d[!dim][1   ] = spos1;
 		parts[start+2].d[!dim][0   ] = spos2;
+		split_shape = SPLIT_SHAPE_U;
 		break;
 	case 7: { // H
 		parts[start+1].d[ dim][ dir] = dpos2;
 		parts[start+1].d[!dim][ 0  ] = spos1; // middle part
 		parts[start+1].d[!dim][ 1  ] = spos2;
 		parts[start+2].d[ dim][!dir] = dpos2; // full width part
+		split_shape = SPLIT_SHAPE_H;
 		break;
 	}
 	case 8: { // +
@@ -577,6 +581,7 @@ void building_t::split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen) {
 		parts[start+2].d[!dim][ 1  ] = spos2;
 		parts[start+1].d[ dim][ dir] = dpos2; // middle part
 		parts[start+2].d[ dim][!dir] = dpos2; // partial width part
+		split_shape = SPLIT_SHAPE_X;
 		break;
 	}
 	case 9: { // O (courtyard)
@@ -586,6 +591,7 @@ void building_t::split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen) {
 		parts[start+1].d[!dim][1   ] = spos1;
 		parts[start+2].d[!dim][0   ] = spos2;
 		parts[start+3].d[ dim][!dir] = dpos2; // other full width part
+		split_shape = SPLIT_SHAPE_O;
 		break;
 	}
 	default: assert(0);
