@@ -743,6 +743,20 @@ template<typename T> void indexed_vntc_vect_t<T>::unset_bone_attrs() {
 	glDisableVertexAttribArray(BONE_WEIGHTS_LOC);
 }
 
+struct model3d_vao_mgr_t {
+	vao_wrap_t vao_vntc, vao_tan, vao_shadow;
+
+	template<typename T> void bind(shader_t &shader, bool is_shadow_pass) {
+		bool const has_tangents(sizeof(T) == sizeof(vert_norm_tc_tan));
+		vao_wrap_t &vao(is_shadow_pass ? vao_shadow : (has_tangents ? vao_tan : vao_vntc));
+		bool const is_new_vao(!vao.vao);
+		vao.ensure_vao_bound();
+		if (is_new_vao) {T::set_vertex_array_attribs(shader, vao.vao, 0);} // binding_index=0
+	}
+};
+model3d_vao_mgr_t model3d_vao_mgr;
+bool const use_shared_vao = 0;
+
 // Note: non-const due to VBO caching
 template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool is_shadow_pass, point const *const xlate, unsigned npts, bool no_vfc) {
 
@@ -790,11 +804,15 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 	}
 	else if (has_bones()) {setup_bones(shader, is_shadow_pass);}
 	else {this->create_and_upload(*this, indices, is_shadow_pass, 0, 1);} // dynamic_level=0, setup_pointers=1
+	bool const draw_all(is_shadow_pass || blocks.empty() || no_vfc || camera_pdu.sphere_completely_visible_test(bsphere.pos, bsphere.radius));
+
+	if (use_shared_vao && draw_all) {
+		// TODO
+	}
 	this->pre_render(is_shadow_pass);
-	// what about calling T::set_vertex_array_attribs() with a shared VAO?
 	check_mvm_update();
 	
-	if (is_shadow_pass || blocks.empty() || no_vfc || camera_pdu.sphere_completely_visible_test(bsphere.pos, bsphere.radius)) { // draw the entire range
+	if (draw_all) { // draw the entire range; most of the time is spent here
 		draw_indexed_tri_verts(size(), (ixn*end_ix/ixd), GL_TRIANGLES);
 	}
 	else { // draw each block independently
@@ -803,9 +821,9 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 			if (camera_pdu.cube_visible(i->bcube)) {draw_indexed_tri_verts(size(), (ixn*i->num/ixd), GL_TRIANGLES, (void *)((ixn*i->start_ix/ixd)*sizeof(unsigned)));}
 		}
 	}
-	this->post_render();
-	T::unset_attrs();
-	if (has_bones()) {unset_bone_attrs();}
+	//this->post_render(); // now called after drawing all materials
+	//T::unset_attrs(); // needed to unset tangent attrs
+	//if (has_bones()) {unset_bone_attrs();}
 }
 
 
@@ -1334,14 +1352,14 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 
 	if (is_z_prepass) { // no textures
 		if (alpha < 1.0 || has_alpha_mask()) return; // partially transparent or has alpha mask
-		geom.render(shader, 0, xlate);
+		geom    .render(shader, 0, xlate);
 		geom_tan.render(shader, 0, xlate);
 	}
 	else if (is_shadow_pass) {
 		bool const has_amask(has_alpha_mask());
 		if (enable_alpha_mask != 2 && has_amask != bool(enable_alpha_mask)) return; // incorrect pass
 		if (has_amask) {tmgr.bind_texture(tex_id);} // enable alpha mask texture
-		geom.render(shader, 1, xlate);
+		geom    .render(shader, 1, xlate);
 		geom_tan.render(shader, 1, xlate);
 		if (has_amask) {select_no_texture();} // back to a default white texture
 	}
@@ -1996,6 +2014,7 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflec
 		if (cull_front_faces(reflection_pass)) {glCullFace(GL_BACK);} // restore the default
 		glDisable(GL_CULL_FACE);
 	}
+	indexed_vao_manager_with_shadow_t::post_render();
 }
 
 void model3d::render_material(shader_t &shader, unsigned mat_id, bool is_shadow_pass, bool is_z_prepass,
@@ -2003,6 +2022,7 @@ void model3d::render_material(shader_t &shader, unsigned mat_id, bool is_shadow_
 {
 	if (mat_id == materials.size()) {unbound_geom.render(shader, is_shadow_pass, xlate);} // unbound geom is material ID materials.size() (one past the end)
 	else {get_material(mat_id).render(shader, tmgr, unbound_mat.tid, is_shadow_pass, is_z_prepass, enable_alpha_mask, is_bmap_pass, xlate, no_set_min_alpha);}
+	indexed_vao_manager_with_shadow_t::post_render();
 }
 
 material_t *model3d::get_material_by_name(string const &name) {
@@ -2292,6 +2312,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 			render_with_xform(shader, xf, mvm, is_shadow_pass, reflection_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, reflect_mode, trans_op_mask);
 		}
 	}
+	indexed_vao_manager_with_shadow_t::post_render();
 	// cptw dtor called here
 }
 
@@ -2393,6 +2414,7 @@ void model3d::model_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 		model->render_materials_def(s, 1, 0, 0, (sam_pass == 1), 3, 3, &zero_vector); // no transforms; both opaque and partially transparent
 		s.end_shader();
 	}
+	indexed_vao_manager_with_shadow_t::post_render();
 }
 
 

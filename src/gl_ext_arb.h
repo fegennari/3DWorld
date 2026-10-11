@@ -243,10 +243,7 @@ public:
 	template<typename vert_type_t> void create_from_vbo(bool shadow, bool setup_pointers=0, bool always_bind=0) {
 		vaos[shadow].create_from_vbo<vert_type_t>(*this, setup_pointers, always_bind);
 	}
-	void pre_render(bool shadow, bool using_index=1, bool do_bind_vbo=0) const {
-		vaos[shadow].enable_vao();
-		if (do_bind_vbo) {indexed_vbo_manager_t::pre_render(using_index);}
-	}
+	void pre_render(bool shadow) const {vaos[shadow].enable_vao();}
 	static void post_render() {bind_vao(0); indexed_vbo_manager_t::post_render();}
 };
 
