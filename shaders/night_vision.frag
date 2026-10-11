@@ -5,6 +5,7 @@ in vec2 tc;
 
 void main() {
 	vec3 color      = texture(frame_buffer_tex, vec2(tc.x*xscale, tc.y*yscale)).rgb;
-	float luminance = sqrt((color.r + color.g + color.b)/3.0);
-	fg_FragColor    = vec4(0.0, luminance, 0.0, 1.0); // all green
+	float luminance = (color.r + color.g + color.b)/3.0;
+	float gscale    = mix(3.0*luminance, luminance, luminance);
+	fg_FragColor    = vec4(0.0, gscale, 0.0, 1.0); // all green
 }
