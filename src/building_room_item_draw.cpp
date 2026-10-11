@@ -1573,14 +1573,14 @@ public:
 
 lava_draw_t lava_draw;
 
-int room_object_t::get_model_id() const { // Note: first 8 bits is model ID, last 8 bits is sub-model ID
+unsigned room_object_t::get_model_id() const { // Note: first 8 bits is model ID, last 8 bits is sub-model ID
 	assert(type >= TYPE_TOILET);
 	if (type == TYPE_MONITOR)    return OBJ_MODEL_TV        ; // monitor has same model as TV
 	if (type == TYPE_GBIKE  )    return OBJ_MODEL_BICYCLE   ; // same model as city bicycle
 	if (type == TYPE_XFORMER)    return OBJ_MODEL_SUBSTATION; // same model as city substation
 	if (type == TYPE_US_FLAG)    return OBJ_MODEL_FLAG      ; // same model as city flag
 	if (type == TYPE_BLDG_FOUNT) return OBJ_MODEL_FOUNTAIN + pack_sub_model_id(item_flags); // same models as city fountains; select a sub_model_id
-	int id((int)type + OBJ_MODEL_TOILET - TYPE_TOILET);
+	unsigned id((unsigned)type + OBJ_MODEL_TOILET - TYPE_TOILET);
 	// choose a sub_model_id for these types using bits 8-15
 	if (type == TYPE_HANGER || type == TYPE_CLOTHES || type == TYPE_PLANT_MODEL || type == TYPE_SHOE || type == TYPE_HOSP_BED || type == TYPE_APPLE ||
 		type == TYPE_EX_MACHINE || type == TYPE_HANDGUN || type == TYPE_KITCH_APP)
@@ -1754,7 +1754,7 @@ void draw_obj_model(obj_model_inst_t const &i, room_object_t const &obj, shader_
 	if (refract_ix > 1.0  ) {s.set_refract_ix(refract_ix);}
 	if (specular   > 0.0  ) {s.set_specular(specular, shine, metalness);} // set default specular for materials that don't have any specular set
 	// Note: lamps are the most common and therefore most expensive models to draw
-	int const model_id(obj.get_model_id()); // first 8 bits is model ID, last 8 bits is sub-model ID
+	unsigned const model_id(obj.get_model_id()); // first 8 bits is model ID, last 8 bits is sub-model ID
 	unsigned rot_only_mat_mask(0);
 	vector3d dir(i.dir);
 

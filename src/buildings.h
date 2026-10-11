@@ -282,7 +282,7 @@ struct room_object_t : public oriented_cube_t { // size=68
 	int get_paper_tid() const;
 	int get_food_box_tid() const;
 	std::string const &get_food_box_name() const;
-	int get_model_id() const;
+	unsigned get_model_id() const;
 	void set_as_bottle(unsigned rand_id, unsigned max_type=NUM_BOTTLE_TYPES-1, bool no_empty=0, unsigned exclude_mask=0, bool make_empty=0, bool allow_transparent=0);
 	void remove() {type = TYPE_BLOCKER; flags = (RO_FLAG_NOCOLL | RO_FLAG_INVIS);} // replace it with an invisible blocker that won't collide with anything
 	colorRGBA get_color() const;
