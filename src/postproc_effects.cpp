@@ -37,6 +37,10 @@ void bind_frame_buffer_RGB(unsigned tu_id=0) {
 	bind_texture_tu(frame_buffer_RGB_tid, tu_id);
 }
 
+void add_aspect_ratio(shader_t &s) {
+	s.add_uniform_float("aspect_ratio", float(window_width)/float(window_height));
+}
+
 void draw_ortho_screen_space_triangle() {
 
 	// setup matrices
@@ -85,7 +89,7 @@ void add_god_rays() {
 	s.add_uniform_int("depth_tex", 0);
 	s.add_uniform_color("sun_color", sun_color);
 	s.add_uniform_vector3d("sun_pos", world_space_to_screen_space(get_sun_pos()));
-	s.add_uniform_float("aspect_ratio", float(window_width)/float(window_height));
+	add_aspect_ratio(s);
 	fill_screen_white_and_end_shader(s);
 	color_buffer_frame = 0; // reset to invalidate buffer
 }
@@ -160,7 +164,7 @@ void add_color_only_effect(string const &frag_shader, float intensity=1.0, float
 	s.add_uniform_int("frame_buffer_tex", 0);
 	s.add_uniform_float("time", time); // may not be used
 	s.add_uniform_color("color_mod", color_mod); // may not be used
-	s.add_uniform_float("aspect_ratio", float(window_width)/float(window_height));
+	add_aspect_ratio(s);
 	select_texture(NOISE_TEX, 1);
 	s.add_uniform_int("noise_tex", 1); // Note: used for heat waves effect, could be used for others
 	set_xy_step(s); // may not be used
@@ -193,6 +197,7 @@ void postproc_convert_colors(unsigned xsize, unsigned ysize, bool to_grayscale, 
 	// since the screen resolution may be different, we have to scale the texture coordinates
 	s.add_uniform_float("xscale", float(xsize)/float(window_width ));
 	s.add_uniform_float("yscale", float(ysize)/float(window_height));
+	add_aspect_ratio(s);
 	fill_screen_white_and_end_shader(s);
 	color_buffer_frame = 0; // reset to invalidate buffer
 }
@@ -212,7 +217,7 @@ void add_sphere_refract_effect(sphere_t const &sphere, float intensity) {
 	s.begin_shader();
 	s.add_uniform_int("frame_buffer_tex", 0);
 	//s.add_uniform_float("time", time); // unused in shader
-	s.add_uniform_float("aspect_ratio", float(window_width)/float(window_height));
+	add_aspect_ratio(s);
 	s.add_uniform_float("intensity", CLIP_TO_01(intensity)); // 1.0 at T=0, 0.0 at T=1
 	s.add_uniform_float("radius", sphere.radius/p2p_dist(get_camera_pos(), sphere.pos)); // divide distance/depth to convert to screen space radius
 	s.add_uniform_vector3d("center", center);
@@ -360,7 +365,6 @@ void run_postproc_effects() {
 	}
 	if (enable_postproc_recolor) {add_color_only_effect("recolor", 0.0);} // add recolor at the very end
 	if (enable_night_vision    ) {postproc_night_vision();}
-	if (enable_night_vision    ) {add_vignette(BLACK);}
 	if (vignette_color.A > 0.0 ) {add_vignette(vignette_color);}
 }
 
