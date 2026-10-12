@@ -929,9 +929,6 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 			divide_part_into_jail_cells(*p, part_id, gen_index, rgen);
 			add_part_sep_walls(p, place_area, rooms_start, must_split);
 		}
-		/*else if (num_part_levels == 1 && split_shape == SPLIT_SHAPE_L) {
-			// generate L-shaped building hallways
-		}*/
 		else { // generate random walls using recursive 2D slices
 			float const min_wall_len2(0.85*min_wall_len); // a somewhat shorter value that applies to some tests (but not wall_split_thresh)
 			bool const no_walls(min(p->dx(), p->dy()) < min_wall_len2); // not enough space to add a room (chimney, porch support, garage, shed, etc.)
@@ -940,31 +937,66 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 			assert(to_split.empty());
 			if (no_walls) {add_room(*p, part_id, 1);} // add entire part as a room
 			else {to_split.emplace_back(*p);} // seed room is entire part, no door
-			bool is_first_split(1);
 			point part_door_open_dir_tp(p->get_cube_center()); // used to determine in which direction doors open; updated based on central hallway
 			unsigned const ds_start(interior->door_stacks.size());
+			bool is_first_split(1), added_hall(0), added_whirl(0);
 			// see if we have a skylight to work with
 			vect_cube_t part_skylights; // should be at most size 1 with currently skylight addition code
-			bool added_whirl(0);
 			add_cubes_intersecting(skylights, *p, part_skylights);
 
 			while (!to_split.empty()) { // recursively split rooms until all rooms are too small to split or there are no more valid splits
 				split_cube_t const c(to_split.back()); // Note: non-const because door_lo/door_hi is modified during T-junction insert
 				to_split.pop_back();
 				vector3d const csz(c.get_size());
-				bool wall_dim(0), can_use_either_dim(0); // which dim the room is split by
+				bool wall_dim(0), can_use_either_dim(0); // which dim the room is split by; usually the long dim
 				if      (csz.y > min_wall_len2 && csz.x > 1.25*csz.y) {wall_dim = 0;} // split long room in x
 				else if (csz.x > min_wall_len2 && csz.y > 1.25*csz.x) {wall_dim = 1;} // split long room in y
 				else {wall_dim = rgen.rand_bool(); can_use_either_dim = 1;} // choose a random split dim for nearly square rooms
+				float const rsz_wdim(csz[!wall_dim]), rsz_nwdim(csz[wall_dim]); // usually {short, long} dims
+				unsigned const unsplit_num_lights((!is_house && !is_basement_part && rsz_nwdim > 8.0*window_vspacing) ? 2 : 1); // allow two lights in large office rooms
 
-				if (csz[wall_dim] < min_wall_len2) {
-					add_room(c, part_id, 1);
+				if (rsz_nwdim < min_wall_len2) {
+					add_room(c, part_id, unsplit_num_lights);
 					continue; // not enough space to add a wall
 				}
 				// add central hallway if wall/hall len is at least enough to place at least 2 rooms; 50% chance if part is a basement; houses and small office buildings
 				bool const is_basement_room(has_basement() && part_id == (unsigned)basement_part_ix);
-				bool const add_hallway(is_first_split && csz[!wall_dim] > 1.5*min_split_len && (!is_basement_room || rgen.rand_bool()));
+				bool const add_hallway(is_first_split && rsz_wdim > 1.5*min_split_len && rsz_nwdim > min_split_len && (!is_basement_room || rgen.rand_bool())); // down center of part
 
+				if (!add_hallway && !added_hall && is_first_split && rsz_wdim > 3.5*window_hspacing[!wall_dim] && !is_basement_room && num_part_levels == 1) {
+					if (split_shape == SPLIT_SHAPE_L || split_shape == SPLIT_SHAPE_T || split_shape == SPLIT_SHAPE_U || split_shape == SPLIT_SHAPE_H) {
+						bool add_edge_hall(0), edge_hall_side(0);
+
+						if (c.d[wall_dim][0] == bcube.d[wall_dim][0] && c.d[wall_dim][1] == bcube.d[wall_dim][1]) {
+							bool const gap_lo(c.d[!wall_dim][0] > bcube.d[!wall_dim][0]);
+							bool const gap_hi(c.d[!wall_dim][1] < bcube.d[!wall_dim][1]);
+							if (gap_lo && !gap_hi) {add_edge_hall = 1; edge_hall_side = 0;}
+							if (gap_hi && !gap_lo) {add_edge_hall = 1; edge_hall_side = 1;}
+						}
+						if (add_edge_hall) { // add edge hallway, in opposite dim
+							float const wspace(window_hspacing[!wall_dim]);
+							float const hall_width(min(wspace*(1.0 + 0.75*window_border), max(wspace*(1.0 - 0.75*window_border), 2.5*doorway_width))); // about a window width
+
+							if (rsz_wdim /*- hall_width*/ > min_split_len) { // remaining area can still be split; no longer need strict check due to added_hall special case below
+								float const hall_wall_pos(p->d[!wall_dim][edge_hall_side] - (edge_hall_side ? 1.0 : -1.0)*hall_width);
+								cube_t hall(c), remaining(c);
+								hall.d[!wall_dim][!edge_hall_side] = remaining.d[!wall_dim][edge_hall_side] = hall_wall_pos;
+								assert(hall.is_strictly_normalized());
+								unsigned const num_lights(2.0*rsz_nwdim/min_split_len); // more lights for longer hallways
+								add_room(hall, part_id, num_lights, 1, 0);
+								pref_conn_to = hall; // prefer to connect doors to this room
+								pref_conn_to.expand_by_xy(2.0*wall_thick);
+								cube_t wall(c);
+								create_wall(wall, !wall_dim, hall_wall_pos, fc_thick, wall_half_thick, wall_edge_spacing);
+								interior->walls[!wall_dim].push_back(wall);
+								to_split.push_back(remaining);
+								is_first_split = 0; // doesn't count as a split
+								added_hall     = 1;
+								continue;
+							}
+						}
+					}
+				}
 				if (!add_hallway && min(csz.x, csz.y) > 3.0*min_wall_len && rgen.rand_bool()) { // create a whirl pattern
 					cube_t cr(c), sr[4] = {c, c, c, c}; // center room and 4 side rooms (in CCW order)
 					bool is_valid(1);
@@ -1062,7 +1094,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 					if (csz[wall_dim] < min_wall_len2) break; // other dim is too small
 				} // for dim_pass
 				if (!pos_valid) { // no valid pos in either dim, skip this split
-					add_room(c, part_id, 1);
+					add_room(c, part_id, unsplit_num_lights);
 					continue;
 				}
 				// insert a doorway into the wall
@@ -1096,7 +1128,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 						hall.d[wall_dim][ dir] = other_wall_pos; // Note: building navigation code wants hallways to end at wall centerlines
 						hall.d[wall_dim][!dir] = wall_pos;
 						assert(hall.is_strictly_normalized());
-						unsigned const num_lights(2.0*csz[!wall_dim]/min_split_len); // more lights for longer hallways
+						unsigned const num_lights(2.0*rsz_wdim/min_split_len); // more lights for longer hallways
 						add_room(hall, part_id, num_lights, 1, 0);
 						pref_conn_to = hall; // prefer to connect doors to this room
 						pref_conn_to.expand_by_xy(2.0*wall_thick);
@@ -1115,8 +1147,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 						if (real_num_parts == 1) {bldg_door_open_dir_tp[wall_dim] = part_door_open_dir_tp[wall_dim];} // this is also the test point for the entire building
 					}
 				}
-				// split into two smaller rooms; ensure we can split at least once per dim
-				bool const do_split(csz[!wall_dim] > min(min_split_len, max(min_wall_len, 0.9f*bcube.get_sz_dim(!wall_dim))));
+				// split into two smaller rooms; ensure we can split at least once per dim by checking the normally smaller dim, but use the avg dim if we have a side hallway
+				bool const do_split((added_hall ? 0.5*(rsz_wdim + rsz_nwdim) : rsz_wdim) > min(min_split_len, max(min_wall_len, 0.9f*bcube.get_sz_dim(!wall_dim))));
 
 				for (unsigned d = 0; d < 2; ++d) { // still have space to split in other dim, add the two parts to the stack
 					split_cube_t c_sub(c);
@@ -1124,7 +1156,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, unsigned gen_index, bool has
 					c_sub.door_lo[!wall_dim][d] = door_lo[!d] - wall_half_thick; // set new door pos in this dim (keep door pos in other dim, if set)
 					c_sub.door_hi[!wall_dim][d] = door_hi[!d] + wall_half_thick;
 					if (do_split /*|| c_sub.dx() > 2.0*c_sub.dy() || c_sub.dy() > 2.0*c_sub.dx()*/) {to_split.push_back(c_sub);} // also split if high aspect ratio?
-					else {add_room(c_sub, part_id, 1);} // leaf case (unsplit), add a new room
+					else {add_room(c_sub, part_id, unsplit_num_lights);} // leaf case (unsplit), add a new room
 				}
 				is_first_split = 0;
 			} // end while()
