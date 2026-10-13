@@ -540,7 +540,6 @@ struct gas_station_t : public obj_with_roof_pavement_lights_t, public reservable
 	mutable bool cached_smaps[num_lights]={}; // for lights
 	vector<gas_pump_t> pumps;
 	vector<manhole_t > manholes;
-	//mutable unsigned last_ped_frame[num_lanes+1]={}; // for future work with car/ped coll; not easy to implement
 
 	gas_station_t(cube_t const &c, bool dim_, bool dir_, bool edir, unsigned pix, unsigned gix, unsigned rand_val);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;

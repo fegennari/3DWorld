@@ -2097,7 +2097,6 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 						add_plants_to_room(rgen, sub_room, zval, room_id, light_amt, place_start, num_plants);
 						// try to place a lamp 50% of the time; these go on the floor but aren't really meant to be floor lamps; they can be placeholders for future tall lamps
 						//if (rgen.rand_bool()) {try_add_lamp(sub_room, window_vspace, room_id, RO_FLAG_IN_MALL, light_amt, blockers, objs, rgen);}
-						// TYPE_FPLACE?
 					}
 					else if (rtype == RTYPE_KITCHEN || rtype == RTYPE_DINING) { // tables only, for now
 						sub_room.expand_by_xy(room_pad); // make it larger to allow chairs to stick out a bit, since they don't block the player

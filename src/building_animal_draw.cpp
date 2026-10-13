@@ -112,7 +112,7 @@ public:
 		bool any_drawn(0);
 		rgeom_mat_t &mat(mats[low_detail]);
 
-		for (spider_t const &S : spiders) { // future work: use instancing
+		for (spider_t const &S : spiders) {
 			if (!shadow_only && S.on_web) { // draw spider webs
 				cube_t strand(S.pos - 0.3*S.radius*S.upv); // end of abdomen (matches body_zval)
 				set_cube_zvals(strand, (S.pos.z + 1.3*S.radius), S.web_start_zval);
@@ -281,7 +281,7 @@ public:
 	void draw(vect_insect_t const &insects, shader_t &s, building_t const &building, occlusion_checker_noncity_t const &oc, vector3d const &xlate, bool reflection_pass) {
 		if (insects.empty()) return; // nothing to draw
 		point const camera_bs(camera_pdu.pos - xlate);
-		bool const check_occlusion(display_mode & 0x08);//, low_detail(shadow_only || reflection_pass);
+		bool const check_occlusion(display_mode & 0x08);
 		float const draw_dist_scale = 500.0;
 		bool any_drawn(0);
 		wing_verts.clear();

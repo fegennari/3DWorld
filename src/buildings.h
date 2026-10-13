@@ -1754,7 +1754,6 @@ struct building_t : public building_geom_t {
 	bool has_mall_skylight  () const {return (has_mall() && !interior->mall_info->skylights.empty());}
 	bool has_backrooms_texture() const {return (has_backrooms() && interior->backrooms_tid > 0);}
 	bool has_extb_ceiling_tile() const {return (!is_house && crack_damage < 0.5 && !has_backrooms());}
-	//bool split_draw_geom() const {return (has_ext_basement() && (has_retail() || has_mall()));} // high object/vertex count either above or below ground; for future use
 	bool is_office_bldg () const {return (btype == BTYPE_OFFICE    );}
 	bool is_apartment   () const {return (btype == BTYPE_APARTMENT );}
 	bool is_hotel       () const {return (btype == BTYPE_HOTEL     );}

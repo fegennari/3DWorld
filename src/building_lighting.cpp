@@ -2501,7 +2501,6 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			}
 			if (!maybe_visible) continue;
 		}
-		//if (line_intersect_walls(lpos, camera_rot)) continue; // straight line visibility test - for debugging, or maybe future use in assigning priorities
 		//if (check_cube_occluded(clipped_bc, interior->fc_occluders, camera_rot)) continue; // legal, but may not help much
 		bool const is_fully_broken(i->is_broken2());
 		

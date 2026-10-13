@@ -479,7 +479,6 @@ class road_network_t : public streetlights_t { // AKA city center
 	vector<vect_cube_t> plot_colliders;
 	plot_xy_t plot_xy;
 	unsigned city_id=0, cluster_id=0, plot_id_offset=0;
-	//string city_name; // future work
 	float tot_road_len=0.0;
 	mutable unsigned num_cars=0; // Note: not counting parked cars; mutable so that car_manager can update this
 	bool is_residential=0;
