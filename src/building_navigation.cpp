@@ -2078,6 +2078,17 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 				assert(s < stairs_end); // last set is mall stairwell
 				stairwell_t const &stairs((s == num_stairwells) ? interior->mall_info->ent_stairs : interior->stairwells[s]);
 				assert(!stairs.is_all_zeros());
+				// clamp point to room above or below stairs if close to a wall to avoid a backtracking segment with that makes the person turn 270 degrees
+				point *pts[2] = {&from_path.front(), &path.back()};
+
+				for (unsigned d = 0; d < 2; ++d) {
+					int const room_id(get_room_containing_pt(*pts[d]));
+					if (room_id < 0) continue; // error?
+					cube_t r(get_room(room_id));
+					if (!r.contains_cube_xy(stairs)) continue; // stairs clipping wall?
+					r.expand_by_xy(-radius);
+					r.clamp_pt_xy(*pts[d]);
+				} // for d
 				cube_t const stairs_ext(get_stairs_plus_step_up(stairs, radius));
 				enter_pt = stairs_ext.closest_pt(from_path.front());
 				point const exit_pt(stairs_ext.closest_pt(path.back()));
