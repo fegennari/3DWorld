@@ -4619,24 +4619,24 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 	if (fallen && !inc_lg) return;
 	colorRGBA const color(apply_wood_light_color(c));
 	point const tex_origin(use_this_tex_origin ? *use_this_tex_origin : c.get_llc());
+	rgeom_mat_t *const wood_mat(inc_lg ? &get_wood_material(tscale) : nullptr);
 
 	if (fallen) { // fallen bookcase; only draw back and sides, and no books
-		get_wood_material(tscale).add_cube_to_verts(c, color, tex_origin, EF_Z1); // skip bottom surface
+		wood_mat->add_cube_to_verts(c, color, tex_origin, EF_Z1); // skip bottom surface
 		return;
 	}
-	bool const draw_back_face(c.was_moved() || c.is_open()); // draw back face if moved or placed near an open wall
-	unsigned const skip_faces(draw_back_face ? 0 : ~get_face_mask(c.dim, !c.dir)); // skip back face, unless moved by the player and no longer against the wall
-	unsigned const skip_faces_shelves(skip_faces | get_skip_mask_for_xy(!c.dim)); // skip back face and sides
-	float const depth((c.dir ? -1.0 : 1.0)*c.get_depth()); // signed depth
+	bool const dim(c.dim), dir(c.dir), draw_back_face(c.was_moved() || c.is_open()); // draw back face if moved or placed near an open wall
+	unsigned const skip_faces(draw_back_face ? 0 : ~get_face_mask(dim, !dir)); // skip back face, unless moved by the player and no longer against the wall
+	unsigned const skip_faces_shelves(skip_faces | get_skip_mask_for_xy(!dim)); // skip back face and sides
+	float const depth((dir ? -1.0 : 1.0)*c.get_depth()); // signed depth
 	cube_t top, middle, back, lr[2];
 	get_bookcase_cubes(c, top, middle, back, lr, no_shelves, sides_scale);
 
 	if (inc_lg) {
-		unsigned const back_skip_faces(draw_back_face ? ~get_skip_mask_for_xy(c.dim) : get_face_mask(c.dim, c.dir)); // back - only face oriented outward
-		rgeom_mat_t &wood_mat(get_wood_material(tscale));
-		wood_mat.add_cube_to_verts(top,  color, tex_origin, skip_faces_shelves); // top
-		wood_mat.add_cube_to_verts(back, color, tex_origin, back_skip_faces   ); // back
-		for (unsigned d = 0; d < 2; ++d) {wood_mat.add_cube_to_verts(lr[d], color, tex_origin, (skip_faces | EF_Z1));} // left/right sides
+		unsigned const back_skip_faces(draw_back_face ? ~get_skip_mask_for_xy(dim) : get_face_mask(dim, dir)); // back - only face oriented outward
+		wood_mat->add_cube_to_verts(top,  color, tex_origin, skip_faces_shelves); // top
+		wood_mat->add_cube_to_verts(back, color, tex_origin, back_skip_faces   ); // back
+		for (unsigned d = 0; d < 2; ++d) {wood_mat->add_cube_to_verts(lr[d], color, tex_origin, (skip_faces | EF_Z1));} // left/right sides
 	}
 	if (no_shelves) return;
 	// add shelves
@@ -4645,7 +4645,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 	shelf_rgen.rand_mix();
 	unsigned const num_shelves(3 + (shelf_rgen.rand() % (c.in_mall() ? 2 : 3))); // 3-5, randomly selected; 3-4 for malls
 	unsigned const max_books(MAX_BCASE_BOOKS); // limited by room_object_t combined flags bits; could increase, but then book taking logic won't always be correct
-	float const shelf_dz(middle.dz()/num_shelves), shelf_thick(0.12*shelf_dz);
+	float const shelf_dz(middle.dz()/num_shelves), shelf_thick(0.11*shelf_dz);
 	// 40% of the time lower shelves are higher than upper shelves
 	float const shelf_dz_range((shelf_rgen.rand_float() < 0.4) ? shelf_rgen.rand_uniform(0.15, 0.28)*shelf_dz : 0.0);
 	uint64_t const skip_book_flags(c.get_combined_flags());
@@ -4654,136 +4654,151 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 	
 	for (unsigned i = 0; i < num_shelves; ++i) {
 		float cur_dz(shelf_dz);
-		if (2*i < num_shelves-1) {cur_dz += shelf_dz_range;} else if (2*i > num_shelves-1) {cur_dz -= shelf_dz_range;} // lower shelves are taller than upper shelves
+		if      (2*i < num_shelves-1) {cur_dz += shelf_dz_range;} // lower shelves are taller than upper shelves
+		else if (2*i > num_shelves-1) {cur_dz -= shelf_dz_range;}
 		cube_t &shelf(shelves[i]);
 		shelf = middle; // copy XY parts
 		shelf.z1() += cur_zval;
 		shelf.z2()  = shelf.z1() + shelf_thick;
 		cur_zval   += cur_dz;
 		shelf_heights[i] = (cur_dz - shelf_thick);
-		if (inc_lg) {get_wood_material(tscale).add_cube_to_verts(shelf, color, tex_origin, skip_faces_shelves);}
-	}
+		if (inc_lg) {wood_mat->add_cube_to_verts(shelf, color, tex_origin, skip_faces_shelves);}
+	} // for i
 	// add books
 	rand_gen_t rgen(c.create_rgen());
 
 	for (unsigned i = 0, book_ix = 0; i < num_shelves && book_ix < max_books; ++i) {
-		// Future work: add vertical shelf splits as well? With recursive nesting?
-		if (rgen.rand_float() < 0.15) continue; // no books on this shelf
-		cube_t const &shelf(shelves[i]);
-		float const shelf_width(shelf.get_sz_dim(!c.dim)), shelf_height(shelf_heights[i]);
+		bool const add_split(shelf_rgen.rand_float() < 0.25); // 25% of the time
+		cube_t const &shelf_row(shelves[i]);
+		float const shelf_row_width(shelf_row.get_sz_dim(!dim)), shelf_height(shelf_heights[i]);
+		cube_t shelf_sides[2] = {shelf_row, shelf_row};
 
-		if (rgen.rand_float() < 0.1) { // add a stack of books rather than upright books
-			unsigned const num_stacked((rgen.rand()%8) + 1); // 1-8
-			float const shelf_depth(shelf.get_sz_dim(c.dim)), max_book_width(1.0*shelf_depth); // must fit within shelf width
-			float const max_book_len(min(1.0f*shelf_height, 1.5f*max_book_width)), max_book_hlen(0.5*max_book_len), dist_from_end(1.2*max_book_hlen); // height along width of shelf
-			if (shelf_width <= 2.0*dist_from_end) continue; // shouldn't happen, but if it does it's probably best to skip this shelf
-			float const max_book_thick(min(0.8f*shelf_thick, shelf_height/(num_stacked+1)));
-			float const center_w(rgen.rand_uniform((shelf.d[!c.dim][0] + dist_from_end), (shelf.d[!c.dim][1] - dist_from_end)));
-			float const center_d(shelf.get_center_dim(c.dim));
-			float cur_zval(shelf.z2()); // stack starts on the top of the shelf
+		if (add_split) {
+			cube_t divider(shelf_row); // copy depth
+			float const split_pos[3] = {0.35, 0.5, 0.65};
+			set_wall_width(divider, (shelf_row.d[!dim][0] + split_pos[rgen.rand() % 3]*shelf_row_width), 0.4*shelf_row.dz(), !dim);
+			set_cube_zvals(divider, shelf_row.z2(), shelf_row.z2()+shelf_height);
+			for (unsigned side = 0; side < 2; ++side) {shelf_sides[side].d[!dim][!side] = divider.d[!dim][side];}
+			if (inc_lg) {wood_mat->add_cube_to_verts(divider, color, tex_origin, (skip_faces | EF_Z12));} // skip back, top, and bottom
+		}
+		for (unsigned side = 0; side < (add_split ? 2 : 1); ++side) { // each side of split, if present
+			if (rgen.rand_float() < 0.15) continue; // no books on this shelf
+			cube_t const &shelf(shelf_sides[side]);
+			float const shelf_width(shelf.get_sz_dim(!dim));
 
-			for (unsigned n = 0; n < num_stacked; ++n) {
-				float const book_thick(max_book_thick*rgen.rand_uniform(0.5, 1.0)), next_zval(cur_zval + book_thick);
-				if (next_zval + max_book_thick > shelf_height) break; // not enough space to stack this book - done
-				float const book_len(max_book_hlen*rgen.rand_uniform(0.7, 1.0)), book_width(min(0.5f*max_book_width*rgen.rand_uniform(0.7, 1.0), 1.1f*book_len));
-				point bot_center;
-				bot_center[ c.dim] = center_d + depth*rgen.rand_uniform(0.0, 0.05); // Note: signed depth
-				bot_center[!c.dim] = center_w + 0.1*shelf_depth*rgen.rand_uniform(-1.0, 1.0);
-				cube_t book(bot_center, bot_center);
-				set_cube_zvals(book, cur_zval, next_zval);
-				book.expand_in_dim( c.dim, book_width);
-				book.expand_in_dim(!c.dim, book_len  );
-				colorRGBA const book_color(book_colors[rgen.rand() % NUM_BOOK_COLORS]);
-				bool const backwards((rgen.rand()%10) == 0); // spine facing out 90% of the time
+			if (rgen.rand_float() < 0.1) { // add a stack of books rather than upright books
+				unsigned const num_stacked((rgen.rand()%8) + 1); // 1-8
+				float const shelf_depth(shelf.get_sz_dim(dim)), max_book_width(1.0*shelf_depth); // must fit within shelf width
+				float const max_book_len(min(1.0f*shelf_height, 1.5f*max_book_width)), max_book_hlen(0.5*max_book_len), dist_from_end(1.2*max_book_hlen); // height along width of shelf
+				if (shelf_width <= 2.0*dist_from_end) continue; // shouldn't happen, but if it does it's probably best to skip this shelf
+				float const max_book_thick(min(0.8f*shelf_thick, shelf_height/(num_stacked+1)));
+				float const center_w(rgen.rand_uniform((shelf.d[!dim][0] + dist_from_end), (shelf.d[!dim][1] - dist_from_end))), center_d(shelf.get_center_dim(dim));
+				float cur_zval(shelf.z2()); // stack starts on the top of the shelf
 
-				if (!(skip_book_flags & c.get_book_ix_mask(book_ix))) { // works with up to 48 books
-					add_bcase_book(c, book, inc_lg, inc_sm, inc_text, backwards, 0, skip_faces, book_ix, 0, book_color, 0.0, books); // in_set=0, set_start_ix=0, tilt_angle=0.0
+				for (unsigned n = 0; n < num_stacked; ++n) {
+					float const book_thick(max_book_thick*rgen.rand_uniform(0.5, 1.0)), next_zval(cur_zval + book_thick);
+					if (next_zval + max_book_thick > shelf_height) break; // not enough space to stack this book - done
+					float const book_len(max_book_hlen*rgen.rand_uniform(0.7, 1.0)), book_width(min(0.5f*max_book_width*rgen.rand_uniform(0.7, 1.0), 1.1f*book_len));
+					point bot_center;
+					bot_center[ dim] = center_d + depth*rgen.rand_uniform(0.0, 0.05); // Note: signed depth
+					bot_center[!dim] = center_w + 0.1*shelf_depth*rgen.rand_uniform(-1.0, 1.0);
+					cube_t book(bot_center, bot_center);
+					set_cube_zvals(book, cur_zval, next_zval);
+					book.expand_in_dim( dim, book_width);
+					book.expand_in_dim(!dim, book_len  );
+					colorRGBA const book_color(book_colors[rgen.rand() % NUM_BOOK_COLORS]);
+					bool const backwards((rgen.rand()%10) == 0); // spine facing out 90% of the time
+
+					if (!(skip_book_flags & c.get_book_ix_mask(book_ix))) { // works with up to 48 books
+						add_bcase_book(c, book, inc_lg, inc_sm, inc_text, backwards, 0, skip_faces, book_ix, 0, book_color, 0.0, books); // in_set=0, set_start_ix=0, tilt_angle=0.0
+					}
+					++book_ix;
+					cur_zval = next_zval;
+					if (book_ix == max_books) break; // no more books
+				} // for n
+				continue; // done with this shelf
+			} // end stack of books
+			unsigned const num_left(max_books - book_ix), rand_mod(min(11U, max(3U, num_left/3)));
+			unsigned num_spaces(22 + (rgen.rand()%rand_mod)); // 22-32 book spaces per shelf, fewer when running out of books
+			if (add_split) {num_spaces = round_fp(num_spaces*shelf_width/shelf_row_width);} // adjust to horizontal space
+			float const skip_rate((num_left < max_books/3) ? 0.2 : 0.12); // skip more often when running out of books
+			unsigned skip_mask(0), set_start_ix(0);
+
+			for (unsigned n = 0; n < num_spaces; ++n) {
+				if (rgen.rand_float() < skip_rate) {
+					unsigned const skip_end(n + (rgen.rand()%8) + 1); // skip 1-8 books
+					for (; n < skip_end; ++n) {skip_mask |= (1<<n);}
+				}
+			}
+			float const book_space(shelf_width/num_spaces), shelf_end(shelf.d[!dim][1]);
+			bool const enable_sets(rgen.rand_float() < 0.4); // 40% of shelves can have sets
+			bool prev_tilted(0), in_set(0), last_start_or_end_set(0);
+			colorRGBA book_color;
+			float pos(shelf.d[!dim][0]), last_book_pos(pos), min_height(0.0), width(0.0), height(0.0), depth_val(0.0);
+
+			for (unsigned n = 0; n < num_spaces; ++n) { // fill this shelf horizontally
+				if ((pos + 0.7*book_space) > shelf_end) break; // not enough space for another book
+				// don't toggle on two consecutive books or on the last book on the shelf; this should prevent single book sets except when there's a missing book
+				bool const start_or_end_set(enable_sets && !last_start_or_end_set && n+1 < num_spaces && (rgen.rand()&7) == 0);
+				last_start_or_end_set = start_or_end_set;
+			
+				if (start_or_end_set) {
+					in_set ^= 1;
+					if (in_set) {set_start_ix = book_ix;} // first book in this set
+				}
+				if (start_or_end_set || !in_set) { // choose a new book set color/width/height if we're starting a new set or not currently in a set
+					book_color = book_colors[rgen.rand() % NUM_BOOK_COLORS];
+					width      = book_space*rgen.rand_uniform(0.7, 1.3);
+					height     = max(shelf_height*rgen.rand_uniform(0.6, 0.98), min_height);
+					depth_val  = depth*rgen.rand_uniform(0.0, 0.2);
+				}
+				if (!prev_tilted && (skip_mask & (1<<n))) { // skip this book, and don't tilt the next one
+					pos   += width;
+					in_set = 0;
+					continue;
+				}
+				float const side_gap(0.05*width*rgen.rand_float()); // add a small gap between books to help separate books of different colors
+				float const right_pos(min((pos + width - side_gap), shelf_end)), avail_space(right_pos - last_book_pos);
+				float tilt_angle(0.0);
+				cube_t book;
+				book.z1() = shelf.z2();
+				book.d[dim][ dir] = shelf.d[dim][ dir] + depth_val; // facing out
+				book.d[dim][!dir] = shelf.d[dim][!dir]; // facing in
+				book.translate_dim(dim, depth*rgen.rand_uniform(0.0, 0.05)); // slight random shift outward
+				min_height = 0.0;
+
+				if (avail_space > 1.1f*height && rgen.rand_float() < 0.5) { // book has space to fall over 50% of the time
+					book.d[!dim][0] = last_book_pos + rgen.rand_uniform(0.0, (right_pos - last_book_pos - height)); // shift a random amount within the gap
+					book.d[!dim][1] = book.d[!dim][0] + height;
+					book.z2() = shelf.z2() + width;
+				}
+				else { // upright
+					if (!prev_tilted && avail_space > 2.0*width && (right_pos + book_space) < shelf_end && n+1 < num_spaces && book_ix+1 < max_books) {
+						// rotates about the URC; note that books are limited to tilting only in the direction of iteration, which is constant per bookcase
+						float const lean_width(min((avail_space - width), rgen.rand_uniform(0.1, 0.6)*height)); // use part of the availabe space to lean
+						tilt_angle = asinf(lean_width/height);
+						float const delta_z(height - sqrt(height*height - lean_width*lean_width)); // move down to touch the bottom of the bookcase when rotated
+						book.z1() -= delta_z;
+						min_height = rgen.rand_uniform(0.95, 1.05)*(height - delta_z); // make sure the book this book is leaning on is tall enough
+					}
+					book.d[!dim][0] = pos;
+					book.d[!dim][1] = right_pos; // clamp to edge of bookcase interior
+					book.z2() = book.z1() + height;
+					assert(pos < right_pos);
+				}
+				bool const backwards(!in_set && (rgen.rand()%10) == 0); // spine facing out 90% of the time if not in a set
+
+				if (!(skip_book_flags & c.get_book_ix_mask(book_ix))) { // may have more than 48 books, and will wrap in that case
+					add_bcase_book(c, book, inc_lg, inc_sm, inc_text, backwards, in_set, skip_faces, book_ix, set_start_ix, book_color, tilt_angle, books);
 				}
 				++book_ix;
-				cur_zval = next_zval;
+				pos += width;
+				last_book_pos = pos;
+				prev_tilted   = (tilt_angle != 0.0); // don't tilt two books in a row
 				if (book_ix == max_books) break; // no more books
-			} // for n
-			continue; // done with this shelf
-		}
-		unsigned const num_left(max_books - book_ix), rand_mod(min(11U, max(3U, num_left/3)));
-		unsigned const num_spaces(22 + (rgen.rand()%rand_mod)); // 22-32 book spaces per shelf, fewer when running out of books
-		float const skip_rate((num_left < max_books/3) ? 0.2 : 0.12); // skip more often when running out of books
-		unsigned skip_mask(0), set_start_ix(0);
-
-		for (unsigned n = 0; n < num_spaces; ++n) {
-			if (rgen.rand_float() < skip_rate) {
-				unsigned const skip_end(n + (rgen.rand()%8) + 1); // skip 1-8 books
-				for (; n < skip_end; ++n) {skip_mask |= (1<<n);}
-			}
-		}
-		float const book_space(shelf_width/num_spaces), shelf_end(shelf.d[!c.dim][1]);
-		bool const enable_sets(rgen.rand_float() < 0.4); // 40% of shelves can have sets
-		bool prev_tilted(0), in_set(0), last_start_or_end_set(0);
-		colorRGBA book_color;
-		float pos(shelf.d[!c.dim][0]), last_book_pos(pos), min_height(0.0), width(0.0), height(0.0), depth_val(0.0);
-
-		for (unsigned n = 0; n < num_spaces; ++n) { // fill this shelf horizontally
-			if ((pos + 0.7*book_space) > shelf_end) break; // not enough space for another book
-			// don't toggle on two consecutive books or on the last book on the shelf; this should prevent single book sets except when there's a missing book
-			bool const start_or_end_set(enable_sets && !last_start_or_end_set && n+1 < num_spaces && (rgen.rand()&7) == 0);
-			last_start_or_end_set = start_or_end_set;
-			
-			if (start_or_end_set) {
-				in_set ^= 1;
-				if (in_set) {set_start_ix = book_ix;} // first book in this set
-			}
-			if (start_or_end_set || !in_set) { // choose a new book set color/width/height if we're starting a new set or not currently in a set
-				book_color = book_colors[rgen.rand() % NUM_BOOK_COLORS];
-				width      = book_space*rgen.rand_uniform(0.7, 1.3);
-				height     = max(shelf_height*rgen.rand_uniform(0.6, 0.98), min_height);
-				depth_val  = depth*rgen.rand_uniform(0.0, 0.2);
-			}
-			if (!prev_tilted && (skip_mask & (1<<n))) { // skip this book, and don't tilt the next one
-				pos   += width;
-				in_set = 0;
-				continue;
-			}
-			float const side_gap(0.05*width*rgen.rand_float()); // add a small gap between books to help separate books of different colors
-			float const right_pos(min((pos + width - side_gap), shelf_end)), avail_space(right_pos - last_book_pos);
-			float tilt_angle(0.0);
-			cube_t book;
-			book.z1() = shelf.z2();
-			book.d[c.dim][ c.dir] = shelf.d[c.dim][ c.dir] + depth_val; // facing out
-			book.d[c.dim][!c.dir] = shelf.d[c.dim][!c.dir]; // facing in
-			book.translate_dim(c.dim, depth*rgen.rand_uniform(0.0, 0.05)); // slight random shift outward
-			min_height = 0.0;
-
-			if (avail_space > 1.1f*height && rgen.rand_float() < 0.5) { // book has space to fall over 50% of the time
-				book.d[!c.dim][0] = last_book_pos + rgen.rand_uniform(0.0, (right_pos - last_book_pos - height)); // shift a random amount within the gap
-				book.d[!c.dim][1] = book.d[!c.dim][0] + height;
-				book.z2() = shelf.z2() + width;
-			}
-			else { // upright
-				if (!prev_tilted && avail_space > 2.0*width && (right_pos + book_space) < shelf_end && n+1 < num_spaces && book_ix+1 < max_books) {
-					// rotates about the URC; note that books are limited to tilting only in the direction of iteration, which is constant per bookcase
-					float const lean_width(min((avail_space - width), rgen.rand_uniform(0.1, 0.6)*height)); // use part of the availabe space to lean
-					tilt_angle = asinf(lean_width/height);
-					float const delta_z(height - sqrt(height*height - lean_width*lean_width)); // move down to touch the bottom of the bookcase when rotated
-					book.z1() -= delta_z;
-					min_height = rgen.rand_uniform(0.95, 1.05)*(height - delta_z); // make sure the book this book is leaning on is tall enough
-				}
-				book.d[!c.dim][0] = pos;
-				book.d[!c.dim][1] = right_pos; // clamp to edge of bookcase interior
-				book.z2() = book.z1() + height;
-				assert(pos < right_pos);
-			}
-			bool const backwards(!in_set && (rgen.rand()%10) == 0); // spine facing out 90% of the time if not in a set
-
-			if (!(skip_book_flags & c.get_book_ix_mask(book_ix))) { // may have more than 48 books, and will wrap in that case
-				add_bcase_book(c, book, inc_lg, inc_sm, inc_text, backwards, in_set, skip_faces, book_ix, set_start_ix, book_color, tilt_angle, books);
-			}
-			++book_ix;
-			pos += width;
-			last_book_pos = pos;
-			prev_tilted   = (tilt_angle != 0.0); // don't tilt two books in a row
-			if (book_ix == max_books) break; // no more books
-		} // for n
-	} // for i
+			} // for n (book)
+		} // for side
+	} // for i (shelf)
 }
 
 void building_room_geom_t::add_wine_rack(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale) {
