@@ -4628,7 +4628,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 	bool const dim(c.dim), dir(c.dir), draw_back_face(c.was_moved() || c.is_open()); // draw back face if moved or placed near an open wall
 	unsigned const skip_faces(draw_back_face ? 0 : ~get_face_mask(dim, !dir)); // skip back face, unless moved by the player and no longer against the wall
 	unsigned const skip_faces_shelves(skip_faces | get_skip_mask_for_xy(!dim)); // skip back face and sides
-	float const depth((dir ? -1.0 : 1.0)*c.get_depth()); // signed depth
+	float const bc_depth(c.get_depth()), dsign(dir ? 1.0 : -1.0);
 	cube_t top, middle, back, lr[2];
 	get_bookcase_cubes(c, top, middle, back, lr, no_shelves, sides_scale);
 
@@ -4681,10 +4681,10 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 			for (unsigned side = 0; side < 2; ++side) {shelf_sides[side].d[!dim][!side] = divider.d[!dim][side];}
 			if (inc_lg) {wood_mat->add_cube_to_verts(divider, color, tex_origin, (skip_faces | EF_Z12));} // skip back, top, and bottom
 		}
-		for (unsigned side = 0; side < (add_split ? 2 : 1); ++side) { // each side of split, if present
+		for (unsigned side = 0; side < (add_split ? 2U : 1U); ++side) { // each side of split, if present
 			if (rgen.rand_float() < 0.15) continue; // no books on this shelf
 			cube_t const &shelf(shelf_sides[side]);
-			float const shelf_width(shelf.get_sz_dim(!dim));
+			float const shelf_width(shelf.get_sz_dim(!dim)), shelf_back_edge(shelf.d[dim][!dir]);
 
 			if (rgen.rand_float() < 0.1) { // add a stack of books rather than upright books
 				unsigned const num_stacked((rgen.rand()%8) + 1); // 1-8
@@ -4700,7 +4700,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 					if (next_zval + max_book_thick > shelf_height) break; // not enough space to stack this book - done
 					float const book_len(max_book_hlen*rgen.rand_uniform(0.7, 1.0)), book_width(min(0.5f*max_book_width*rgen.rand_uniform(0.7, 1.0), 1.1f*book_len));
 					point bot_center;
-					bot_center[ dim] = center_d + depth*rgen.rand_uniform(0.0, 0.05); // Note: signed depth
+					bot_center[ dim] = center_d -  dsign*bc_depth*rgen.rand_uniform(0.0, 0.05); // Note: signed depth
 					bot_center[!dim] = center_w + 0.1*shelf_depth*rgen.rand_uniform(-1.0, 1.0);
 					cube_t book(bot_center, bot_center);
 					set_cube_zvals(book, cur_zval, next_zval);
@@ -4730,7 +4730,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 					for (; n < skip_end; ++n) {skip_mask |= (1<<n);}
 				}
 			}
-			float const book_space(shelf_width/num_spaces), shelf_end(shelf.d[!dim][1]);
+			float const book_space(min(0.15f*shelf_height, shelf_width/num_spaces)), shelf_end(shelf.d[!dim][1]);
 			bool const enable_sets(rgen.rand_float() < 0.4); // 40% of shelves can have sets
 			bool prev_tilted(0), in_set(0), last_start_or_end_set(0);
 			colorRGBA book_color;
@@ -4750,7 +4750,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 					book_color = book_colors[rgen.rand() % NUM_BOOK_COLORS];
 					width      = book_space*rgen.rand_uniform(0.7, 1.3);
 					height     = max(shelf_height*rgen.rand_uniform(0.6, 0.98), min_height);
-					depth_val  = depth*rgen.rand_uniform(0.0, 0.2);
+					depth_val  = dsign*min(bc_depth, 1.2f*height)*rgen.rand_uniform(0.8, 1.0); // not too short and wide
 				}
 				if (!prev_tilted && (skip_mask & (1<<n))) { // skip this book, and don't tilt the next one
 					pos   += width;
@@ -4762,9 +4762,9 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 				float tilt_angle(0.0);
 				cube_t book;
 				book.z1() = shelf.z2();
-				book.d[dim][ dir] = shelf.d[dim][ dir] + depth_val; // facing out
-				book.d[dim][!dir] = shelf.d[dim][!dir]; // facing in
-				book.translate_dim(dim, depth*rgen.rand_uniform(0.0, 0.05)); // slight random shift outward
+				book.d[dim][ dir] = shelf_back_edge + depth_val; // facing out
+				book.d[dim][!dir] = shelf_back_edge; // facing in
+				book.translate_dim(dim, -dsign*bc_depth*rgen.rand_uniform(0.0, 0.05)); // slight random shift outward
 				min_height = 0.0;
 
 				if (avail_space > 1.1f*height && rgen.rand_float() < 0.5) { // book has space to fall over 50% of the time
