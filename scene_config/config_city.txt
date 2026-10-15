@@ -131,7 +131,8 @@ city car_model ../models/cars/Camaro/camaro2.model3d              1 0 0  24 -1 9
 city car_model ../models/cars/LowPolyTruck/truck.model3d          1 0 0  -1  2  0  1 1.6 0.5  3 4 5 6 16 17 20 24 # always GRAY
 city car_model ../models/cars/BMW/bmw.model3d                     1 0 0   0 -1 180 1 1.0 2.0  0 9 # Note: has emissive lights
 city car_model ../models/cars/ambulance.glb                       0 0 0  -1 -3 90  1 1.5 1.0  0
-#city car_model ../models/cars/Bentley/Bentley.model3d            1 0 0    1 -1 90  1 1.0 0.5  1
+#city car_model ../models/cars/Bentley/Bentley.model3d             1 0 0   1 -1 90  1 1.0 0.5  1
+city car_model ../models/cars/school_bus.glb                      0 0 0  -1  3 90  1 2.0 1.0  0 # always orange
 use_model_lod_blocks 0 # doesn't really work on car model
 model_mat_lod_thresh 0.008
 allow_model3d_quads 1 # 0 is slightly faster for drawing but uses more memory (must recreate model3d files to change this)

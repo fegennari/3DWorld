@@ -148,7 +148,7 @@ struct car_base_t { // the part needed for the pedestrian interface (size = 48);
 };
 
 struct car_t : public car_base_t, public waiting_obj_t { // size = 136
-	bool is_truck=0, is_police=0, is_ambulance=0, is_emergency=0, entering_city=0, in_tunnel=0, dest_valid=0, destroyed=0;
+	bool is_truck=0, is_police=0, is_ambulance=0, is_bus=0, is_emergency=0, entering_city=0, in_tunnel=0, dest_valid=0, destroyed=0;
 	bool in_reverse=0, engine_running=0, is_braking=0, in_parking_lot=0;
 	uint8_t color_id=0, front_car_turn_dir=TURN_UNSPEC, model_id=0, headlight_color=0, dest_gs_lane=0, dest_cw_lane=0, park_btype=BTYPE_UNSET;
 	uint16_t dest_city=0, dest_isec=0;
@@ -160,7 +160,7 @@ struct car_t : public car_base_t, public waiting_obj_t { // size = 136
 	void set_bcube(point const &center, vector3d const &sz);
 	bool is_valid   () const {return !bcube.is_all_zeros();}
 	bool is_sleeping() const {return (wake_time > 0.0);}
-	bool is_large   () const {return (is_truck || is_ambulance);}
+	bool is_large   () const {return (is_truck || is_ambulance || is_bus);}
 	bool has_dest_dw_gs_cw() const {return (dest_driveway >= 0 || dest_gstation >= 0 || dest_cwash >= 0);}
 	bool in_gs_exit_lane() const;
 	bool in_cw_exit_lane() const;

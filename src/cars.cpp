@@ -58,7 +58,7 @@ void car_t::apply_scale(float scale) {
 	height *= scale;
 	point const pos(get_center());
 	vector2d sz((bcube.x2() - pos.x), (bcube.y2() - pos.y));
-	is_truck = (scale > 1.2); // trucks are larger in size
+	is_truck = (scale > 1.2); // trucks are larger in size; includes ambulances and buses
 
 	if (is_truck) { // truck bcube is taller and less wide
 		height   *= 1.55;
@@ -808,7 +808,7 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows, int di
 		vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
 		float const dirt_show_amt(min(1.0, 4.0*(car.dirt_amt - 0.75))); // only show if > 75% dirty
 		bool const low_detail(!shadow_only && dist_val > 0.035);
-		bool const add_dirt(dirt_shader_loc >= 0 && dirt_show_amt > 0.0 && !car.is_ambulance);
+		bool const add_dirt(dirt_shader_loc >= 0 && dirt_show_amt > 0.0 && !car.is_ambulance && !car.is_bus);
 		bool const add_foam(foam_shader_loc >= 0 && car.foam_amt > 0.0);
 		cube_t non_rot_bcube(car.bcube);
 		set_wall_width(non_rot_bcube, car.bcube.zc(), 0.5*car.height, 2);
@@ -849,10 +849,9 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows, int di
 	vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
 	unsigned const lr_xor(((camera_pdu.pos[!dim] - xlate[!dim]) - center[!dim]) < 0.0f);
 	bool const brake_lights_on(car.is_almost_stopped() || car.stopped_at_light || car.is_braking), headlights_on(car.headlights_on());
-	float const hv1(car.is_truck ? 0.8 : 0.2), hv2(1.0 - hv1); // headlights and tail lights; blend from bottom to top
-	float const sv1(car.is_truck ? 0.8 : 0.3), sv2(1.0 - sv1); // turn signals; blend from bottom to top
 
 	if (headlights_on && dist_val < 0.3) { // night time headlights
+		float const hv1(car.is_bus ? 0.65 : (car.is_truck ? 0.8 : 0.2)), hv2(1.0 - hv1); // headlights; blend from bottom to top
 		colorRGBA const hl_color(get_headlight_color(car));
 		float const c1(car.is_ambulance ? 0.22 : 0.1), c2(1.0 - c1);
 
@@ -864,6 +863,7 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows, int di
 		}
 	}
 	if ((brake_lights_on || headlights_on || car.in_reverse) && dist_val < 0.2) { // brake/tail/backup lights
+		float const hv1(car.is_bus ? 0.5 : (car.is_truck ? 0.8 : 0.2)), hv2(1.0 - hv1); // tail lights; blend from bottom to top
 		float const bv1(car.is_large() ? 0.15 : 0.2), bv2(1.0 - bv1);
 
 		for (unsigned d = 0; d < 2; ++d) { // L, R
@@ -878,6 +878,7 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows, int di
 		double const time(fract((tfticks + 1000.0*car.max_speed)/(double(ts_period)*TICKS_PER_SECOND))); // use car max_speed as seed to offset time base
 
 		if (time > 0.5 || !animate2) { // flash on and off; always on when time is stopped to help with visual debugging
+			float const sv1(car.is_bus ? 0.5 : (car.is_truck ? 0.8 : 0.3)), sv2(1.0 - sv1); // turn signals; blend from bottom to top
 			bool const tdir((car.turn_dir == TURN_LEFT) ^ dim ^ dir ^ car.in_reverse); // R=1,2,5,6 or L=0,3,4,7
 			vector3d const side_n(cross_product((pb[6] - pb[2]), (pb[1] - pb[2])).get_norm()*sign*(tdir ? 1.0 : -1.0));
 
@@ -1052,6 +1053,7 @@ void car_manager_t::add_parked_cars(vector<car_t> const &new_cars) {
 void car_manager_t::assign_car_model_size_color(car_t &car, rand_gen_t &local_rgen, bool is_in_garage, unsigned btype) {
 	unsigned const num_models(car_model_loader.num_models());
 	int fixed_color(-1);
+	bool const in_parking_lot(btype == BTYPE_UNSET && car.park_btype != BTYPE_UNSET);
 	is_in_garage |= (car.cur_road_type == TYPE_BUILDING); // also applies to cars on parking structure roofs
 	if      (btype          == BTYPE_UNSET) {btype = car.park_btype;} // parking lot case
 	else if (car.park_btype == BTYPE_UNSET) {car.park_btype = btype;} // building car case
@@ -1061,21 +1063,27 @@ void car_manager_t::assign_car_model_size_color(car_t &car, rand_gen_t &local_rg
 		for (unsigned n = 0; n < 20; ++n) {
 			if (FORCE_MODEL_ID >= 0) {car.model_id = (unsigned char)FORCE_MODEL_ID;}
 			else {
-				// higher chance of some car types per-building, if loaded at this point;
-				// what about cars in city parking lots by these buildings?
-				if      (btype == BTYPE_HOSPITAL && car_model_loader.amb_model_id    >= 0 && local_rgen.rand_float() < 0.1) {car.model_id = car_model_loader.amb_model_id   ;}
-				else if (btype == BTYPE_POLICE   && car_model_loader.police_model_id >= 0 && local_rgen.rand_float() < 0.4) {car.model_id = car_model_loader.police_model_id;}
-				else {car.model_id = ((num_models > 1) ? (local_rgen.rand() % num_models) : 0);}
+				for (unsigned n = 0; n < 100; ++n) { // choose a valid model
+					// higher chance of some car types per-building, if loaded at this point;
+					// what about cars in city parking lots by these buildings?
+					if      (btype == BTYPE_HOSPITAL && car_model_loader.amb_model_id    >= 0 && local_rgen.rand_float() < 0.1) {car.model_id = car_model_loader.   amb_model_id;}
+					else if (btype == BTYPE_POLICE   && car_model_loader.police_model_id >= 0 && local_rgen.rand_float() < 0.4) {car.model_id = car_model_loader.police_model_id;}
+					//else if (btype == BTYPE_SCHOOL   && car_model_loader.bus_model_id    >= 0 && local_rgen.rand_float() < 0.3) {car.model_id = car_model_loader.   bus_model_id;}
+					else {car.model_id = ((num_models > 1) ? (local_rgen.rand() % num_models) : 0);}
+					if (in_parking_lot && car.model_id == car_model_loader.bus_model_id) continue; // skip bus as it doesn't fit in parking spots
+					break; // success/done
+				} // for n
 			}
 			city_model_t const &model(car_model_loader.get_model(car.model_id));
 			
 			// if there are multiple models to choose from, and this car is in a garage, try for a model that's not scaled up (truck or ambulance) (what about driveways?)
 			if (FORCE_MODEL_ID < 0 && is_in_garage && model.scale > 1.0) {
-				// future work: can we add a school bus to school parking garages?
-				if (btype == BTYPE_HOSPITAL && car.model_id == car_model_loader.amb_model_id) {} // ambulance; allow it, scaled down
+				float max_scale(1.2);
+				if      (btype == BTYPE_HOSPITAL && car.model_id == car_model_loader.amb_model_id) {max_scale = 1.2;} // ambulance ; allow it, scaled down
+				else if (btype == BTYPE_SCHOOL   && car.model_id == car_model_loader.bus_model_id) {max_scale = 1.4;} // school bus; allow it, scaled down
 				else if (num_models > 1 && n+1 < 20) continue; // try a different model
 				// don't scale the model because it may not fit; instead, add a small truck if we can't place a car
-				car.apply_scale(min(1.2f, model.scale)); // that's about all that can fit
+				car.apply_scale(min(max_scale, model.scale)); // that's about all that can fit
 			}
 			else {
 				car.apply_scale(model.scale);
@@ -1099,7 +1107,7 @@ void car_manager_t::assign_car_model_size_color(car_t &car, rand_gen_t &local_rg
 	if (num_models > 0) { // handle emergency vehicles
 		if      (car.model_id == car_model_loader.police_model_id) {car.is_police    = 1;}
 		else if (car.model_id == car_model_loader.amb_model_id   ) {car.is_ambulance = 1;}
-		//else if (car.model_id == car_model_loader.bus_model_id      ) {car.is_bus       = 1;} // future work
+		else if (car.model_id == car_model_loader.bus_model_id   ) {car.is_bus       = 1;}
 		car.is_emergency = is_active_emergency_vehicle(car_model_loader, car, 1, 1); // both lights and siren
 	}
 	assert(car.is_valid());
