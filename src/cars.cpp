@@ -1051,6 +1051,7 @@ void car_manager_t::add_parked_cars(vector<car_t> const &new_cars) {
 }
 
 void car_manager_t::assign_car_model_size_color(car_t &car, rand_gen_t &local_rgen, bool is_in_garage, unsigned btype) {
+	float const police_prob(0.75), ambulance_prob(0.5), bus_prob(0.25); // probabilities relative to normal cars; truck isn't a special type and stays at 1.0
 	unsigned const num_models(car_model_loader.num_models());
 	int fixed_color(-1);
 	bool const in_parking_lot(btype == BTYPE_UNSET && car.park_btype != BTYPE_UNSET);
@@ -1071,6 +1072,9 @@ void car_manager_t::assign_car_model_size_color(car_t &car, rand_gen_t &local_rg
 					//else if (btype == BTYPE_SCHOOL   && car_model_loader.bus_model_id    >= 0 && local_rgen.rand_float() < 0.3) {car.model_id = car_model_loader.   bus_model_id;}
 					else {car.model_id = ((num_models > 1) ? (local_rgen.rand() % num_models) : 0);}
 					if (in_parking_lot && car.model_id == car_model_loader.bus_model_id) continue; // skip bus as it doesn't fit in parking spots
+					if (car.model_id == car_model_loader.police_model_id && local_rgen.rand_float() > police_prob)    continue;
+					if (car.model_id == car_model_loader.amb_model_id    && local_rgen.rand_float() > ambulance_prob) continue;
+					if (car.model_id == car_model_loader.bus_model_id    && local_rgen.rand_float() > bus_prob)       continue;
 					break; // success/done
 				} // for n
 			}
