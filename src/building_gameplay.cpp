@@ -314,7 +314,7 @@ void setup_bldg_obj_types() {
 	// animals; not room objects
 	bldg_obj_types[TYPE_RAT       ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 8.99,  1.0,   "rat"); // can be picked up
 	bldg_obj_types[TYPE_ROACH     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0, 0.0,   0.01,  "cockroach");
-	bldg_obj_types[TYPE_SPIDER    ] = bldg_obj_type_t(0, 0, 1, 0, 0, 0, 0, 0.0,   0.1,   "spider");
+	bldg_obj_types[TYPE_SPIDER    ] = bldg_obj_type_t(0, 0, 1, 1, 0, 0, 0, 0.0,   0.1,   "spider"); // can be picked up
 	bldg_obj_types[TYPE_SNAKE     ] = bldg_obj_type_t(0, 0, 1, 0, 0, 0, 0, 50.00, 4.0,   "snake");
 	bldg_obj_types[TYPE_INSECT    ] = bldg_obj_type_t(0, 0, 0, 0, 0, 1, 0, 0.0,   0.01,  "insect"); // not actually added as an object
 	bldg_obj_types[TYPE_FISH      ] = bldg_obj_type_t(0, 0, 0, 0, 0, 1, 0, 10.0,  0.1,   "fish"); // not actually added as an object
@@ -841,7 +841,7 @@ public:
 		while (!carried.empty()) {
 			room_object_t const &obj(carried.back());
 
-			if (obj.has_dstate() || obj.type == TYPE_BOOK || obj.type == TYPE_RAT || (obj.type == TYPE_FIRE_EXT && obj.is_broken())) { // drop items
+			if (obj.has_dstate() || obj.type == TYPE_BOOK || obj.type == TYPE_RAT || obj.type == TYPE_SPIDER || (obj.type == TYPE_FIRE_EXT && obj.is_broken())) { // drop items
 				building.maybe_use_last_pickup_room_object(camera_bs, 1, 1); // no_time_check=1, random_dir=1; may not be usable
 			}
 			carried.pop_back();
@@ -1683,6 +1683,15 @@ bool register_player_object_pickup(room_object_t const &obj, point const &at_pos
 	do_room_obj_pickup = 0; // no more object pickups
 	return 1;
 }
+bool is_obj_reachable(building_t const &building, point const &p1, vector3d const &dir, float &range, cube_t const &bcube) {
+	point p1c(p1), p2c(p1 + range*dir);
+	if (!do_line_clip(p1c, p2c, bcube.d)) return 0; // test ray intersection vs. bcube
+	float const dist(p2p_dist(p1, p1c));
+	if (dist >= range) return 0; // too far
+	if (building.check_for_wall_ceil_floor_int(p1, p1c)) return 0; // check for occlusion
+	range = dist;
+	return 1;
+}
 
 bool building_t::player_pickup_object(point const &at_pos, vector3d const &in_dir) { // Note: at_pos/in_dir are in camera building space
 	if (!has_room_geom()) return 0;
@@ -1694,23 +1703,24 @@ bool building_t::player_pickup_object(point const &at_pos, vector3d const &in_di
 bool building_room_geom_t::player_pickup_object(building_t &building, point const &at_pos, vector3d const &in_dir) { // Note: at_pos/in_dir are in rotated building space
 	float const range_max(3.0*CAMERA_RADIUS), drawer_range_max(2.5*CAMERA_RADIUS);
 	float range(range_max), obj_dist(0.0);
-	int rat_ix(-1);
+	int rat_ix(-1), spider_ix(-1);
 
 	if (bldg_obj_types[TYPE_RAT].pickup) { // check rats
 		for (auto r = rats.begin(); r != rats.end(); ++r) {
 			if (r->is_hiding) continue; // can't pick up when hiding
-			point p1c(at_pos), p2c(at_pos + in_dir*range);
-			if (!do_line_clip(p1c, p2c, r->get_bcube().d)) continue; // test ray intersection vs. bcube
-			float const dist(p2p_dist(at_pos, p1c));
-			if (dist >= range) continue; // too far
-			if (building.check_for_wall_ceil_floor_int(at_pos, p1c)) continue; // check for occlusion
-			range  = dist;
-			rat_ix = (r - rats.begin());
-		} // for r
+			if (is_obj_reachable(building, at_pos, in_dir, range, r->get_bcube())) {rat_ix = (r - rats.begin());}
+		}
 		// what about sewer_rats and pet_rats?
 	}
-	//if (bldg_obj_types[TYPE_SPIDER].pickup) {} // check spiders (future work)
-	//if (bldg_obj_types[TYPE_SNAKE ].pickup) {} // check snakes  (future work)
+	if (bldg_obj_types[TYPE_SPIDER].pickup) { // check spiders
+		for (auto s = spiders.begin(); s != spiders.end(); ++s) {
+			if (s->squished) continue; // can't pick up squished spider
+			if (is_obj_reachable(building, at_pos, in_dir, range, s->get_bcube())) {spider_ix = (s - spiders.begin());}
+		}
+	}
+	if (bldg_obj_types[TYPE_SNAKE].pickup) { // check snakes
+		// future work
+	}
 	int const obj_id(find_nearest_pickup_object(building, at_pos, in_dir, range, obj_dist));
 	float drawer_range(min(range, drawer_range_max));
 	if (obj_id >= 0) {min_eq(drawer_range, obj_dist);} // only include drawers that are closer than the pickup object
@@ -1740,12 +1750,26 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 				gen_sound_thread_safe(SOUND_RAT_SQUEAK, building.local_to_camera_space(rats[rat_ix].pos));
 				register_building_sound(rats[rat_ix].pos, 0.8);
 			}
-			if (!r.dead && in_building_gameplay_mode()) { // maybe bite the player when picked up
+			if (!r.dead && in_building_gameplay_mode() && (frame_counter & 1)) { // bite the player when picked up 50% of the time
 				rand_gen_t rgen;
 				rgen.set_state(frame_counter, obj_id+1);
-				if (rgen.rand_bool()) {building.rat_bite_player(at_pos, rgen.rand_uniform(0.05, 0.1), rgen);}
+				building.rat_bite_player(at_pos, rgen.rand_uniform(0.05, 0.1), rgen);
 			}
 			rats.erase(rats.begin() + rat_ix); // remove the rat from the building
+			modified_by_player = 1;
+			return 1;
+		}
+		if (spider_ix >= 0) { // can pick up a spider
+			spider_t const &s(spiders[spider_ix]);
+			room_object_t spider(s.get_bcube(), TYPE_SPIDER, 0, 0, 0, 0); // no room
+			if (!register_player_object_pickup(spider, at_pos)) return 0;
+			player_inventory.add_item(spider);
+
+			if (!s.squished && in_building_gameplay_mode() && (frame_counter & 1)) { // bite the player when picked up 50% of the time
+				bool const player_dead(player_take_damage(0.1, 1, 1)); // scream when poisoned
+				if (player_dead) {building.register_player_death(at_pos);}
+			}
+			spiders.erase(spiders.begin() + spider_ix); // remove the spider from the building
 			modified_by_player = 1;
 			return 1;
 		}
@@ -2703,7 +2727,7 @@ bool trash_held_object(room_object_t &trashcan) {return player_inventory.trash_l
 void drop_inventory_item(building_t const &b, room_object_t const &obj, point const &player_pos) {
 	player_inventory.return_object_to_building(obj); // re-add this object's value
 	player_inventory.remove_last_item(); // used
-	if (!b.check_for_water_splash(obj.get_cube_center(), 0.5)) {play_obj_fall_sound(obj, player_pos);} // splash or drop sound; should it be based on weight?
+	if (obj.type != TYPE_SPIDER && !b.check_for_water_splash(obj.get_cube_center(), 0.5)) {play_obj_fall_sound(obj, player_pos);} // splash or drop sound; should it be based on weight?
 }
 bool building_t::drop_room_object(room_object_t &obj, point const &dest, point const &player_pos, bool dim, bool dir) {
 	obj.dim = dim;
@@ -2773,12 +2797,11 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos, bool
 			if (player_in_water == 2) return 0; // can't use when fully underwater
 			tape_manager.toggle_use(obj, this);
 		}
-		else if (obj.type == TYPE_BOOK || obj.type == TYPE_RAT) { // items that can be dropped
-			bool const is_rat(obj.type == TYPE_RAT);
+		else if (obj.type == TYPE_BOOK || obj.type == TYPE_RAT || obj.type == TYPE_SPIDER) { // items that can be dropped
 			float const half_width(0.5*obj.get_max_dim_sz()); // use conservative max dim
 			point dest(player_pos + (1.2f*(player_radius + half_width))*dir);
 
-			if (is_rat) {
+			if (obj.type == TYPE_RAT) {
 				bool const was_dead(obj.is_broken());
 				bool is_dead(was_dead);
 				bool const dropped(add_rat(dest, half_width, dir, player_pos, is_dead)); // facing away from the player
@@ -2789,6 +2812,9 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos, bool
 					register_building_sound(player_pos, 0.8);
 				}
 				if (!dropped) return 0;
+			}
+			else if (obj.type == TYPE_SPIDER) {
+				if (!add_spider(dest, half_width, dir, player_pos)) return 0;
 			}
 			else { // book; orient based on the player's primary direction
 				if (!get_zval_for_obj_placement(dest, half_width, dest.z, 0)) return 0; // no suitable placement found; add_z_bias=0
@@ -3452,8 +3478,8 @@ bool room_object_t::can_use() const { // excludes dynamic objects
 	if (is_medicine()) return 1; // medicine can be carried in the inventory and used later
 	if (type == TYPE_TPROLL) {return (taken_level == 0);} // can only use the TP roll, not the holder
 	if (type == TYPE_BOX && !is_open() && !was_expanded()) return 1; // unopened box; not from a shelf
-	return (type == TYPE_SPRAYCAN || type == TYPE_MARKER || type == TYPE_BOOK || type == TYPE_PHONE || type == TYPE_TAPE || type == TYPE_RAT || type == TYPE_FIRE_EXT ||
-		type == TYPE_CANDLE || type == TYPE_ERASER || type == TYPE_FLASHLIGHT || type == TYPE_HANDGUN || type == TYPE_TV_REMOTE || type == TYPE_NV_GOGGLES);
+	return (type == TYPE_SPRAYCAN || type == TYPE_MARKER || type == TYPE_BOOK || type == TYPE_PHONE || type == TYPE_TAPE || type == TYPE_RAT || type == TYPE_SPIDER ||
+		type == TYPE_FIRE_EXT || type == TYPE_CANDLE || type == TYPE_ERASER || type == TYPE_FLASHLIGHT || type == TYPE_HANDGUN || type == TYPE_TV_REMOTE || type == TYPE_NV_GOGGLES);
 }
 bool room_object_t::can_place_onto() const { // Note: excludes flat objects such as TYPE_RUG and TYPE_BLANKET
 	return (type == TYPE_TABLE || type == TYPE_DESK || type == TYPE_DRESSER || type == TYPE_NIGHTSTAND || type == TYPE_COUNTER || type == TYPE_KSINK ||

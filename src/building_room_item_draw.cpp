@@ -53,6 +53,7 @@ void end_fish_draw(shader_t &s, bool inc_pools_and_fb);
 void calc_cur_ambient_diffuse();
 void reset_interior_lighting_and_end_shader(shader_t &s);
 bool has_cars_enabled();
+void draw_held_spider(shader_t &s, point const &pos, float radius, vector3d const &dir);
 
 bool has_key_3d_model      () {return building_obj_model_loader.is_model_valid(OBJ_MODEL_KEY);}
 bool has_office_chair_model() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_OFFICE_CHAIR);}
@@ -1272,7 +1273,7 @@ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, 
 		tmp_rgeom.mats_small.upload_draw_and_clear(s);
 		tmp_rgeom.mats_text .upload_draw_and_clear(s);
 		disable_blend();
-		return;
+		return; // don't need to run the code below
 	}
 	else if (c.type == TYPE_PHONE) {
 		cube_t const screen(add_phone_frame_and_return_screen_if_on(c, mat, 1)); // in_hand=1
@@ -1293,12 +1294,16 @@ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, 
 		tmp_rgeom.add_tv_remote(c);
 		for (rgeom_mat_t &mat : tmp_rgeom.mats_small) {rotate_verts(mat.quad_verts, plus_z, z_rot_angle, obj_center, 0);}
 		tmp_rgeom.mats_small.upload_draw_and_clear(s);
-		return;
+		return; // don't need to run the code below
 	}
 	else if (c.type == TYPE_RAT) { // draw the rat facing away from the player
 		bool const is_dead(c.is_broken()); // upside down if dead; shadow_pass=0; not animated
 		building_obj_model_loader.draw_model(s, obj_center, c, cview_dir, rat_color, xlate, OBJ_MODEL_RAT, 0, 0, nullptr, 0, 0, 0, is_dead);
 		check_mvm_update();
+		return; // don't need to run the code below
+	}
+	else if (c.type == TYPE_SPIDER) {
+		draw_held_spider(s, obj_center, 0.25*(c.dx() + c.dy()), -cview_dir); // facing the player
 		return; // don't need to run the code below
 	}
 	else if (c.is_medicine()) {

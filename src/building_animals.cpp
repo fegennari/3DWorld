@@ -293,7 +293,7 @@ bool building_t::add_rat(point const &pos, float hlength, vector3d const &dir, p
 		point const test_pos(rat_pos + vector3d(0.0, 0.0, rat.height));
 		auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
-		for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) { // check for a toilet that we can drop the rat into
+		for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) { // check for a toilet, microwave, or stove that we can add the rat to
 			if (i->room_id != get_room_containing_pt(placed_from)) continue; // wrong room
 
 			if (i->type == TYPE_TOILET && i->contains_pt(test_pos)) {
@@ -1008,6 +1008,35 @@ bool building_room_geom_t::maybe_spawn_spider_in_drawer(room_object_t const &c, 
 	dir.normalize();
 	spiders.emplace_back(cube_bot_center(drawer), radius, dir, spiders.size());
 	if (!is_door) {spiders.back().jump(0.002*rgen.rand_uniform(1.0, 1.4));} // jump out of drawers
+	return 1;
+}
+
+bool building_t::add_spider(point const &pos, float hlength, vector3d const &dir, point const &placed_from) {
+	if (!spider_t::allow_in_attic() && point_in_attic(pos)) return 0;
+	point spider_pos(pos);
+	if (!get_zval_of_floor(pos, hlength, spider_pos.z)) return 0; // place on the floor, skip if there's no floor here; doesn't work with glass floors
+	if (point_in_water_area(spider_pos, 0)) return 0; // don't place spider in water; full_room_height=0
+	spider_t spider(spider_pos, hlength, vector3d(dir.x, dir.y, 0.0).get_norm(), interior->room_geom->spiders.size()); // dir in XY plane
+
+	if (check_line_coll_expand(pos, spider_pos, hlength, spider.get_height(), ATYPE_SPIDER)) { // something is in the way
+		point const test_pos(spider_pos + vector3d(0.0, 0.0, spider.get_height()));
+		auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
+
+		for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) { // check for a toilet that we can drop the spider into
+			if (i->room_id != get_room_containing_pt(placed_from)) continue; // wrong room
+
+			if (i->type == TYPE_TOILET && i->contains_pt(test_pos)) {
+				point const sound_origin(i->get_cube_center());
+				gen_sound_thread_safe(SOUND_FLUSH, local_to_camera_space(sound_origin));
+				register_building_sound(sound_origin, 0.5);
+				register_achievement("Sleep with the Fishes");
+				return 1;
+			}
+		} // for i
+		return 0; // can't place the spider here
+	}
+	interior->room_geom->spiders.add(spider);
+	interior->room_geom->modified_by_player = 1;
 	return 1;
 }
 

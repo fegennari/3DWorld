@@ -102,8 +102,8 @@ class spider_draw_t {
 public:
 	void clear() {mats[0].clear(); mats[1].clear(); is_setup = 0;}
 
-	void draw(vect_spider_t const &spiders, shader_t &s, building_t const &building, occlusion_checker_noncity_t const &oc,
-		vector3d const &xlate, bool shadow_only, bool reflection_pass, bool check_clip_cube)
+	void draw(vect_spider_t const &spiders, shader_t &s, building_t const *const building, occlusion_checker_noncity_t const *const oc,
+		vector3d const &xlate, bool shadow_only=0, bool reflection_pass=0, bool check_clip_cube=0)
 	{
 		if (spiders.empty()) return; // nothing to draw
 		int anim_time_loc(-1);
@@ -128,7 +128,7 @@ public:
 			cube_t const bcube(S.get_bcube());
 			if (check_clip_cube && !smap_light_clip_cube.intersects(bcube + xlate)) continue; // shadow map clip cube test: fast and high rejection ratio, do this first
 			if (!camera_pdu.cube_visible(bcube + xlate)) continue; // VFC
-			if (check_occlusion && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass, 0, 0, 1)) continue; // inc_extra_occluders=1
+			if (check_occlusion && building && oc && building->check_obj_occluded(bcube, camera_bs, *oc, reflection_pass, 0, 0, 1)) continue; // inc_extra_occluders=1
 			
 			if (S.dir == zero_vector || S.upv == zero_vector) {
 				if (!had_inval_spider_warn) {cout << "Error: Invalid spider: " << TXTS(S.pos) << TXTS(S.dir) << TXTS(S.upv) << endl;} // print only once
@@ -617,11 +617,18 @@ void building_room_geom_t::draw_animals(shader_t &s, building_t const &building,
 		bind_default_flat_normal_map();
 		if (bird_drawn) {check_mvm_update();} // needed after popping model transform matrix
 	} // end birds drawing
-	spider_draw.draw(spiders,            s, building, oc, xlate, shadow_only, reflection_pass, check_clip_cube);
-	snake_draw .draw(snakes, pet_snakes, s, building, oc, xlate, shadow_only, reflection_pass, check_clip_cube);
+	spider_draw.draw(spiders,            s, &building, &oc, xlate, shadow_only, reflection_pass, check_clip_cube);
+	snake_draw .draw(snakes, pet_snakes, s,  building,  oc, xlate, shadow_only, reflection_pass, check_clip_cube);
 	if (!shadow_only) {insect_draw.draw(insects, s, building, oc, xlate, reflection_pass);} // insects are too small to cast shadows
 	// draw sewer spiders
-	if (player_in_tunnel && !shadow_only) {spider_draw.draw(sewer_spiders, s, building, oc, xlate, shadow_only, reflection_pass, check_clip_cube);}
+	if (player_in_tunnel && !shadow_only) {spider_draw.draw(sewer_spiders, s, &building, &oc, xlate, shadow_only, reflection_pass, check_clip_cube);}
 }
 
+void draw_held_spider(shader_t &s, point const &pos, float radius, vector3d const &dir) {
+	vect_spider_t spiders;
+	spiders.emplace_back(pos, radius, dir, 0); // id=0
+	orthogonalize_dir(plus_z, dir, spiders.back().upv, 1);
+	if (animate2) {spiders.back().anim_time = 0.05*tfticks;}
+	spider_draw.draw(spiders, s, nullptr, nullptr, zero_vector); // no building, oc, xlate, etc.
+}
 

@@ -2185,6 +2185,7 @@ private:
 	void update_rat(rat_t &rat, point const &camera_bs, float timestep, float &max_xmove, bool can_attack_player, rand_gen_t &rgen);
 	void scare_rat(rat_t &rat, point const &camera_bs) const;
 	void scare_rat_at_pos(rat_t &rat, point const &scare_pos, float amount, bool by_sight) const;
+	bool add_spider(point const &pos, float hlength, vector3d const &dir, point const &placed_from);
 	bool update_spider_pos_orient(spider_t &spider, point const &camera_bs, float timestep, rand_gen_t &rgen) const;
 	void update_spider(spider_t &spider, point const &camera_bs, float timestep, float &max_xmove, rand_gen_t &rgen);
 	bool maybe_squish_animals(room_object_t const &obj, point const &player_pos);
@@ -2285,6 +2286,7 @@ public:
 	point local_to_camera_space(point const &pos) const;
 	void play_door_open_close_sound(point const &pos, bool open, float gain=1.0, float pitch=1.0, unsigned door_type=DOOR_TYPE_STD) const;
 	void play_open_close_sound(room_object_t const &obj, point const &sound_origin) const;
+	void register_player_death(point const &camera_bs);
 	void maybe_gen_chimney_smoke() const;
 	int get_part_ix_containing_cube(cube_t const &c) const;
 	int get_part_ix_containing_pt(point const &pt) const;
@@ -2820,7 +2822,6 @@ private:
 	void update_pool_table(room_object_t &ball);
 	bool get_zval_for_pool_bottom(point const &pos, float &zval) const;
 	bool get_zval_of_floor(point const &pos, float radius, float &zval) const;
-	void register_player_death(point const &camera_bs);
 	void add_blood_decal(point const &pos, float radius, colorRGBA const &color=WHITE);
 	void add_broken_glass_to_floor(point const &pos, float radius);
 	void add_broken_glass_decal(point const &pos, float radius, rand_gen_t &rgen);
