@@ -2925,7 +2925,7 @@ int building_t::check_line_coll_expand(point const &p1, point const &p2, float r
 
 	// check interior walls, doors, stairwells, and elevators
 	for (unsigned d = 0; d < 2; ++d) {
-		if (line_int_cubes_exp(p1, p2, interior->walls[d], expand_walls, line_bcube)) return (d+1); // 2-3
+		if (line_int_cubes_exp(p1, p2, interior->walls[d], expand_walls, line_bcube)) return (d+1); // 1-2
 	}
 	for (auto const &ds : interior->door_stacks) {
 		if (ds.z1() > obj_z2 || ds.z2() < obj_z1) continue; // wrong floor for this stack/part
