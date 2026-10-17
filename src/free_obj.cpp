@@ -628,10 +628,7 @@ void free_obj::draw(shader_t &shader, vpc_shader_t &upc_shader) const { // view 
 			glStencilOpSeparate(GL_FRONT, GL_INCR_WRAP, GL_INCR_WRAP, GL_KEEP);
 			glStencilOpSeparate(GL_BACK,  GL_DECR_WRAP, GL_DECR_WRAP, GL_KEEP);
 			assert(!sobjs.empty());
-
-			for (unsigned d = 0; d < sobjs.size(); ++d) {
-				draw_shadow_volumes_from(sobjs[d], sun_pos, dscale, ndiv);
-			}
+			for (unsigned d = 0; d < sobjs.size(); ++d) {draw_shadow_volumes_from(sobjs[d], sun_pos, dscale, ndiv);}
 			fgPopMatrix();
 			glStencilFunc(GL_EQUAL, 0, ~0U);
 			glStencilOpSeparate(GL_FRONT_AND_BACK, GL_KEEP, GL_KEEP, GL_KEEP);
