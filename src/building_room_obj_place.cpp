@@ -2161,6 +2161,7 @@ bool building_t::add_livingroom_objs(rand_gen_t rgen, room_t const &room, float 
 	if (!is_basement && (is_house || is_apartment()) && (rgen.rand()%3) == 0) { // add fishtank on a tall table 33% of the time if above ground
 		add_fishtank_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area);
 	}
+	place_model_along_wall(OBJ_MODEL_FLOOR_LAMP, TYPE_FLOOR_LAMP, room, 0.65, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0);
 	maybe_add_radiator_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start);
 	if (!is_basement) {add_entryway_objs(rgen, room, zval, room_id, tot_light_amt, objs_start);}
 	if (is_house && rgen.rand_bool()) {add_clock_to_room_wall(rgen, room, zval, room_id, tot_light_amt, objs_start, 0);} // analog

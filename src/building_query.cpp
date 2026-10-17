@@ -2316,7 +2316,7 @@ public:
 				type == TYPE_GYM_WEIGHT || type == TYPE_BAR_SOAP || type == TYPE_COAT_RACK || type == TYPE_VIS_PHONE || type == TYPE_JUMPSUIT || type == TYPE_CARD_DECK ||
 				type == TYPE_CIGARETTE || type == TYPE_BULLETS || type == TYPE_CEIL_TILE || type == TYPE_MUSHROOM || type == TYPE_SHELL_CASE || type == TYPE_JAR ||
 				type == TYPE_US_FLAG || type == TYPE_FOOD_FISH || type == TYPE_MILK || type == TYPE_FOOD_TUB || type == TYPE_EASEL || type == TYPE_TV_REMOTE ||
-				type == TYPE_WETF_SIGN || type == TYPE_NV_GOGGLES) continue;
+				type == TYPE_WETF_SIGN || type == TYPE_NV_GOGGLES || type == TYPE_FLOOR_LAMP) continue;
 			if (z1 > obj.z2() || z2 < obj.z1()) continue; // zval test
 
 			if (obj.type == TYPE_PARK_SPACE) {
@@ -2780,7 +2780,7 @@ void building_t::get_room_obj_cubes(room_object_t const &c, point const &pos, ve
 		type == TYPE_US_FLAG || type == TYPE_BLDG_FOUNT || type == TYPE_THEFT_SENS || type == TYPE_WARN_LIGHT || type == TYPE_FORKLIFT || type == TYPE_OP_TABLE ||
 		type == TYPE_HARDHAT || type == TYPE_TOPHAT || type == TYPE_EX_MACHINE || type == TYPE_COAT_RACK || type == TYPE_VIS_PHONE || type == TYPE_JUMPSUIT ||
 		type == TYPE_SHOWERTUB || type == TYPE_CEIL_TILE || type == TYPE_WALL_GAP || type == TYPE_SINK || type == TYPE_EASEL || type == TYPE_WHEELCHAIR ||
-		type == TYPE_GENERATOR || type == TYPE_WETF_SIGN)
+		type == TYPE_GENERATOR || type == TYPE_WETF_SIGN || type == TYPE_FLOOR_LAMP)
 	{
 		non_cubes.push_back(c); // non-cubes; bar stools are close, should they be included?
 		// allow walking on the floor above a parking garage ramp if there's no cutout; shrink ramp bcube to the ceiling of the top floor of the parking garage

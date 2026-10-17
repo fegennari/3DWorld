@@ -1024,7 +1024,7 @@ bool building_t::add_spider(point const &pos, float hlength, vector3d const &dir
 	float tmin(1.0); // Note: spider_pos is on the floor, not in front of the player, so spiders can only be placed in a downward direction
 
 	if (coll_type == 1 || coll_type == 2) { // wall
-		for (cube_t const &wall : interior->walls[coll_type == 2]) {
+		for (cube_t const &wall : interior->walls[coll_type-1]) {
 			float tmin0(0.0), tmax0(1.0);
 			if (get_line_clip(pos, spider_pos, wall.d, tmin0, tmax0) && tmin0 < tmin) {tmin = tmin0;}
 		}
