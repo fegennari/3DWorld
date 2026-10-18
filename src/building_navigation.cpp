@@ -1257,9 +1257,10 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 	unsigned const cand_room(goal.room_ix);
 	room_t const &room(get_room(cand_room)); // target room
 	if (!interior->nav_graph->is_room_connected_to(loc.room_ix, cand_room, *interior, person.pos.z, person.has_key)) return 0; // unreachable
+	point const target_pos((global_building_params.ai_target_player ? goal.pos: get_center_of_room(cand_room)));
 	person.cur_room     = loc.room_ix;
 	person.dest_room    = cand_room; // set but not yet used
-	person.target_pos   = (global_building_params.ai_target_player ? goal.pos: get_center_of_room(cand_room));
+	person.target_pos   = target_pos;
 	person.target_pos.z = person.pos.z; // keep orig zval to stay on the same floor
 	person.is_on_stairs = person.path_is_fixed = person.last_used_stairs = person.missed_player_room_change = 0; // non-stairs dest, reset
 
@@ -1267,12 +1268,18 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 		return 1; // person/zombie and player both on glass floor
 	}
 	// assume current and dest room are both in the mall and we're using mall concourse stairs rather than back hallway stairs
-	float const floor_spacing(point_in_mall(person.pos) ? get_mall_floor_spacing() : window_vspace);
+	bool const person_in_mall(point_in_mall(person.pos));
+	float const floor_spacing(person_in_mall ? get_mall_floor_spacing() : window_vspace);
 	// allow moving to a different floor, currently only one floor at a time
 	// note that if we're following a sound this may lead us to the wrong floor of the room if more than one floor above or below;
 	// the current system doesn't allow for paths that span more than two floors;
 	// however, this will get us on a floor closer to the player, and hopefully there will be new sounds to guide us from there
-	if (goal.floor_ix < loc.floor_ix) { // try one floor below
+	if (person_in_mall != point_in_mall(target_pos) && can_use_mall_entrance_stairs(person.pos, target_pos)) { // mall to parking garage by stairs?
+		float const target_floor_spacing(person_in_mall ? window_vspace : get_mall_floor_spacing());
+		unsigned const floor_ix((target_pos.z - room.z1())/target_floor_spacing);
+		person.target_pos.z = room.z1() + get_fc_thickness() + floor_ix*target_floor_spacing + person.radius; // standing on the floor of the room that the target is on
+	}
+	else if (goal.floor_ix < loc.floor_ix) { // try one floor below
 		float const new_z(person.target_pos.z - floor_spacing);
 		if (new_z > room.z1()) {person.target_pos.z = new_z;} // change if there is a floor below
 	}
@@ -1665,8 +1672,9 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 			avoid.push_back(ac);
 		} // for s
 	}
-	if (!(USE_MALL_ENT_STAIRS && skip_stairs) && has_mall_ent_stairs() && mall_info->ent_stairs.z1() < z2 && mall_info->ent_stairs.z2() > z1) {
-		avoid.push_back(mall_info->ent_stairs); // only allow walking on mall entrance stairs when enabled, and path includes stairs (so stairs coll is skipped)
+	// only allow walking on mall entrance stairs when enabled, but exclude them from avoid because they can be walked on and will set zval
+	if (!USE_MALL_ENT_STAIRS && has_mall_ent_stairs() && mall_info->ent_stairs.z1() < z2 && mall_info->ent_stairs.z2() > z1) {
+		avoid.push_back(mall_info->ent_stairs);
 	}
 	add_bcube_if_overlaps_zval(elevators, avoid, z1, z2); // clearance not required
 	
@@ -1817,11 +1825,23 @@ bool building_t::no_stairs_exit_on_floor(stairwell_t const &stairs, float zval) 
 	int const to_floor(max(0, int((zval - stairs.z1())/get_stairs_floor_spacing(stairs))));
 	return (stairs.not_an_exit_mask & (1 << to_floor));
 }
+bool building_t::can_use_mall_entrance_stairs(point const &p1, point const &p2) const {
+	if (p1.z > ground_floor_z1 || p2.z > ground_floor_z1) return 0; // not in the parking garage or mall
+	if (!USE_MALL_ENT_STAIRS || !has_mall_ent_stairs()) return 0;
+	cube_t const &pg(get_basement());
+	float const mall_top_floor_zval(get_mall_concourse().z2() - get_mall_floor_spacing()), pg_bot_ceil_zval(pg.z1() + get_window_vspace());
+
+	for (unsigned d = 0; d < 2; ++d) { // check if one point is in lowest level of the parking garage and the other is in the upper level of the mall
+		point const &A(d ? p2 : p1), &B(d ? p1 : p2);
+		if (pg.contains_pt(A) && A.z < pg_bot_ceil_zval && point_in_mall(B) && B.z > mall_top_floor_zval) return 1;
+	}
+	return 0;
+}
 void building_t::find_nearest_stairs_ramp_esc(point const &p1, point const &p2, vector<unsigned> &nearest_stairs, int part_ix) const { // p1=from, p2=to
 	nearest_stairs.clear();
 	assert(interior);
 	assert(part_ix < 0 || (unsigned)part_ix < parts.size());
-	bool const maybe_in_basement(part_ix < 0 || part_ix == basement_part_ix), inc_mall_ent_stairs(has_mall_ent_stairs());
+	bool const maybe_in_basement(part_ix < 0 || part_ix == basement_part_ix), inc_mall_ent_stairs(USE_MALL_ENT_STAIRS && has_mall_ent_stairs());
 	float const zmin(min(p1.z, p2.z)), zmax(max(p1.z, p2.z));
 	unsigned const num_stairwells(interior->stairwells.size()), stairs_end(num_stairwells + inc_mall_ent_stairs);
 	vector<pair<float, unsigned>> sorted;
@@ -1849,18 +1869,8 @@ void building_t::find_nearest_stairs_ramp_esc(point const &p1, point const &p2, 
 				sorted.emplace_back(dist, (i + stairs_end + 1));
 			}
 		}
-		if (inc_mall_ent_stairs && zmax < ground_floor_z1) { // consider mall entrance stairs
-			cube_t const &pg(get_basement());
-			float const mall_top_floor_zval(get_mall_concourse().z2() - get_mall_floor_spacing()), pg_bot_ceil_zval(pg.z1() + get_window_vspace());
-
-			for (unsigned d = 0; d < 2; ++d) {
-				point const &A(d ? p2 : p1), &B(d ? p1 : p2);
-
-				// check if one point is in lowest level of the parking garage and the other is in the upper level of the mall
-				if (pg.contains_pt(A) && A.z < pg_bot_ceil_zval && point_in_mall(B) && B.z > mall_top_floor_zval) {
-					sorted.emplace_back(get_dist_xy_through_pt(p1, interior->mall_info->ent_stairs.get_cube_center(), p2), num_stairwells); // ix=num_stairwells
-				}
-			} // for d
+		if (inc_mall_ent_stairs && can_use_mall_entrance_stairs(p1, p2)) { // consider mall entrance stairs
+			sorted.emplace_back(get_dist_xy_through_pt(p1, interior->mall_info->ent_stairs.get_cube_center(), p2), num_stairwells); // ix=num_stairwells
 		}
 	}
 	sort(sorted.begin(), sorted.end()); // sort by distance, min first
@@ -1998,7 +2008,7 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 		have_goal_pos = (dest_room.is_hallway || dest_room.is_industrial());
 	}
 	point const *const custom_dest(have_goal_pos ? &person.target_pos : nullptr);
-
+	
 	if (loc1.floor_ix != loc2.floor_ix) { // different floors: find path from <from> to nearest stairs, then find path from stairs to <to>
 		vector<unsigned> cand_stairs_ramp_esc;
 		find_nearest_stairs_ramp_esc(from, to, cand_stairs_ramp_esc); // pass in loc1.part_ix if both loc part_ix values are equal?
@@ -2515,9 +2525,9 @@ bool building_t::need_to_update_ai_path(person_t &person) const {
 	//if (same_room && person.path.size() > 1) return 0; // same room but path has a jog, continue on existing path (faster, but slower to adapt to player position change)
 	if (dist_less_than(person.pos, target.pos, person.radius)) {person.missed_player_room_change = 0; return 0;} // already close enough
 	if (person.on_fixed_path()) return 0; // don't change paths when on the stairs/ramp/escalator
-	float const floor_spacing(get_window_vspace());
 
 	if (get_floor_for_zval(target.pos.z) != get_floor_for_zval(prev_player_building_loc.pos.z)) { // if player did not change floors
+		float const floor_spacing(point_in_mall(person.pos) ? get_mall_floor_spacing() : get_window_vspace());
 		if (fabs(person.pos.z - target.pos.z) > 2.0f*floor_spacing) return 0; // person/player are > 2 floors apart, continue toward stairs (should it be one floor apart?) (optimization)
 	}
 	bool const goal_player(person.goal_type == GOAL_TYPE_PLAYER), player_room_changed(!target.same_room_floor(prev_player_building_loc));
@@ -2533,7 +2543,7 @@ bool building_t::need_to_update_ai_path(person_t &person) const {
 	else if (goal_player && player_room_changed) {person.missed_player_room_change = 1;}
 	// if we were following the player, don't get distracted by a sound such as another zombie moaning
 	if (goal_player && person.target_valid() && !person.path.empty()) return 0;
-	if (has_nearby_sound(person, floor_spacing)) {person.missed_player_room_change = 0; return 1;} // new sound source; ignore player as they're not visible
+	if (has_nearby_sound(person, get_window_vspace())) {person.missed_player_room_change = 0; return 1;} // new sound source; ignore player as they're not visible
 	return 0; // continue on the previously chosen path
 }
 
@@ -3089,11 +3099,15 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	if (dot_product((person.target_pos - person.pos), person.dir) < 0.0) {max_eq(goal_dist, coll_dist);} // don't turn in place if dest is behind us and we're close
 	person.on_new_path_seg = 0; // clear flag for this frame
 	//person.following_player = can_target_player(person); // for debugging visualization
-
+	bool const check_mall_stairs(USE_MALL_ENT_STAIRS && !person.in_pool && !person.in_tunnel);
+	point target_pos(person.target_pos);
+	float target_feet_zval(target_pos.z - radius);
+	if (check_mall_stairs && adjust_zval_for_mall_stairs(target_pos, target_feet_zval)) {target_pos.z = target_feet_zval + radius;} // move target up onto stairs
+	
 	// check if at dest; note that we use a different distance check for Z to account for model height changes when switching between people and zombie models
-	if (dist_xy_less_than(person.pos, person.target_pos, goal_dist) && fabs(person.pos.z - person.target_pos.z) < 0.5*person.get_height()) {
-		assert(point_in_building_or_basement_bcube(person.target_pos));
-		person.pos = person.target_pos;
+	if (dist_xy_less_than(person.pos, target_pos, goal_dist) && fabs(person.pos.z - target_pos.z) < 0.5*person.get_height()) {
+		assert(point_in_building_or_basement_bcube(target_pos));
+		person.pos = target_pos;
 		
 		if (!person.path.empty()) { // move to next path point
 			person.next_path_pt(0);
@@ -3350,13 +3364,12 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		if (fabs(adj_zval - new_pos.z) > 0.1*radius) {person.abort_dest();} // if we snap to the floor, reset the target and path
 		new_pos.z = adj_zval;
 	}
-	if (USE_MALL_ENT_STAIRS) { // handle mall entrance stairs
-		float feet_zval(new_pos.z - radius);
+	// handle mall entrance stairs
+	float feet_zval(new_pos.z - radius);
 
-		if (!person.in_pool && !person.in_tunnel && adjust_zval_for_mall_stairs(new_pos, feet_zval)) {
-			new_pos.z = feet_zval + radius; // move up onto stairs
-			//person.is_on_stairs = 1; // ???
-		}
+	if (check_mall_stairs && adjust_zval_for_mall_stairs(new_pos, feet_zval)) {
+		new_pos.z = feet_zval + radius; // move up onto stairs
+		person.is_on_stairs = 1; // unnecessary?
 	}
 	max_eq(new_pos.z, min_valid_zval); // don't let the person go below the ground floor
 	min_eq(new_pos.z, max_valid_zval); // don't let the person go above the room ceiling
