@@ -2014,12 +2014,19 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 					unsigned const NUM_MRTYPES = 6;
 					unsigned const rtypes[NUM_MRTYPES] = {RTYPE_BED, RTYPE_BED, RTYPE_LIVING, RTYPE_LIVING, RTYPE_OFFICE, RTYPE_DINING};
 					unsigned const rtype(rtypes[rgen.rand() % NUM_MRTYPES]);
+					float zval2(zval);
 
+					if (rtype == RTYPE_OFFICE) { // add carpeting; could also add to bedroom and living room, but that doesn't match house flooring
+						zval2 = zval+get_flooring_thick();
+						cube_t flooring(sub_room);
+						set_cube_zvals(flooring, zval, zval2);
+						objs.emplace_back(flooring, TYPE_FLOORING, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_OPEN), light_amt, SHAPE_CUBE, WHITE, FLOORING_CARPET);
+					}
 					if (rtype == RTYPE_BED) { // Note: light_ix_assign is needed for closet lights, but these aren't added here
 						unsigned const bed_ix(objs.size());
 						cube_t picture_blocker;
 
-						if (add_bedroom_objs(rgen, sub_room, blockers, chair_color, zval, room_id, 0, light_amt, start_ix, 1, 0, 1, light_ix_assign)) {
+						if (add_bedroom_objs(rgen, sub_room, blockers, chair_color, zval2, room_id, 0, light_amt, start_ix, 1, 0, 1, light_ix_assign)) {
 							for (auto i = objs.begin()+bed_ix+1; i != objs.end(); ++i) { // set has_mirror flag if a dresser mirror was placed
 								if (i->type != TYPE_DRESS_MIR) continue;
 								room.set_has_mirror();
@@ -2045,7 +2052,7 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 									float const height(window_vspace*rgen.rand_uniform(0.28, 0.42));
 									float const width(min(height, 0.4f*wall.get_sz_dim(!wdim))*rgen.rand_uniform(1.5, 1.8)); // width > height
 									cube_t c;
-									set_wall_width(c, (zval + rgen.rand_uniform(0.54, 0.62)*window_vspace), 0.5*height, 2); // Z
+									set_wall_width(c, (zval2 + rgen.rand_uniform(0.54, 0.62)*window_vspace), 0.5*height, 2); // Z
 									set_wall_width(c, wall.get_center_dim(!wdim), 0.5*width, !wdim);
 									c.d[wdim][ wdir] = wall_pos;
 									c.d[wdim][!wdir] = wall_pos + (wdir ? -1.0 : 1.0)*0.04*wall_thickness; // shift into room
@@ -2064,12 +2071,12 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 						unsigned const num_couches(1 + rgen.rand_bool()); // 1-2
 
 						for (unsigned n = 0; n < num_couches; ++n) { // place up to 2 couches
-							if (place_model_along_wall(OBJ_MODEL_COUCH, TYPE_COUCH, sub_room, 0.40, rgen, zval, room_id, light_amt, sub_room, start_ix, 0.0, 4, 1, color)) {
+							if (place_model_along_wall(OBJ_MODEL_COUCH, TYPE_COUCH, sub_room, 0.40, rgen, zval2, room_id, light_amt, sub_room, start_ix, 0.0, 4, 1, color)) {
 								blockers.push_back(objs.back()); // add couch to blockers for table
 								blockers.back().expand_by_xy(0.5*door_width); // add extra padding
 							}
 						}
-						if (rgen.rand_bool() && place_model_along_wall(OBJ_MODEL_RCHAIR, TYPE_RCHAIR, sub_room, 0.5, rgen, zval, room_id, light_amt, sub_room, start_ix, 0.0)) {
+						if (rgen.rand_bool() && place_model_along_wall(OBJ_MODEL_RCHAIR, TYPE_RCHAIR, sub_room, 0.5, rgen, zval2, room_id, light_amt, sub_room, start_ix, 0.0)) {
 							blockers.push_back(objs.back());
 						}
 						for (unsigned n = 0; n < 10; ++n) { // 10 attempts to place a valid table; wood, no chairs, tall=0
@@ -2093,9 +2100,9 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 							}
 							rgen.rand_mix(); // needed to get different rand values
 						} // for n
-						place_model_along_wall(OBJ_MODEL_FLOOR_LAMP, TYPE_FLOOR_LAMP, room, 0.65, rgen, zval, room_id, light_amt, sub_room, objs_start, 1.0);
+						place_model_along_wall(OBJ_MODEL_FLOOR_LAMP, TYPE_FLOOR_LAMP, room, 0.65, rgen, zval2, room_id, light_amt, sub_room, objs_start, 1.0);
 						unsigned const num_plants(rgen.rand() % 3); // 0-2
-						add_plants_to_room(rgen, sub_room, zval, room_id, light_amt, place_start, num_plants);
+						add_plants_to_room(rgen, sub_room, zval2, room_id, light_amt, place_start, num_plants);
 					}
 					else if (rtype == RTYPE_KITCHEN || rtype == RTYPE_DINING) { // tables only, for now
 						sub_room.expand_by_xy(room_pad); // make it larger to allow chairs to stick out a bit, since they don't block the player
@@ -2104,13 +2111,13 @@ unsigned building_t::add_mall_store_objs(rand_gen_t rgen, room_t &room, float zv
 						add_table_and_chairs(rgen, sub_room, blockers, room_id, room_center, chair_color, 0.0, light_amt, 4, use_tall_table, wooden_or_plastic);
 					}
 					else if (rtype == RTYPE_OFFICE) {
-						add_desk_to_room(rgen, sub_room, blockers, chair_color, zval, room_id, light_amt, start_ix, 1, 0, 1); // is_basement=1, desk_ix=0, no_computer=1
-						add_bookcase_to_room(rgen, sub_room, zval, room_id, light_amt, start_ix, 0);
+						add_desk_to_room(rgen, sub_room, blockers, chair_color, zval2, room_id, light_amt, start_ix, 1, 0, 1); // is_basement=1, desk_ix=0, no_computer=1
+						add_bookcase_to_room(rgen, sub_room, zval2, room_id, light_amt, start_ix, 0);
 					}
 					if (rtype == RTYPE_BED || rtype == RTYPE_LIVING || rtype == RTYPE_DINING) { // maybe add a rug
 						if (rgen.rand_float() < 0.75) { // 75% of the time
 							sub_room.intersect_with_cube(room); // keep rug inside of room walls
-							add_rug_to_room(rgen, sub_room, zval, room_id, light_amt, start_ix);
+							add_rug_to_room(rgen, sub_room, zval2, room_id, light_amt, start_ix);
 						}
 					}
 				} // end STORE_FURNITURE
