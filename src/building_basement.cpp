@@ -355,8 +355,10 @@ void building_t::expand_door_blocker(cube_t &blocker) const {
 }
 cube_t building_t::get_ext_basement_door_blocker() const {
 	if (!has_ext_basement()) return cube_t();
-	cube_t blocker(interior->get_ext_basement_door().get_open_door_path_bcube());
-	expand_door_blocker(blocker); // extra expands width on open side, but that should be okay
+	door_t const &door(interior->get_ext_basement_door());
+	cube_t blocker(door.get_true_bcube());
+	expand_door_blocker(blocker);
+	blocker.union_with_cube(door.get_open_door_path_bcube()); // allow space for door to fully open
 	return blocker;
 }
 
