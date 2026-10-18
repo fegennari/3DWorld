@@ -2303,7 +2303,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		set_cube_zvals(trim, door.z1(), (door.z1() + 0.1*fc_thick + trim_thickness)); // floor height + extend slightly above
 		objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, dir, (ext_flags | (draw_bot ? 0 : RO_FLAG_ADJ_BOT)), 1.0, SHAPE_SHORT, ext_trim_color);
 
-		if (d->type == tquad_with_ix_t::TYPE_HDOOR || d->type == tquad_with_ix_t::TYPE_ODOOR || d->is_building_door() || garage_door) {
+		if (d->is_exterior_door() && !d->is_rooftop_door()) {
 			// add trim at top of exterior door, houses and office buildings
 			set_cube_zvals(trim, door.z2()-0.03*door.dz(), door.z2()); // ends at top of door texture; see logic in clip_door_to_interior()
 		}
@@ -3041,7 +3041,7 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 		bool const above_ground(c.z1() > ground_floor_z1 + 2.0*fc_thickness);
 		bool const dim(c.dy() < c.dx()), dir(d.get_norm()[dim] > 0.0);
 		bool const is_garage(d.type == tquad_with_ix_t::TYPE_GDOOR);
-		if (above_ground &&  d.type != tquad_with_ix_t::TYPE_HDOOR) continue; // only house doors above ground have stairs; office buildings have walkways
+		if (above_ground &&  !d.is_house_ext_door()) continue; // only house exterior doors above ground have stairs; office buildings have walkways
 		cube_t step(get_step_for_ext_door(d));
 		// skip if over a pool deck? but we don't have that info here
 		point const step_center(step.get_cube_center());

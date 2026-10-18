@@ -938,7 +938,8 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	bool const pref_street_dim(get_street_dim()), pref_street_dir(get_street_side());
 	bool door_dim(street_dir ? pref_street_dim : (rand_num & 1)), door_dir(0), dim(0), dir(0), dir2(0), skip_last_roof(0);
 	unsigned door_part(0), detail_type(0), num_floors(0); // num_floors is only calculated for single cube houses and only used for multi-family houses
-	real_num_parts = (two_parts ? 2 : 1); // only walkable parts: excludes shed, garage, porch roof, and chimney
+	real_num_parts  = (two_parts ? 2 : 1); // only walkable parts: excludes shed, garage, porch roof, and chimney
+	use_modern_door = (rand_num & 128);
 	cube_t door_cube;
 
 	if (two_parts) { // multi-part house; parts[1] is the lower height part
@@ -1340,7 +1341,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	gen_grayscale_detail_color(rgen, 0.4, 0.8); // for roof
 
 	if (is_house) {
-		door_color = (rgen.rand_bool() ? LT_BROWN : WHITE);
+		door_color = ((rgen.rand_bool() && !use_modern_door) ? LT_BROWN : WHITE);
 		// white, white, white, white, pink, peach, lt green, lt blue
 		colorRGBA const wall_colors[8] = {WHITE, WHITE, WHITE, WHITE, colorRGBA(1.0, 0.85, 0.85), colorRGBA(1.0, 0.85, 0.75), colorRGBA(0.85, 1.0, 0.85), colorRGBA(0.85, 0.85, 1.0)};
 		wall_color = wall_color.modulate_with(wall_colors[rgen.rand()%8]);
@@ -1484,7 +1485,7 @@ bool building_t::maybe_add_city_driveway(cube_t const &plot, unsigned building_i
 
 	// first look for exterior doors facing the road to add walkways
 	for (tquad_with_ix_t const &d : doors) {
-		if (d.type != tquad_with_ix_t::TYPE_HDOOR) continue; // skip garage doors
+		if (!d.is_house_ext_door())   continue; // skip garage doors
 		cube_t const c(d.get_bcube());
 		if (c.z1() > min_door_z1)     continue; // skip upper level doors
 		if ((c.dy() < c.dx()) != dim) continue; // wrong door dim
@@ -1921,6 +1922,7 @@ bool building_t::add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir,
 	if (for_office_building)  {type = (is_back_door ? (unsigned)tquad_with_ix_t::TYPE_BDOOR2 : (unsigned)tquad_with_ix_t::TYPE_BDOOR);}
 	else if (is_restroom  ()) {type = (unsigned)tquad_with_ix_t::TYPE_ODOOR;}
 	else if (is_restaurant()) {type = (unsigned)tquad_with_ix_t::TYPE_BDOOR;}
+	else if (use_modern_door) {type = (unsigned)tquad_with_ix_t::TYPE_MDOOR;} // residential/house modern door
 	else                      {type = (unsigned)tquad_with_ix_t::TYPE_HDOOR;} // residential/house
 	door_rotation_t drot; // return value is unused
 	// exterior=1, open_amt=0.0, opens_out=opens_up=swap_sides=open_min_amt=0

@@ -113,20 +113,21 @@ struct building_geom_t { // describes the physical shape of a building
 
 struct tquad_with_ix_t : public tquad_t {
 	// roof {office, peak, hip, slope}, roof access cover, wall, house door, building front door, building back door, garage door, interior door,
-	// interior door back face, office door, office interior door, roof door, roof door
+	// interior door back face, office door, office interior door, roof door, roof door, roof interior door, modern door, ...
 	enum {TYPE_ROOF_OFFICE=0, TYPE_ROOF_PEAK, TYPE_ROOF_HIP, TYPE_ROOF_SLOPE, TYPE_ROOF_ACC, TYPE_WALL, TYPE_HDOOR, TYPE_BDOOR, TYPE_BDOOR2, TYPE_GDOOR, TYPE_IDOOR,
-		TYPE_IDOOR_IN, TYPE_ODOOR, TYPE_ODOOR_IN, TYPE_RDOOR, TYPE_RDOOR2, TYPE_RDOOR_IN, TYPE_HELIPAD, TYPE_SOLAR, TYPE_MET_TRIM, TYPE_WHITE_TRIM,
+		TYPE_IDOOR_IN, TYPE_ODOOR, TYPE_ODOOR_IN, TYPE_RDOOR, TYPE_RDOOR2, TYPE_RDOOR_IN, TYPE_MDOOR, TYPE_HELIPAD, TYPE_SOLAR, TYPE_MET_TRIM, TYPE_WHITE_TRIM,
 		TYPE_SKYLIGHT_INT, TYPE_SKYLIGHT_CAP};
-	bool is_roof         () const {return (type == TYPE_ROOF_OFFICE || type == TYPE_ROOF_PEAK || type == TYPE_ROOF_HIP || type == TYPE_ROOF_SLOPE);}
-	bool is_building_door() const {return (type == TYPE_BDOOR || type == TYPE_BDOOR2);} // for office buildings
-	bool is_exterior_door() const {return (type == TYPE_HDOOR || type == TYPE_GDOOR || type == TYPE_ODOOR || is_rooftop_door() || is_building_door());}
+	bool is_roof          () const {return (type == TYPE_ROOF_OFFICE || type == TYPE_ROOF_PEAK || type == TYPE_ROOF_HIP || type == TYPE_ROOF_SLOPE);}
+	bool is_building_door () const {return (type == TYPE_BDOOR || type == TYPE_BDOOR2);} // for office buildings
+	bool is_house_ext_door() const {return (type == TYPE_HDOOR || type == TYPE_MDOOR);}
+	bool is_exterior_door () const {return (type == TYPE_GDOOR || type == TYPE_ODOOR || is_house_ext_door() || is_rooftop_door() || is_building_door());}
 	bool is_ext_not_roof_door() const {return (is_exterior_door() && type != TYPE_RDOOR);}
-	bool is_interior_door() const {return (type == TYPE_IDOOR || type == TYPE_IDOOR_IN || type == TYPE_ODOOR || type == TYPE_ODOOR_IN);}
-	bool is_inside_face  () const {return (type == TYPE_IDOOR_IN || type == TYPE_ODOOR_IN || type == TYPE_RDOOR_IN);}
-	bool is_rooftop_door () const {return (type == TYPE_RDOOR || type == TYPE_RDOOR2 || type == TYPE_RDOOR_IN);}
-	bool door_opens_inward() const{return (type == tquad_with_ix_t::TYPE_HDOOR);}
-	bool is_trim         () const {return (type == TYPE_MET_TRIM || type == TYPE_WHITE_TRIM || type == TYPE_SKYLIGHT_INT);}
-	bool is_untextured   () const {return (is_trim() || type == TYPE_SKYLIGHT_CAP);}
+	bool is_interior_door () const {return (type == TYPE_IDOOR || type == TYPE_IDOOR_IN || type == TYPE_ODOOR || type == TYPE_ODOOR_IN);}
+	bool is_inside_face   () const {return (type == TYPE_IDOOR_IN || type == TYPE_ODOOR_IN || type == TYPE_RDOOR_IN);}
+	bool is_rooftop_door  () const {return (type == TYPE_RDOOR || type == TYPE_RDOOR2 || type == TYPE_RDOOR_IN);}
+	bool door_opens_inward() const {return is_house_ext_door();}
+	bool is_trim          () const {return (type == TYPE_MET_TRIM || type == TYPE_WHITE_TRIM || type == TYPE_SKYLIGHT_INT);}
+	bool is_untextured    () const {return (is_trim() || type == TYPE_SKYLIGHT_CAP);}
 
 	unsigned type;
 	tquad_with_ix_t(unsigned npts_=0, unsigned type_=TYPE_ROOF_PEAK) : tquad_t(npts_), type(type_) {}
@@ -1699,7 +1700,7 @@ struct building_t : public building_geom_t {
 	uint8_t num_part_levels=1, split_shape=0;
 	building_type_t btype=BTYPE_UNSET;
 	bool is_house=0, has_garage=0, has_shed=0, has_int_garage=0, has_courtyard=0, has_complex_floorplan=0, has_helipad=0, has_ac=0, has_fake_roof_door=0;
-	bool has_tline_conn=0, has_smokestack=0, has_antenna=0, has_radiators=0, was_custom_placed=0, mw_restroom_side=0;
+	bool has_tline_conn=0, has_smokestack=0, has_antenna=0, has_radiators=0, was_custom_placed=0, mw_restroom_side=0, use_modern_door=0;
 	bool street_side=0; // for convenience stores and restrooms
 	mutable bool has_attic_window=0; // make mutable so that drawing code can update/cache this value
 	bool multi_family=0; // apartments, multi-family house, duplex, etc. - split by floor

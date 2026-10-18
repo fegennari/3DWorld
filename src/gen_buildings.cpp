@@ -342,7 +342,7 @@ public:
 		register_tid(building_texture_mgr.get_bdoor_tid());
 		register_tid(building_texture_mgr.get_bdoor2_tid());
 		register_tid(building_texture_mgr.get_gdoor_tid());
-		//register_tid(building_texture_mgr.get_mdoor_tid()); // enable when this door type is used
+		register_tid(building_texture_mgr.get_mdoor_tid());
 		register_tid(building_texture_mgr.get_ac_unit_tid1());
 		register_tid(building_texture_mgr.get_ac_unit_tid2());
 		register_tid(building_texture_mgr.get_duct_tid());
@@ -1736,7 +1736,7 @@ int get_building_door_tid(unsigned type) { // exterior doors, and interior doors
 	case tquad_with_ix_t::TYPE_BDOOR : return building_texture_mgr.get_bdoor_tid ();
 	case tquad_with_ix_t::TYPE_BDOOR2: return building_texture_mgr.get_bdoor2_tid();
 	case tquad_with_ix_t::TYPE_GDOOR : return building_texture_mgr.get_gdoor_tid ();
-	//case tquad_with_ix_t::TYPE_MDOOR : return building_texture_mgr.get_mdoor_tid ();
+	case tquad_with_ix_t::TYPE_MDOOR : return building_texture_mgr.get_mdoor_tid ();
 	default: assert(0);
 	}
 	return -1; // never gets here
@@ -2641,7 +2641,8 @@ template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer,
 	if (is_rooftop_door) {type = door_type;} // roof door is special because we only draw half of the texture when open
 	bool const opened(open_amt > 0.0), opens_up(door_type == tquad_with_ix_t::TYPE_GDOOR);
 	// exclude the frame on open interior doors
-	bool const exclude_frame((door_type == tquad_with_ix_t::TYPE_HDOOR || door_type == tquad_with_ix_t::TYPE_ODOOR || is_rooftop_door) && (!exterior || opened));
+	bool const exclude_frame((door_type == tquad_with_ix_t::TYPE_HDOOR || door_type == tquad_with_ix_t::TYPE_MDOOR ||
+		door_type == tquad_with_ix_t::TYPE_ODOOR || is_rooftop_door) && (!exterior || opened));
 	unsigned const num_edges(opens_up ? 4 : 2);
 	int const tid(get_building_door_tid(door_type));
 	float const half_thickness(opens_up ? 0.01*D.dz() : 0.5*DOOR_THICK_TO_WIDTH*D.get_sz_dim(!dim));
