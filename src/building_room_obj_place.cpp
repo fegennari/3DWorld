@@ -2766,7 +2766,7 @@ void building_t::add_floor_clutter_and_trash(rand_gen_t &rgen, room_t const &roo
 
 void building_t::add_laundry_basket(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, cube_t place_area) {
 	float const floor_spacing(get_window_vspace()), radius(rgen.rand_uniform(0.1, 0.12)*floor_spacing), height(rgen.rand_uniform(1.5, 2.25)*radius);
-	place_area.expand_by_xy(-radius); // leave a slight gap between laundry basket and wall
+	place_area.expand_by_xy(-(radius + 0.5*get_trim_thickness())); // leave a slight gap between laundry basket and wall
 	if (!place_area.is_strictly_normalized()) return; // no space for laundry basket (likely can't happen)
 	cube_t legal_area(get_part_for_room(room));
 	legal_area.expand_by_xy(-(1.0*floor_spacing + radius)); // keep away from part edge/exterior walls to avoid alpha mask drawing problems (unless we use mats_amask)
