@@ -1902,6 +1902,7 @@ bool building_t::place_obj_along_wall(room_object type, room_t const &room, floa
 	if (max(place_area_sz.x, place_area_sz.y) <= min_space) return 0; // can't fit in either dim
 	unsigned const force_dim((place_area_sz.x <= min_space) ? 0 : ((place_area_sz.y <= min_space) ? 1 : 2)); // *other* dim; 2=neither
 	float const obj_clearance(depth*front_clearance), clearance(max(obj_clearance, get_min_front_clearance_inc_people()));
+	bool const is_mall_store(room.get_room_type(0) == RTYPE_STORE);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	cube_t c;
 	set_cube_zvals(c, zval, zval+height);
@@ -1912,7 +1913,7 @@ bool building_t::place_obj_along_wall(room_object type, room_t const &room, floa
 		bool const dim((force_dim < 2) ? force_dim : (use_pref ? (pref_orient >> 1) : rgen.rand_bool())); // choose a random wall unless forced
 		bool const dir(use_pref ? !(pref_orient & 1) : rgen.rand_bool()); // dir is inverted for the model, so we invert pref dir as well
 		if (skip_walls_mask & (1 << (2*dim + dir))) continue;
-		if (!use_pref && !is_residential() && room.has_open_wall(dim, dir)) continue; // don't place against an open wall such as prison bars
+		if (!use_pref && !is_residential() && !is_mall_store && room.has_open_wall(dim, dir)) continue; // don't place against open wall such as prison bars; skip for furniture stores
 		float const dsign(dir ? -1.0 : 1.0);
 		unsigned const orient(2*dim + dir);
 		float center(0.0);
