@@ -1850,7 +1850,7 @@ void building_t::find_nearest_stairs_ramp_esc(point const &p1, point const &p2, 
 			}
 		}
 		if (inc_mall_ent_stairs && zmax < ground_floor_z1) { // consider mall entrance stairs
-			cube_t const pg(get_basement());
+			cube_t const &pg(get_basement());
 			float const mall_top_floor_zval(get_mall_concourse().z2() - get_mall_floor_spacing()), pg_bot_ceil_zval(pg.z1() + get_window_vspace());
 
 			for (unsigned d = 0; d < 2; ++d) {
@@ -2089,6 +2089,8 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 					r.expand_by_xy(-radius);
 					r.clamp_pt_xy(*pts[d]);
 				} // for d
+				if (from_path.size() > 1 && from_path[0] == from_path[1]) {from_path.erase(from_path.begin());} // remove duplicate after clamping
+				if (path.size() > 1 && path.back() == path[path.size()-2]) {path.pop_back();} // remove duplicate after clamping
 				cube_t const stairs_ext(get_stairs_plus_step_up(stairs, radius));
 				enter_pt = stairs_ext.closest_pt(from_path.front());
 				point const exit_pt(stairs_ext.closest_pt(path.back()));
