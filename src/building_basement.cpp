@@ -844,6 +844,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 								if (on_wall) {
 									objs.emplace_back(sign, TYPE_SIGN, room_id, !dim, !d, RO_FLAG_NOCOLL);
 									objs.back().obj_id = register_sign_text("Handicap");
+									obstacles.push_back(sign); // add so that we don't block it with a fan, etc.
 								}
 							}
 						}
