@@ -1257,7 +1257,7 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 	unsigned const cand_room(goal.room_ix);
 	room_t const &room(get_room(cand_room)); // target room
 	if (!interior->nav_graph->is_room_connected_to(loc.room_ix, cand_room, *interior, person.pos.z, person.has_key)) return 0; // unreachable
-	point const target_pos((global_building_params.ai_target_player ? goal.pos: get_center_of_room(cand_room)));
+	point const target_pos((global_building_params.ai_target_player ? goal.pos: room.get_cube_center()));
 	person.cur_room     = loc.room_ix;
 	person.dest_room    = cand_room; // set but not yet used
 	person.target_pos   = target_pos;
@@ -1275,7 +1275,7 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 	// the current system doesn't allow for paths that span more than two floors;
 	// however, this will get us on a floor closer to the player, and hopefully there will be new sounds to guide us from there
 	if (person_in_mall != point_in_mall(target_pos) && can_use_mall_entrance_stairs(person.pos, target_pos)) { // mall to parking garage by stairs?
-		float const target_floor_spacing(person_in_mall ? window_vspace : get_mall_floor_spacing());
+		float const target_floor_spacing(person_in_mall ? window_vspace : get_mall_floor_spacing()); // opposite floor_spacing
 		unsigned const floor_ix((target_pos.z - room.z1())/target_floor_spacing);
 		person.target_pos.z = room.z1() + get_fc_thickness() + floor_ix*target_floor_spacing + person.radius; // standing on the floor of the room that the target is on
 	}
@@ -1579,7 +1579,11 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 		person.target_pos   = get_center_of_room(cand_room);
 		person.target_pos.z = person.pos.z; // keep orig zval to stay on the same floor
 
-		if (person.pos.z > top_ceil_z) { // room is below the person
+		// handle step down from parking garage to mall entrance stairs, which shares the same ceiling but has a lower floor height
+		if (has_mall_ent_stairs() && point_in_mall(person.target_pos) && has_parking_garage && get_basement().contains_pt(person.pos)) {
+			person.target_pos.z = get_mall_concourse().z2() - get_mall_floor_spacing() + get_fc_thickness() + person.radius;
+		}
+		else if (person.pos.z > top_ceil_z) { // room is below the person
 			float const new_z(person.target_pos.z - floor_spacing);
 			assert(new_z > bot_floor_z && new_z < top_ceil_z);
 			person.target_pos.z = new_z; // target the floor below
@@ -1827,7 +1831,7 @@ bool building_t::no_stairs_exit_on_floor(stairwell_t const &stairs, float zval) 
 }
 bool building_t::can_use_mall_entrance_stairs(point const &p1, point const &p2) const {
 	if (p1.z > ground_floor_z1 || p2.z > ground_floor_z1) return 0; // not in the parking garage or mall
-	if (!USE_MALL_ENT_STAIRS || !has_mall_ent_stairs()) return 0;
+	if (!USE_MALL_ENT_STAIRS || !has_mall_ent_stairs())   return 0;
 	cube_t const &pg(get_basement());
 	float const mall_top_floor_zval(get_mall_concourse().z2() - get_mall_floor_spacing()), pg_bot_ceil_zval(pg.z1() + get_window_vspace());
 
@@ -3121,6 +3125,10 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		int const ret(adjust_zval_for_mall_stairs(person.pos, person_feet_zval));
 		if (ret == 2) {person.pos.z = person_feet_zval + radius;}
 		person.on_mall_stairs = (ret > 0);
+
+		if (person.on_mall_stairs && person.pos.z > target_pos.z+2.0*radius && has_mall_ent_stairs() && dist_xy_less_than(person.pos, target_pos, radius)) {
+			target_pos.z = person.pos.z; // fix for target just past mall entrance stairs/parking garage door
+		}
 	}
 	// check if at dest; note that we use a different distance check for Z to account for model height changes when switching between people and zombie models
 	if (dist_xy_less_than(person.pos, target_pos, goal_dist) && fabs(person.pos.z - target_pos.z) < 0.5*person.get_height()) {
