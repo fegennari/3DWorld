@@ -1574,7 +1574,8 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 		float const bot_floor_z(room.z1()), top_ceil_z((room.is_single_floor && !is_retail) ? (bot_floor_z + floor_spacing) : room.z2()); // approximate
 		if ((person.pos.z + floor_spacing) < bot_floor_z || (person.pos.z - floor_spacing) > top_ceil_z) continue; // room more than one floor above/below current pos
 		// allow move to a different stacked part 25% of the time; 100% of the time for parking garages and retail, since they're more rare
-		if ((person.pos.z < bot_floor_z || person.pos.z > top_ceil_z) && !(has_parking_garage && bot_floor_z < ground_floor_z1) && !is_retail && (rgen.rand()&3) != 0) continue;
+		if ((person.pos.z < bot_floor_z || person.pos.z > top_ceil_z) && !(has_parking_garage && person.pos.z < ground_floor_z1 && bot_floor_z >= ground_floor_z1) &&
+			!is_retail && (rgen.rand()&3) != 0) continue;
 		if (!interior->nav_graph->is_room_connected_to(loc.room_ix, cand_room, *interior, person.pos.z, person.has_key)) continue;
 		person.target_pos   = get_center_of_room(cand_room);
 		person.target_pos.z = person.pos.z; // keep orig zval to stay on the same floor
