@@ -2353,7 +2353,7 @@ private:
 	void add_mall_store(cube_t const &store, cube_t const &window_area, bool dim, bool dir, bool &has_adj_store, vect_cube_t &wall_cuts, rand_gen_t &rgen);
 	void add_extb_room_floor_and_ceil(cube_t const &room);
 	void add_mall_stairs();
-	bool adjust_zval_for_mall_stairs(point const &pos, float &zval) const;
+	int adjust_zval_for_mall_stairs(point const &pos, float &zval) const;
 	void select_mall_wall_color();
 	float get_mall_floor_spacing(cube_t const &room) const;
 	bool is_inside_mall_stores(point const &pos) const;

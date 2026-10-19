@@ -12,7 +12,7 @@
 
 
 bool  const ALLOW_AI_IN_MALLS   = 1;
-bool  const USE_MALL_ENT_STAIRS = 0; // TODO: not yet working
+bool  const USE_MALL_ENT_STAIRS = 1;
 float const COLL_RADIUS_SCALE   = 0.75; // somewhat smaller than radius, but larger than PED_WIDTH_SCALE
 
 int player_hiding_frame(0);
@@ -2165,7 +2165,7 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 					path.add((landing_center + enter_dir_xy*landing_offset), 1);
 				}
 				else if (stairs.shape == SHAPE_FAN) { // mall stairs
-					// TODO: same as straight stairs?
+					// same as straight stairs, with lower end point at the center of the bottom of the stairs
 				}
 				else if (stairs.shape == SHAPE_SPIRAL) {} // spiral staircase not yet implemented
 			} // end stairs case
@@ -3031,6 +3031,9 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	if (has_rgeom && !person.has_room_geom && !person.on_fixed_path() && person.ai_state < AI_ENTER_ELEVATOR) {person.abort_dest(); choose_dest = 1;}
 	person.has_room_geom = has_rgeom;
 
+	if (person.on_mall_stairs && interior->mall_info->ent_stairs.contains_pt(person.pos)) {
+		person.pos.z = interior->mall_info->ent_stairs.z1() + radius; // move back down to mall floor level to run path finding; will reset zval later if on stairs
+	}
 	if (update_path) { // need to update based on player movement; higher priority than choose_dest
 		bool const goal_ret(choose_dest_goal(person, rgen)); // check if person can reach the target
 
@@ -3099,11 +3102,23 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	if (dot_product((person.target_pos - person.pos), person.dir) < 0.0) {max_eq(goal_dist, coll_dist);} // don't turn in place if dest is behind us and we're close
 	person.on_new_path_seg = 0; // clear flag for this frame
 	//person.following_player = can_target_player(person); // for debugging visualization
-	bool const check_mall_stairs(USE_MALL_ENT_STAIRS && !person.in_pool && !person.in_tunnel);
-	point target_pos(person.target_pos);
-	float target_feet_zval(target_pos.z - radius);
-	if (check_mall_stairs && adjust_zval_for_mall_stairs(target_pos, target_feet_zval)) {target_pos.z = target_feet_zval + radius;} // move target up onto stairs
 	
+	// check for mall entrance stairs and move up onto them;
+	// this mostly works, except that people will sometimes create a path on the air at the level of the top of the stairs;
+	// the path is reset when they enter the mall so it sort of works, but the path is also reset a second time when they exit the stairs, leading to erratic movement
+	point target_pos(person.target_pos);
+	person.on_mall_stairs = 0;
+	
+	if (USE_MALL_ENT_STAIRS && !person.in_pool && !person.in_tunnel) {
+		// check for target on mall stairs
+		float target_feet_zval(target_pos.z - radius);
+		if (adjust_zval_for_mall_stairs(target_pos, target_feet_zval) == 2) {target_pos.z = target_feet_zval + radius;} // move target up onto stairs
+		// check for person on mall stairs
+		float person_feet_zval(person.pos.z - radius);
+		int const ret(adjust_zval_for_mall_stairs(person.pos, person_feet_zval));
+		if (ret == 2) {person.pos.z = person_feet_zval + radius;}
+		person.on_mall_stairs = (ret > 0);
+	}
 	// check if at dest; note that we use a different distance check for Z to account for model height changes when switching between people and zombie models
 	if (dist_xy_less_than(person.pos, target_pos, goal_dist) && fabs(person.pos.z - target_pos.z) < 0.5*person.get_height()) {
 		assert(point_in_building_or_basement_bcube(target_pos));
@@ -3119,6 +3134,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 				else {person.target_pos += 0.01*radius*rgen.signed_rand_vector_xy();} // add a small random offset so that dir isn't a zero vector
 			}
 			//return AI_NEXT_PT; // returning here and recalculating the path on the next frame can get us stuck at this point when chasing the player
+			target_pos = person.target_pos; // needed for setting dir
 		}
 		else {
 			if (person.goal_type == GOAL_TYPE_ELEVATOR) {
@@ -3148,11 +3164,11 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 				person.wait_for(global_building_params.elevator_wait_time); // wait there for the elevator to arrive; if we're waiting too long, give up and choose another dest
 				return AI_WAIT_ELEVATOR;
 			}
-			if (person.no_wait_at_dest) {
+			if (person.no_wait_at_dest || person.on_mall_stairs) {
 				person.target_pos      = all_zeros; // reset target without waiting
 				person.no_wait_at_dest = 0; // reset for next goal
 			}
-			// don't wait if we can follow the player
+			// don't wait if we can follow the player or if we're on mall entrance stairs
 			else if (!(global_building_params.ai_target_player && (can_target_player(person) || has_nearby_sound(person, floor_spacing))) && !person.in_tunnel) {
 				person.wait_for(rgen.rand_uniform(1.0, (can_ai_follow_player(person) ? 2.0 : 10.0))); // stop for 1-10s, 1-2s if player is in this building in gameplay mode
 				set_look_dir(person);
@@ -3163,7 +3179,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		}
 	}
 	// this person is walking to a destination point
-	vector3d new_dir((person.target_pos - person.pos).get_norm());
+	vector3d new_dir((target_pos - person.pos).get_norm());
 	float const dir_dp(dot_product(new_dir, person.dir));
 	point new_pos;
 
@@ -3257,7 +3273,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		assert(0);
 	}
 	// don't do collision detection while on stairs/ramp/escalator because it doesn't work properly; just let people walk through each other
-	if (!person.on_fixed_path() && !person.in_tunnel) {
+	if (!person.on_fixed_path() && !person.in_tunnel && !person.on_mall_stairs) {
 		if (person.goal_type == GOAL_TYPE_ELEVATOR) { // heading for the elevator
 			// check for collisions with someone else waiting for the elevator
 			for (auto p = interior->people.begin(); p < interior->people.end(); ++p) {
@@ -3363,13 +3379,6 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		float const adj_zval(cur_floor*room_floor_spacing + min_valid_zval);
 		if (fabs(adj_zval - new_pos.z) > 0.1*radius) {person.abort_dest();} // if we snap to the floor, reset the target and path
 		new_pos.z = adj_zval;
-	}
-	// handle mall entrance stairs
-	float feet_zval(new_pos.z - radius);
-
-	if (check_mall_stairs && adjust_zval_for_mall_stairs(new_pos, feet_zval)) {
-		new_pos.z = feet_zval + radius; // move up onto stairs
-		person.is_on_stairs = 1; // unnecessary?
 	}
 	max_eq(new_pos.z, min_valid_zval); // don't let the person go below the ground floor
 	min_eq(new_pos.z, max_valid_zval); // don't let the person go above the room ceiling

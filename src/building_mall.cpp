@@ -763,10 +763,11 @@ void building_t::add_mall_stairs() { // connecting to the entrance door
 	interior->mall_info->ent_stairs = stairwell_t(stair, 1, dim, !dir, SHAPE_FAN);
 }
 
-bool building_t::adjust_zval_for_mall_stairs(point const &pos, float &zval) const {
+// returns: 0=not on mall entrance stairs, 1=on stairs but zval not updated, 2=on stairs and zval updated
+int building_t::adjust_zval_for_mall_stairs(point const &pos, float &zval) const {
 	if (!has_mall_ent_stairs() || zval > ground_floor_z1) return 0;
 	stairwell_t const &s(interior->mall_info->ent_stairs);
-	if (!s.contains_pt_xy(pos) || zval < s.z1() || zval > s.z2()) return 0;
+	if (!s.contains_pt_xy(pos) || zval < s.z1() || zval >= s.z2()) return 0;
 	vect_room_object_t &objs(interior->room_geom->objs);
 	unsigned const esix(interior->mall_info->ent_stairs_start_ix);
 	assert(esix < objs.size());
@@ -777,7 +778,7 @@ bool building_t::adjust_zval_for_mall_stairs(point const &pos, float &zval) cons
 		if (stair.type != TYPE_STAIR) break; // end of stairs
 		if (stair.contains_pt_xy(pos) && zval <= stair.z2()) {zval = stair.z2(); updated = 1;} // move up
 	}
-	return updated;
+	return (updated ? 2 : 1);
 }
 
 // and back hallway stairs lights
