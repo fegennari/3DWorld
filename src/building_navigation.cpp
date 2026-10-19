@@ -3030,6 +3030,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	// note that this may still have the person walk through objects if they're colliding with an object in the frame where room_geom is generated
 	if (has_rgeom && !person.has_room_geom && !person.on_fixed_path() && person.ai_state < AI_ENTER_ELEVATOR) {person.abort_dest(); choose_dest = 1;}
 	person.has_room_geom = has_rgeom;
+	float const prev_pos_z(person.pos.z);
 
 	if (person.on_mall_stairs && interior->mall_info->ent_stairs.contains_pt(person.pos)) {
 		person.pos.z = interior->mall_info->ent_stairs.z1() + radius; // move back down to mall floor level to run path finding; will reset zval later if on stairs
@@ -3089,6 +3090,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		if      (person.target_pos.z < person.pos.z) {person.prev_walked_down = 1;}
 		else if (person.target_pos.z > person.pos.z) {person.prev_walked_down = 0;}
 		assert(!person.path.empty());
+		person.pos.z = prev_pos_z; // reset to mall stairs pos before returning since we don't get into the logic below
 		person.next_path_pt(1);
 		return AI_BEGIN_PATH;
 	}
@@ -3105,8 +3107,9 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	
 	// check for mall entrance stairs and move up onto them;
 	// this mostly works, except that people will sometimes create a path on the air at the level of the top of the stairs;
-	// the path is reset when they enter the mall so it sort of works, but the path is also reset a second time when they exit the stairs, leading to erratic movement
+	// the path is reset when they enter the mall so it sort of works
 	point target_pos(person.target_pos);
+	bool const prev_on_mall_stairs(person.on_mall_stairs);
 	person.on_mall_stairs = 0;
 	
 	if (USE_MALL_ENT_STAIRS && !person.in_pool && !person.in_tunnel) {
@@ -3377,7 +3380,8 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 		int const max_floor(round_fp((room.z2() - true_z1)/room_floor_spacing) - 1);
 		min_eq(cur_floor, max_floor); // clip to the valid floors for this room relative to lowest building floor
 		float const adj_zval(cur_floor*room_floor_spacing + min_valid_zval);
-		if (fabs(adj_zval - new_pos.z) > 0.1*radius) {person.abort_dest();} // if we snap to the floor, reset the target and path
+		// if we snap to the floor, reset the target and path, except when exiting mall entrance stairs
+		if (!prev_on_mall_stairs && fabs(adj_zval - new_pos.z) > 0.1*radius) {person.abort_dest();}
 		new_pos.z = adj_zval;
 	}
 	max_eq(new_pos.z, min_valid_zval); // don't let the person go below the ground floor
