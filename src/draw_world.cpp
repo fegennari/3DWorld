@@ -1109,7 +1109,7 @@ void set_cloud_intersection_shader(shader_t &s) {
 	select_texture(CLOUD_TEX, 8);
 }
 
-float get_cloud_density(point const &pt, vector3d const &dir) { // optimize?
+float get_cloud_density(point const &pt, vector3d const &dir) {
 	if (atmosphere == 0.0) return 0.0;
 	point lsint;
 	if (!line_sphere_int(-dir, pt, cur_spo.center, cur_spo.radius, lsint, 0)) return 0.0; // shouldn't get here?
@@ -1120,7 +1120,6 @@ float get_cloud_density(point const &pt, vector3d const &dir) { // optimize?
 
 void draw_skybox_cube(cube_t const &c) {
 
-	//float const x1(0.0), x2(0.25), x3(0.5), x4(0.75), x5(1.0), y1(0.0), y2(0.3333), y3(0.6667), y4(1.0);
 	float const x1(0.0), x2(0.251), x3(0.499), x4(0.75), x5(1.0), y1(0.0), y2(0.334), y3(0.666), y4(1.0); // bias slightly to avoid face edges
 	point const A(c.x1(), c.y1(), c.z1());
 	point const B(c.x2(), c.y1(), c.z1());

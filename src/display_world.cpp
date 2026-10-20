@@ -172,12 +172,11 @@ point get_moon_pos() {
 	return pos;
 }
 
-colorRGBA get_bkg_color(point const &p1, vector3d const &v12) { // optimize?
+colorRGBA get_bkg_color(point const &p1, vector3d const &v12) { // used for water reflections
 
 	colorRGBA color(bkg_color);
-	// use textures[GRADIENT_TEX]?
 	
-	if (light_factor > 0.4) {
+	if (light_factor > 0.4) { // sun
 		point const spos(get_sun_pos());
 		float const outer_radius(4.0*sun_radius);
 		float rad, t, dist;
@@ -191,7 +190,7 @@ colorRGBA get_bkg_color(point const &p1, vector3d const &v12) { // optimize?
 		}
 	}
 	if (combined_gu) return color;
-	if (light_factor < 0.6 && line_intersect_sphere(p1, v12, get_moon_pos(), moon_radius)) {color = texture_color(MOON_TEX);}
+	if (light_factor < 0.6 && line_intersect_sphere(p1, v12, get_moon_pos(), moon_radius)) {color = texture_color(MOON_TEX);} // moon
 	return color;
 }
 

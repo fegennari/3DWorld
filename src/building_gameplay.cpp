@@ -3489,7 +3489,7 @@ bool room_object_t::can_place_onto() const { // Note: excludes flat objects such
 }
 
 bool building_t::apply_toilet_paper(point const &pos, vector3d const &dir, float half_width) {
-	// for now, just drop a square of TP on the floor; could do better; should the TP roll shrink in size as this is done?
+	// for now, just drop a square of TP on the floor; could do better
 	assert(has_room_geom());
 	static point last_tp_pos;
 	if (dist_xy_less_than(pos, last_tp_pos, 1.5*half_width)) return 0; // too close to prev pos
