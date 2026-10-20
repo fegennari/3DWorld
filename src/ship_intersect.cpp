@@ -41,8 +41,7 @@ void ship_cylinder::draw_svol(point const &tpos, float cur_radius, point const &
 
 	assert(obj);
 	int npts;
-	point pts_[4];
-	point spos_xf(spos);
+	point pts_[4], spos_xf(spos);
 	obj->xform_point(spos_xf);
 	point const center((p1 + p2)*0.5);
 	vector3d const v1(center - spos_xf);
@@ -64,7 +63,6 @@ bool ship_cube::line_intersect(point const &lp1, point const &lp2, float &t, boo
 	float tmax(0.0);
 	return get_line_clip(lp1, lp2, d, t, tmax);
 }
-
 bool ship_cube::sphere_intersect(point const &sc, float sr, point const &p_last, point &p_int, vector3d &norm, bool calc_int) const {
 	if (calc_int) {
 		unsigned cdir; // unused
@@ -152,7 +150,6 @@ void ship_sphere::draw_svol(point const &tpos, float cur_radius, point const &sp
 bool ship_torus::line_intersect(point const &lp1, point const &lp2, float &t, bool calc_t) const {
 	return line_torus_intersect_rescale(lp1, lp2, center, plus_z, ri, ro, t);
 }
-
 bool ship_torus::sphere_intersect(point const &sc, float sr, point const &p_last, point &p_int, vector3d &norm, bool calc_int) const {
 	return sphere_torus_intersect(sc, sr, center, ri, ro, p_int, norm, calc_int);
 }
@@ -184,7 +181,6 @@ void ship_torus::draw_svol(point const &tpos, float cur_radius, point const &spo
 		for (int n = 0; n < npts; ++n) pts[n] = pts_[n];
 		ushadow_polygon(pts, npts, tpos, cur_radius, spos, player, obj, min_sdist).draw_geom(tpos);
 	}
-
 	// determine the tangent points from spos to center with radius ro
 	// http://mathworld.wolfram.com/CircleTangentLine.html
 	double const x0((double)center.x - (double)spos_xf.x), y0((double)center.y - (double)spos_xf.y), xy_sq(x0*x0 + y0*y0), r_sq((double)ro*ro);
@@ -211,9 +207,7 @@ void ship_torus::draw_svol(point const &tpos, float cur_radius, point const &spo
 				if (i == 1 || dist < dmin) {dmin = dist; pmin[0] = i; pmin[1] = j;}
 			}
 		}
-		for (unsigned i = 0; i < 2; ++i) {
-			ushadow_sphere(tpts[pmin[i]], ri_mod, tpos, cur_radius, spos, ndiv, player, obj, min_sdist).draw_geom(tpos);
-		}
+		for (unsigned i = 0; i < 2; ++i) {ushadow_sphere(tpts[pmin[i]], ri_mod, tpos, cur_radius, spos, ndiv, player, obj, min_sdist).draw_geom(tpos);}
 	}
 }
 
@@ -234,9 +228,7 @@ bool ship_bounded_cylinder::sphere_intersect(point const &sc, float sr, point co
 	point pi_test;
 	vector3d norm_test;
 
-	if (bcube.sphere_intersect(sc, sr, p_last, p_int, norm, calc_int) &&
-		ship_cylinder::sphere_intersect(sc, sr, p_last, pi_test, norm_test, calc_int))
-	{
+	if (bcube.sphere_intersect(sc, sr, p_last, p_int, norm, calc_int) && ship_cylinder::sphere_intersect(sc, sr, p_last, pi_test, norm_test, calc_int)) {
 		if (calc_int && p2p_dist_sq(pi_test, p_last) > p2p_dist_sq(p_int, p_last)) {
 			p_int = pi_test;
 			norm  = norm_test;
@@ -320,7 +312,6 @@ bool ship_triangle_list::line_intersect(point const &lp1, point const &lp2, floa
 	}
 	return intersected;
 }
-
 bool ship_triangle_list::sphere_intersect(point const &sc, float sr, point const &p_last, point &p_int, vector3d &norm, bool calc_int) const {
 	return ship_sphere::sphere_intersect(sc, sr, p_last, p_int, norm, calc_int);
 }
@@ -362,7 +353,7 @@ bool u_ship::line_int_obj(point const &p1, point const &p2, point *p_int, float 
 			
 			if (tmin0 < tmin) {
 				tmin = tmin0;
-				if (dscale) *dscale = cobjs[i]->get_dscale();
+				if (dscale) {*dscale = cobjs[i]->get_dscale();}
 			}
 		}
 	}
@@ -532,11 +523,7 @@ ushadow_polygon::ushadow_polygon(upos_point_type const *const pts, unsigned np, 
 	if (!dist_less_than(center, cur_pos, cur_radius)) { // not a self-shadow
 		vector3d_d const shadow_dir((center - sun_pos).get_norm());
 		double const rsum((double)cur_radius + (double)radius);
-		
-		if (!sphere_test_comp((upos_point_type)sun_pos, cur_pos, -shadow_dir, rsum*rsum)) {
-			invalid = 1;
-			return;
-		}
+		if (!sphere_test_comp((upos_point_type)sun_pos, cur_pos, -shadow_dir, rsum*rsum)) {invalid = 1; return;}
 	}
 	get_normal(pts_[0], pts_[1], pts_[2], norm, 0);
 	double const dp(dot_product(norm, (center - sun_pos)));
@@ -546,10 +533,7 @@ ushadow_polygon::ushadow_polygon(upos_point_type const *const pts, unsigned np, 
 		upos_point_type const &pos(pts_[(dp > 0.0) ? (npts - i - 1) : i]);
 		vector3d_d const shadow_dir((pos - sun_pos).get_norm());
 		double const dist(dot_product_ptv(shadow_dir, cur_pos, pos));
-
-		for (unsigned j = 0; j < 2; ++j) {
-			p[j][i] = pos + shadow_dir*max(min_dist, (dist + (1.2 - 2.4*j)*cur_radius));
-		}
+		for (unsigned j = 0; j < 2; ++j) {p[j][i] = pos + shadow_dir*max(min_dist, (dist + (1.2 - 2.4*j)*cur_radius));}
 	}
 }
 
@@ -648,10 +632,7 @@ void ushadow_triangle_mesh::set_triangle(unsigned t, upos_point_type const pts[3
 	for (unsigned i = 0; i < 3; ++i) {
 		upos_point_type const shadow_dir((pts[i] - sun_pos).get_norm());
 		double const dist(dot_product_ptv(shadow_dir, cur_pos, pts[i]));
-
-		for (unsigned j = 0; j < 2; ++j) {
-			tris[t].p[j][i] = pts[i] + shadow_dir*max(min_dist, (dist + (1.2 - 2.4*j)*cur_radius));
-		}
+		for (unsigned j = 0; j < 2; ++j) {tris[t].p[j][i] = pts[i] + shadow_dir*max(min_dist, (dist + (1.2 - 2.4*j)*cur_radius));}
 	}
 }
 

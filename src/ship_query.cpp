@@ -69,9 +69,7 @@ void line_intersect_fo_vector(line_int_data &li_data, vector<cached_obj> const &
 		if (dist_sq > rdist*rdist || (fobj != NULL && sobjs == NULL && dist_sq >= li_data.dist)) continue;
 
 		// check_parent: 0 = disabled, 1 = projectiles only, 2 = projectiles + fighters
-		if (li_data.check_parent && (li_data.check_parent == 2 || (obj.flags & OBJ_FLAGS_PROJ)) &&
-			obj.obj->get_root_parent() == li_data.curr)
-		{
+		if (li_data.check_parent && (li_data.check_parent == 2 || (obj.flags & OBJ_FLAGS_PROJ)) && obj.obj->get_root_parent() == li_data.curr) {
 			continue; // don't hit your own shot/fighter
 		}
 		if (!sphere_test_comp(li_data.start, pos, v_line, radius*radius, t_val))                 continue;
@@ -131,11 +129,11 @@ uobject *line_intersect_objects(line_int_data &li_data, free_obj *&fobj, int obj
 		if (sobj != NULL && li_data.sobjs != NULL) li_data.sobjs->push_back(sobj);
 	}
 	if (fobj != NULL && sobj != NULL) {
-		if (f_dist < s_dist) sobj = NULL; else fobj = NULL;
+		if (f_dist < s_dist) {sobj = NULL;} else {fobj = NULL;}
 	}
 	li_data.dist = 0.0;
-	if (fobj != NULL) li_data.dist = f_dist;
-	if (sobj != NULL) li_data.dist = s_dist;
+	if (fobj != NULL) {li_data.dist = f_dist;}
+	if (sobj != NULL) {li_data.dist = s_dist;}
 	if (sobj != NULL) return sobj;
 	return fobj;
 }
@@ -171,7 +169,6 @@ void apply_one_exp(query_data &qdata, unsigned ix) {
 	}
 	vector3d velocity(dist);
 	if (dmag > TOLERANCE) {velocity *= (0.00025/dmag);}
-
 	// If a ship A fires a rocket R, the rocket strikes another ship B and R explodes, and the blast radius damages ship C, then how would we get the pointer to ship A out of this?
 	// If a ship A fires a rocket R, the rocket strikes another ship B and causes B to explode, and the blast radius damages ship C, then which ship (A or B) gets credit for damaging C?
 	// OK, so lets say no one is responsible for the explosion, but the exploding object's parent (if is has one) is responsible for the damage.
@@ -264,8 +261,8 @@ bool update_min_d(closeness_data &qdata, unsigned ix) { // ships and decoys
 			if (dist*dscale >= qdata.dmin*qdata.dscale) return 1;
 		}
 		if (obj->offense() == 0.0 || !obj->has_weapons()) { // non-offensive ships have low priority
-			if (obj->offense() == 0.0) dscale *= 4.0;
-			if (!obj->has_weapons())   dscale *= 4.0;
+			if (obj->offense() == 0.0) {dscale *= 4.0;}
+			if (!obj->has_weapons())   {dscale *= 4.0;}
 		}
 		if (obj->disabled()) dscale *= 2.0; // disabled ships have lower priority
 		if (dist*dscale >= qdata.dmin*qdata.dscale) return 1;
@@ -292,10 +289,7 @@ bool update_min_d(closeness_data &qdata, unsigned ix) { // ships and decoys
 bool get_all_close(all_query_data &qdata, unsigned ix) {
 	cached_obj const &cobj((*qdata.objs)[ix]);
 	if (fabs(qdata.pos.x - cobj.pos.x) > qdata.max_search_dist) return 0;
-
-	if (dist_less_than(qdata.pos, cobj.pos, qdata.dmax_rscale*cobj.radius) && cobj.obj != qdata.questioner) {
-		qdata.results.push_back(cobj.obj);
-	}
+	if (dist_less_than(qdata.pos, cobj.pos, qdata.dmax_rscale*cobj.radius) && cobj.obj != qdata.questioner) {qdata.results.push_back(cobj.obj);}
 	return 1;
 }
 
@@ -314,7 +308,6 @@ typedef bool (*all_query)     (all_query_data &, unsigned);
 unsigned const BAD_QUERY_FLAGS = (OBJ_FLAGS_BAD_ | OBJ_FLAGS_NEW_);
 
 bool query_func_wrap(query_data &qdata, obj_query query_func, unsigned bad_flags, unsigned ix) {
-
 	cached_obj const &cobj((*qdata.objs)[ix]);
 	if (cobj.flags & (BAD_QUERY_FLAGS | bad_flags)) return 1;
 	if (fabs(qdata.pos.x - cobj.pos.x) > (qdata.radius + qdata.urm)) return 0;
@@ -401,9 +394,7 @@ free_obj const *check_for_incoming_proj(point const &pos, int align, float dist)
 	return ((qdata.radius < dist) ? qdata.fobj : NULL);
 }
 
-free_obj *free_obj::get_closest_ship(point const &pos, float min_dist, float max_dist, bool enemy, bool attack_all,
-									 bool req_shields, bool decoy_tricked, bool dir_pref) const
-{
+free_obj *free_obj::get_closest_ship(point const &pos, float min_dist, float max_dist, bool enemy, bool attack_all,  bool req_shields, bool decoy_tricked, bool dir_pref) const {
 	if (min_dist >= max_dist) return NULL;
 	float dmin(max_dist);
 	float const min_dist_sq(max(TOLERANCE, min_dist*min_dist));

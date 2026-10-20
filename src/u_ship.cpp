@@ -202,7 +202,6 @@ void u_ship::check_size_scale() {
 	radius   = size_scale*specs().radius;
 	c_radius = specs().cr_scale*radius; // collision radius
 }
-
 void u_ship::check_ref_objs() {
 	if (status != 0) return;
 	u_ship_base::check_ref_objs(this);
@@ -223,7 +222,6 @@ float u_ship::get_engine_status() const {
 }
 
 float u_ship::get_real_speed_val() const {
-
 	float const over_mass_factor(get_mass()/u_ship_base::get_mass());
 	float const cscale(min(1.0, (get_crew_scale() + 0.5*SHIP_REQ_CREW))); // slightly slower with fewer crew
 	float const trm_scale(min(1.0f, get_true_rel_mass_scale())); // max is 1.0 in case ship has special weapons/ammo (player ship)
@@ -251,9 +249,7 @@ void u_ship::thrust(int tdir, float speed, bool hyperspeed) {
 		}
 		return;
 	}
-	if (tdir == MOVE_FRONT && dot_product(velocity, dir) >= 0.9999*(hyperspeed ? hyperspeed_mult : 1.0)*get_max_speed()) {
-		return; // already moving at max speed
-	}
+	if (tdir == MOVE_FRONT && dot_product(velocity, dir) >= 0.9999*(hyperspeed ? hyperspeed_mult : 1.0)*get_max_speed()) {return;} // already moving at max speed
 	bool stop(0);
 	if (cached_rsv == 0.0) cached_rsv = get_real_speed_val();
 	speed *= max_sfactor; // *speed_factor?
@@ -271,19 +267,15 @@ void u_ship::thrust(int tdir, float speed, bool hyperspeed) {
 				stop  = 1;
 				tdir  = MOVE_FRONT;
 				speed = -speed; // *** really want to turn to <velocity> and also control the throttle ***
-			}
-			else return;
-		}
-		else return; // *** turn around to <-velocity> and move forward? ***
+			} else return;
+		} else return; // *** turn around to <-velocity> and move forward? ***
 	}
 	if (tdir == MOVE_BACK) {
 		if (sc.reversible) {
 			tdir  = MOVE_FRONT;
 			speed = -speed;
 		}
-		else if (sc.stoppable) {
-			tdir = MOVE_STOP; // closest we can get to moving backwards
-		}
+		else if (sc.stoppable) {tdir = MOVE_STOP;} // closest we can get to moving backwards
 		else return; // *** turn around to <-velocity> and move forward? ***
 	}
 	if (tdir == MOVE_FRONT || tdir == MOVE_STOP) {
@@ -292,17 +284,10 @@ void u_ship::thrust(int tdir, float speed, bool hyperspeed) {
 		if (hyperspeed) speed *= hyperspeed_mult;
 	}
 	if (tdir == MOVE_FRONT) {
-		if (stop && velocity.mag() < fabs(speed)*sc.accel) {
-			velocity = zero_vector; // stopped
-		}
-		else {
-			accelerate(speed, sc.accel);
-			//set_ship_max_speed();
-		}
+		if (stop && velocity.mag() < fabs(speed)*sc.accel) {velocity = zero_vector;} // stopped
+		else {accelerate(speed, sc.accel);}
 	}
-	else if (tdir == MOVE_STOP) {
-		decelerate(speed, sc.decel);
-	}
+	else if (tdir == MOVE_STOP) {decelerate(speed, sc.decel);}
 }
 
 void u_ship::turn(vector3d delta) {
@@ -350,7 +335,6 @@ vector3d u_ship::get_tot_vel_at(point const &cpos) const { // velocity may be to
 
 
 bool u_ship::do_multi_target() const { // add time delay/rand-mod?
-
 	if (target_mode != TARGET_CLOSEST || !TEAM_ALIGNED(alignment) || !weap_turret(get_weapon_id())) return 0;
 	if ((ai_type & AI_BASE_TYPE) == AI_ATT_WAIT) return 0;
 	return 1;
@@ -406,7 +390,6 @@ void u_ship::acquire_target(float min_dist) {
 	if (target_obj != NULL && (target_obj->is_resetting() || target_obj->is_invisible() || (COMMON_TARGETS < 2 && tdist > search_dist))) {
 		target_obj = NULL; // don't target a ship that's out of sensor range or already dead
 	}
-
 	// RETREAT, WAIT, ENEMY, ALL
 	if (ai_base_type != AI_ATT_WAIT) { // RETREAT, ENEMY, ALL
 		if (target_obj == NULL || target_obj == parent || target_obj->invalid() ||
@@ -449,10 +432,7 @@ void u_ship::acquire_target(float min_dist) {
 
 				if (new_target_obj == NULL && alignment != ALIGN_NEUTRAL) { // no target, choose to attack same target as teammates
 					assert(alignment < a_targets.size());
-					
-					if (target_valid(a_targets[alignment]) && dist_less_than(pos, a_targets[alignment]->get_pos(), search_dist)) {
-						new_target_obj = a_targets[alignment];
-					}
+					if (target_valid(a_targets[alignment]) && dist_less_than(pos, a_targets[alignment]->get_pos(), search_dist)) {new_target_obj = a_targets[alignment];}
 				}
 				if ((ai_type & AI_GUARDIAN) && new_target_obj == NULL) { // seek out the last attacker
 					unsigned const start_i(rand() % NUM_ALIGNMENT); // don't show favoritism
@@ -482,9 +462,8 @@ void u_ship::acquire_target(float min_dist) {
 			if (target_obj != NULL && target_mode == TARGET_LAST) {target_set = 1;}
 		}
 	}
-	if ((ai_type & AI_GUARDIAN) && target_obj != NULL && target_obj->get_align() == alignment) {
-		target_obj = NULL; // don't attack a friendly
-	}
+	if ((ai_type & AI_GUARDIAN) && target_obj != NULL && target_obj->get_align() == alignment) {target_obj = NULL;} // don't attack a friendly
+	
 	if (target_obj == NULL && parent != NULL && target_valid(parent->get_target())) {
 		target_obj = parent->get_target(); // as a last resort, even if not TARGET_PARENT
 	}
@@ -498,9 +477,7 @@ void u_ship::acquire_target(float min_dist) {
 }
 
 
-uobject const *u_ship::setup_int_query(vector3d const &qdir, float qdist, free_obj *&fobj,
-									   float &tdist, bool sobjs_only, float line_radius) const
-{
+uobject const *u_ship::setup_int_query(vector3d const &qdir, float qdist, free_obj *&fobj, float &tdist, bool sobjs_only, float line_radius) const {
 	assert(qdist > 0.0);
 	int qtype(get_line_query_obj_types(qdist));
 	if (sobjs_only) qtype &= OBJ_TYPE_SOBJ;
@@ -743,12 +720,8 @@ bool u_ship::claim_world(uobject const *uobj) { // doesn't do a whole lot yet
 	if (!is_player_ship() && !dest_mgr.claim_object(this, !has_homeworld())) return 0; // already claimed
 
 	if (!has_homeworld()) { // make this our homeworld
-		if (uobj == NULL) {
-			homeworld = dest_mgr; // use the current destination as a homeworld
-		}
-		else {
-			homeworld.set_object(uobj);
-		}
+		if (uobj == NULL) {homeworld = dest_mgr;} // use the current destination as a homeworld
+		else {homeworld.set_object(uobj);}
 	}
 	return 1;
 }
@@ -788,7 +761,7 @@ free_obj const *u_ship::try_orbital_regen(free_obj const *cur_targ, bool last_od
 		
 		if (target_dist > min_targ_dist) {
 			regen = 1;
-			if (target_dist < wrange) max_dist = min(max_dist, 0.25f*target_dist);
+			if (target_dist < wrange) {max_dist = min(max_dist, 0.25f*target_dist);}
 		}
 	}
 	if (regen) {
@@ -987,9 +960,7 @@ void u_ship::ai_action() {
 			}
 			if (max_turn > TOLERANCE) {do_turn(orient);}
 
-			if (dist < 1.5*min_dest_dist) {
-				thrust(MOVE_STOP, 1.0, 0); // full stop
-			}
+			if (dist < 1.5*min_dest_dist) {thrust(MOVE_STOP, 1.0, 0);} // full stop
 			else {
 				if (use_high_speed && dot_product(orient, dir) > 0.0) set_max_sf(FAST_SPEED_FACTOR);
 				thrust(MOVE_FRONT, 1.0, 0); // full speed ahead
@@ -1068,18 +1039,13 @@ void u_ship::ai_action() {
 	float const min_target_dist(max(mappd, (target_radius + (1.0f + 0.2f*max(min_attack, mappd)/radius)*c_radius)));
 	vector3d orient(target_dir);
 
-	if (avoid_exp) {
-		orient = avoid_orient;
-	}
-	else if (move_dir == -1) {
-		orient.negate(); // run away (RETREAT)
-	}
+	if (avoid_exp) {orient = avoid_orient;}
+	else if (move_dir == -1) {orient.negate();} // run away (RETREAT)
 	else if (has_target && target_dist < min_target_dist && !targ_friend && !kamikaze && !specs().for_boarding) {
 		if (get_max_speed() > 1.1*cur_targ->get_velocity().mag()) { // if you can get away
 			orient.negate(); // back away, should slow on approach so as not to ram it, unless docking, boarding, etc.
 		}
 	}
-
 	// turn
 	bool obstacle(0);
 
@@ -1087,7 +1053,6 @@ void u_ship::ai_action() {
 		if (can_move_ && !avoid_exp) obstacle = obstacle_avoid(orient, target_dist, 0);
 		do_turn(orient);
 	}
-
 	// roll
 	if (sc.roll_rate > 0.0 && !o_dock_close) {
 		float roll_amt(0.0);
@@ -1100,7 +1065,6 @@ void u_ship::ai_action() {
 		}
 		if (roll_amt != 0.0) {thrust(((roll_amt < 0.0) ? (int)MOVE_LEFT : (int)MOVE_RIGHT), fabs(roll_amt), 0);}
 	}
-
 	// move
 	if (specs().has_fast_speed && target_dist > get_fast_target_dist(cur_targ) &&
 		dot_product(orient, dir) > 0.0 && !has_slow_fighters()) {
@@ -1152,7 +1116,6 @@ void u_ship::ai_action() {
 	else {
 		thrust(MOVE_STOP, 0.2, 0); // slow down more
 	}
-
 	// fire
 	if (!no_ammo && !pickup_fighter && !targ_friend) {ai_fire(fire_dir, target_dist, min_dist, move_dir);}
 }
@@ -1170,9 +1133,7 @@ void u_ship::fire_point_defenses() { // point defense weapon - fires at incoming
 		free_obj const *inc_proj(check_for_incoming_proj(pos, alignment, weap.range));
 		if (!inc_proj) continue;
 		
-		if (target_obj != NULL && target_obj != parent && inc_proj->damage_done() < weap.damage &&
-			dist_less_than(target_obj->get_pos(), pos, weap.range))
-		{
+		if (target_obj != NULL && target_obj != parent && inc_proj->damage_done() < weap.damage && dist_less_than(target_obj->get_pos(), pos, weap.range)) {
 			continue; // better to shoot at the target than the projectile
 		}
 		vector3d const fdir(inc_proj->get_pos(), pos);
@@ -1218,7 +1179,6 @@ bool u_ship::has_clear_line_of_fire(us_weapon const &weap, vector3d const &fire_
 }
 
 bool orbiting_ship::has_clear_line_of_fire(us_weapon const &weap, vector3d const &fire_dir, float target_dist) const {
-
 	if (!u_ship::has_clear_line_of_fire(weap, fire_dir, target_dist)) return 0;
 	if (sun_pos == all_zeros) return 1; // sun not set?
 	point const closest_pt(get_closest_pt_on_line(sun_pos, pos, (pos + fire_dir*target_dist)));
@@ -1314,13 +1274,12 @@ void u_ship::ai_fire(vector3d const &targ_dir, float target_dist, float min_dist
 			if (bwp.temp_src) {value *= 0.5*(1.0 + get_max_t()/max(target_obj->get_max_t(), TOLERANCE));}
 			
 			if (bwp.mind_control) { // prefers a mostly undamaged target
-				value += 40.0f*(1.0f - target_obj->get_damage())*(target_obj->get_cost() +
-					10.0f*(target_obj->offense() + target_obj->defense()))/max(1U, target_crew);
+				value += 40.0f*(1.0f - target_obj->get_damage())*(target_obj->get_cost() + 10.0f*(target_obj->offense() + target_obj->defense()))/max(1U, target_crew);
 			}
 		}
 		value *= 1.0 + 0.5*uw.no_coll; // can hit multiple targets and can't be destroyed easily
 		value *= sw.wcount;
-		if (value >= min_value) wchoices.push_back(make_pair(-value, good_weapons[i])); // want largest to smallest so negate w
+		if (value >= min_value) {wchoices.emplace_back(-value, good_weapons[i]);} // want largest to smallest so negate w
 	} // for i
 	if (wchoices.empty()) return; // probably won't get here
 	sort(wchoices.begin(), wchoices.end());
@@ -1360,7 +1319,6 @@ void u_ship::ai_fire(vector3d const &targ_dir, float target_dist, float min_dist
 
 
 bool u_ship::test_self_intersect(point const &fpos, point const &tpos, vector3d const &fdir, float target_dist) {
-
 	if (!specs().dynamic_cobjs && !weap_turret(get_weapon_id())) return 0; // fixed weapons can't self intersect unless dynamic cobjs
 
 	if (line_sphere_intersect((upos_point_type)fpos, (upos_point_type)tpos, pos, (double)c_radius)) {
@@ -1500,9 +1458,7 @@ bool u_ship::fire_weapon(vector3d const &fire_dir, float target_dist) {
 			target_dir = fdir;
 		}
 		if (tobj && !player_controlled()) {
-			if ((weap.shield_d_only && !tobj->has_shields()) ||
-				(!weap.is_beam && !weap.is_fighter && !weap.is_decoy && weap.damage < tobj->get_damage_abs()))
-			{
+			if ((weap.shield_d_only && !tobj->has_shields()) || (!weap.is_beam && !weap.is_fighter && !weap.is_decoy && weap.damage < tobj->get_damage_abs())) {
 				if (used_ammo >= nshots) used_ammo -= nshots; else used_ammo = 0; // not quite correct?
 				continue; // can't damage the target with this weapon
 			}
@@ -1551,8 +1507,7 @@ bool u_ship::fire_weapon(vector3d const &fire_dir, float target_dist) {
 				fire_planet_killer(this, fpos, fdir, wrange, intersect_type); // see universe.cpp
 				break;
 
-			case UWEAP_CHAFF:
-				{
+			case UWEAP_CHAFF: {
 					vector3d v(fdir*weap.speed);
 					point p(fpos + fdir*(1.5*c_radius));
 
@@ -1697,10 +1652,7 @@ void u_ship::fire_beam(point const &fpos, vector3d const &fdir, unsigned weapon_
 			}
 			else {
 				float const damage_done(fobj->damage(damage, DAMAGE_HEAT, p2, this, weapon_id)); // beam is heat damage
-
-				if (bwp.energy_drain) {
-					energy += ENERGY_XFER_EFF*damage_done*(4.0f/max(4.0f, fticks)); // scale to reasonable values for slow framerate
-				}
+				if (bwp.energy_drain) {energy += ENERGY_XFER_EFF*damage_done*(4.0f/max(4.0f, fticks));} // scale to reasonable values for slow framerate
 			}
 			if (weapon_id == UWEAP_PBEAM || weapon_id == UWEAP_FUSCUT || weapon_id == UWEAP_ESTEAL || weapon_id == UWEAP_LITNING) {
 				if ((rand()&3) == 0 && distance_to_camera(p2) < 2000.0*beamwidth && fobj->is_ship() && (weap.ignores_shields || !fobj->has_shields())) { // hit a ship's armor
@@ -1756,17 +1708,14 @@ void u_ship::fire_beam(point const &fpos, vector3d const &fdir, unsigned weapon_
 }
 
 void u_ship::fire_projectile(point const &fpos, vector3d const &fire_dir) {
-
 	us_weapon const &weap(us_weapons[get_weapon_id()]);
 	unsigned const weapon_id(weap.ammo_type);
 	assert(get_weapon_id() == weapon_id); // sanity check
 	point const ppos(fpos + fire_dir*(1.0*((custom_wpt() ? 0.0 : radius) + weap.radius)));
 	vector3d const pvel((weap.no_ship_vel ? zero_vector : velocity) + fire_dir*weap.speed);
 	create_projectile(weapon_id, this, alignment, ppos, pvel, fire_dir, upv); // return value unused
-
-	if (weap.f_inv > 0.0) { // inverse force applied to the shooter (recoil)
-		coll_physics(ppos, pvel*-weap.f_inv, weap.f_inv*weap.mass, weap.radius, NULL, 1.0);
-	}
+	// inverse force applied to the shooter (recoil)
+	if (weap.f_inv > 0.0) {coll_physics(ppos, pvel*-weap.f_inv, weap.f_inv*weap.mass, weap.radius, NULL, 1.0);}
 }
 
 void u_ship::spawn_fighter(point const &fpos, vector3d const &fire_dir) {
@@ -1840,7 +1789,6 @@ vector3d u_ship::predict_target_dir(point const &fpos, free_obj const *targ, uns
 	// Note: can more accurately test weapon range this way
 	assert(targ != NULL);
 	point const pt(targ->get_pos());
-
 	// get weapon projectile speed
 	if (wclass != UWEAP_NONE && us_weapons[wclass].speed == 0.0) { // not a projectile weapon, just face the target
 		return vector3d(pt, fpos).get_norm();
@@ -1934,7 +1882,6 @@ bool u_ship::dock_fighter(u_ship *ship) {
 }
 
 bool u_ship::orbital_dock(u_ship *ship) { // ship docks with orbital station
-
 	assert(ship != this);
 	if (invalid_priv() || ship->invalid_priv()) return 0;
 	bool const o_dock(specs().orbiting_dock), orbiting(is_orbiting()), ship_orbiting(ship->is_orbiting());
@@ -2024,9 +1971,7 @@ bool u_ship::capture_ship(u_ship *ship, bool add_as_fighter) { // this captures 
 		new_ship->weapons = sclasses[new_ship->sclass].weapons; // can't have the unfair player weapons
 		if (add_as_fighter) add_fighter(new_ship, this, 0);
 	}
-	else if (add_as_fighter) {
-		add_fighter(ship, this, 0);
-	}
+	else if (add_as_fighter) {add_fighter(ship, this, 0);}
 	target_obj = NULL; // no longer targeting this ship
 	
 	for (auto i = ship->fighters.begin(); i != ship->fighters.end(); ) {
@@ -2059,13 +2004,8 @@ bool u_ship::try_paralyze(u_ship const *source, float intensity, point const &pp
 	if (intensity < 1.0E-6) return 0; // hit an undamageable part of the ship?
 	float const resistance((has_shields() ? 2.0 : 1.0)*get_mass()), tval(10.0*intensity/resistance);
 	unsigned ptime(0);
-				
-	if (tval >= 0.5) {
-		ptime = unsigned(max(1.0f, fticks)*tval + 0.5);
-	}
-	else if ((rand() % unsigned(1.0/tval + 0.5)) == 0) {
-		ptime = 1;
-	}
+	if (tval >= 0.5) {ptime = unsigned(max(1.0f, fticks)*tval + 0.5);}
+	else if ((rand() % unsigned(1.0/tval + 0.5)) == 0) {ptime = 1;}
 	if (ptime == 0) return 0;
 	disable(ptime);
 	add_blastr(ppos, dir, 3.0*radius, 0.0, min(max(iticks, 1), int(ptime)), source->get_align(), YELLOW, ORANGE, ETYPE_NONE, source); // colored light
@@ -2111,7 +2051,6 @@ bool u_ship::hostile_explode() const { // called on a ship or a parent
 }
 
 inline bool u_ship::is_enemy(free_obj const *obj) const {
-	
 	assert(obj != NULL);
 	if (!TEAM_ALIGNED(alignment)) return 0;
 	unsigned const oal(obj->get_align());
@@ -2160,9 +2099,7 @@ void u_ship::apply_physics() {
 			surface_mesh.set_rand_translate(tp, unsigned(10.0*fticks));
 		}
 	}
-	if (!is_ok()) {
-		last_hit = 0; // maybe remove this?
-	}
+	if (!is_ok()) {last_hit = 0;} // maybe remove this?
 	else {
 		if (exploding) {
 			if (explode_now()) {
@@ -2170,9 +2107,7 @@ void u_ship::apply_physics() {
 				do_explode();
 				return;
 			}
-			else if (sc.cont_frag && (rand() & 7) == 0) {
-				fragment(dir, 0.05, 1);
-			}
+			else if (sc.cont_frag && (rand() & 7) == 0) {fragment(dir, 0.05, 1);}
 			set_ship_max_speed(2.0); // allow it to move faster than it normally could (due to explosions), but still cap it
 		}
 		else if (!invalid_priv()) {
@@ -2309,7 +2244,6 @@ float u_ship::damage(float val, int type, point const &hit_pos, free_obj const *
 	bool const valid_wc(wc >= 0 && unsigned(wc) < us_weapons.size());
 	bool const ignores_shields(lhyper || (valid_wc && us_weapons[wc].ignores_shields)); // no shields in hyperspeed
 	bool const shield_d_only(valid_wc && us_weapons[wc].shield_d_only);
-	
 	float const hit_points((shield_d_only ? 0.0 : armor) + (ignores_shields ? 0.0 : shields));
 	if (VERIFY_REFS && source) {source->verify_status();}
 	bool const is_kill(!shield_d_only && val > hit_points);
@@ -2317,7 +2251,6 @@ float u_ship::damage(float val, int type, point const &hit_pos, free_obj const *
 	unsigned const src_align(source ? source->get_align()  : (unsigned)NUM_ALIGNMENT);
 	// make sure to report the real damage done (before or after various subtractions?)
 	register_damage(src_sclass, sclass, wc, min(val, hit_points), src_align, get_align(), is_kill, (source == this));
-	
 	assert(shields >= 0.0 && armor >= 0.0);
 	damaged = 1;
 	partial_uncloak(0.5); // must de-cloak partially when hit
@@ -2537,9 +2470,7 @@ void u_ship::fragment(vector3d const &edir, float num, bool outside_cr) const { 
 			vel *= 0.2;
 			vel += expdir*(0.002*(0.05 + radius));
 		}
-		if (etype == ETYPE_STARB) { // parent = this?
-			gen_particle(PTYPE_GLOW, et_params[etype].c1, et_params[etype].c2, plifetime/2, ppos, vel, sz, 5.0, alignment, 1);
-		}
+		if (etype == ETYPE_STARB) {gen_particle(PTYPE_GLOW, et_params[etype].c1, et_params[etype].c2, plifetime/2, ppos, vel, sz, 5.0, alignment, 1);} // parent = this?
 		else {
 			colorRGBA const pcolor((rand()&1) ? specs().base_color : alignment_colors[alignment]);
 			unsigned const ptype((rand()&1) ? (unsigned)PTYPE_SPHERE : (unsigned)PTYPE_TRIANGLE);
@@ -2867,9 +2798,7 @@ void orbiting_ship::ai_action() {
 				else {
 					copy(btypes.begin(), btypes.end(), inserter(unique_sc, unique_sc.begin()));
 				}
-				for (auto it = unique_sc.begin(); it != unique_sc.end(); ++it) {
-					scs.push_back(make_pair(-int(sclasses[*it].cost), *it));
-				}
+				for (auto it = unique_sc.begin(); it != unique_sc.end(); ++it) {scs.push_back(make_pair(-int(sclasses[*it].cost), *it));}
 				sort(scs.begin(), scs.end());
 			}
 			else {
@@ -2926,9 +2855,7 @@ void rand_spawn_ship::destroy_or_respawn() {
 		reset();
 		gen_valid_pos();
 	}
-	else {
-		status = 1; // mark for removal
-	}
+	else {status = 1;} // mark for removal
 }
 
 void rand_spawn_ship::apply_physics() {
@@ -2936,9 +2863,7 @@ void rand_spawn_ship::apply_physics() {
 	u_ship::apply_physics();
 
 	if (is_ok() && needs_respawned()) {
-		if (okay_to_respawn()) {
-			destroy_or_respawn();
-		}
+		if (okay_to_respawn()) {destroy_or_respawn();}
 		else {
 			// what to do here? We have a ship far from the player, but the player is in hyperspeed or has left the system/galaxy
 			// for now, just let our ship continue on its course

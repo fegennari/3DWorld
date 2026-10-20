@@ -93,9 +93,7 @@ void free_obj::check_ref_objs() {
 	if (status != 0) return;
 
 	while (target_obj != NULL && target_obj->not_a_target()) { // try to find a valid target from our current target's parent/ancestors
-		if (target_obj->parent != NULL && target_obj->invalid() && target_valid(target_obj->parent) &&
-			target_obj->parent->get_align() != alignment) // almost correct
-		{
+		if (target_obj->parent != NULL && target_obj->invalid() && target_valid(target_obj->parent) && target_obj->parent->get_align() != alignment) { // almost correct
 			target_obj = target_obj->parent; // now go after the ship's parent
 		}
 		else {target_obj = NULL;}
@@ -127,21 +125,16 @@ void free_obj::accelerate(float speed, float accel) {
 	velocity.set_max_mag(max(vmag0, float(fabs(speed)))); // normalize to speed = max speed
 	assert(!is_nan(velocity));
 }
-
 void free_obj::decelerate(float speed, float decel) {
-
 	if (speed == 0.0 || decel == 0.0) return;
 	float const vmag(velocity.mag()), vmax(max(vmag, float(fabs(speed))));
 
-	if (vmag < decel*vmax) {
-		velocity = zero_vector; // stopped
-	}
+	if (vmag < decel*vmax) {velocity = zero_vector;} // stopped
 	else if (vmag > TOLERANCE) {
 		velocity *= ((vmag - decel*vmax)/vmag); // slow down
 		assert(!is_nan(velocity));
 	}
 }
-
 
 void free_obj::arb_rotate_about(float rangle, vector3d const &raxis) {
 	rotate_vector3d_x2(raxis, rangle, upv, dir);
@@ -149,18 +142,15 @@ void free_obj::arb_rotate_about(float rangle, vector3d const &raxis) {
 	dir.normalize();
 	invalidate_rotv();
 }
-
 void free_obj::do_rotate(float pitch, float yaw) { // upv rotates as you move the mouse in xy circles
 	vector3d const vy(cross_product(dir, upv));
 	rotate_vector3d(upv, yaw, dir); // x-rotation
 	arb_rotate_about(pitch, vy); // y-rotation, rotate up vector
 }
-
 void free_obj::tilt(float val) {
 	rotate_vector3d_norm(dir, val, upv);
 	invalidate_rotv();
 }
-
 
 void free_obj::add_gravity_swp(vector3d const &gravity, vector3d const &swp, float gscale, bool near_bh) {
 
@@ -219,13 +209,9 @@ float free_obj::coll_physics(point const &copos, vector3d const &vcoll, float ob
 	vector3d norm(pos, copos); // normal from collided object to current object
 	bool const stopped(vd.mag() < TOLERANCE), move_pos((stopped || obj_mass >= 0.5*mass0) && obj_radius > 0.0 && c_radius > 0.0);
 	point new_pos(copos);
+	if (norm.mag_sq() < TOLERANCE*TOLERANCE) {norm = signed_rand_vector_norm();} // points on top of each other, just pick a direction
+	else {norm.normalize();}
 
-	if (norm.mag_sq() < TOLERANCE*TOLERANCE) { // points on top of each other, just pick a direction
-		norm = signed_rand_vector_norm();
-	}
-	else {
-		norm.normalize();
-	}
 	if (stopped && !move_pos) { // non-movable objects starting on top of each other - what to do?
 		dvel += norm*1.0E-6; // give it a small velocity
 		return 0.0;
@@ -273,7 +259,6 @@ float free_obj::coll_physics(point const &copos, vector3d const &vcoll, float ob
 		pos = new_pos; // technically should move both objects, but more difficult to ensure no collision afterwards
 	}
 	if (stopped) return 0.0;
-	
 	// compute collision force
 	float const c(-dot_product(norm, vd)); // norm is not really correct in all cases
 	//if (c <= 0.0) return 0.0; // pushed in the direction we were already moving; should this case be skipped?
@@ -312,15 +297,12 @@ void free_obj::advance_time(float timestep) {
 	if (dvel != zero_vector) {
 		velocity += dvel; // collision velocity
 		dvel      = zero_vector;
-		//assert(!is_nan(velocity));
 	}
 	UNROLL_3X(if (fabs(velocity[i_]) < TOLERANCE) {velocity[i_] = 0.0;}) // fix for denormalized numbers?
 	pos += velocity*timestep;
 
 	if (rot_rate != 0.0) { // apply rotation
-		if (fabs(rot_rate) < 1.0E-6) {
-			rot_rate = 0.0;
-		}
+		if (fabs(rot_rate) < 1.0E-6) {rot_rate = 0.0;}
 		else {
 			assert(rot_rate > 0.0);
 			arb_rotate_about(fticks*rot_rate, rot_axis);
@@ -415,7 +397,6 @@ void free_obj::force_calc_rotation_vectors() const {
 	cross_product(rv2, orient, rv1);
 	if (rv1.mag() < TOLERANCE) {rv1 = plus_z;} // otherwise this will assertion fail
 	ra1 = get_angle(rv2.get_norm(), orient);
-
 	// rotate up to <upv>
 	vector3d upvr;
 	rotate_vector3d(upv, rv1, ra1, upvr);
@@ -429,25 +410,21 @@ template<typename T> void free_obj::rotate_point(pointT<T> &pt) const { // rotat
 	rotate_vector3d(pointT<T>(rv1), ra1, pt); // inverse rotate in direction <dir>
 	rotate_vector3d(pointT<T>(rv2), ra2, pt); // inverse rotate up to <upv>
 }
-
 template<typename T> void free_obj::xform_point(pointT<T> &pt) const { // transform from global coordinate system into object coordinate system
 	pt -= pos; // translate to (0,0,0)
 	rotate_point(pt);
 	pt /= radius; // scale by inverse of radius
 }
-
 template<typename T> void free_obj::rotate_point_inv(pointT<T> &pt) const { // rotate from object coordinate system into global coordinate system
 	calc_rotation_vectors();
 	rotate_vector3d(pointT<T>(rv2), -ra2, pt); // rotate up to <upv>
 	rotate_vector3d(pointT<T>(rv1), -ra1, pt); // rotate in direction <dir>
 }
-
 template<typename T> void free_obj::xform_point_inv(pointT<T> &pt) const { // transform from object coordinate system into global coordinate system
 	rotate_point_inv(pt);
 	pt *= T(radius); // scale by radius
 	pt += pos; // translate to pos
 }
-
 void free_obj::xform_point_x2(point &p1, point &p2) const { // transform from global coordinate system into object coordinate system
 	p1 -= pos; // translate to (0,0,0)
 	p2 -= pos; // translate to (0,0,0)
@@ -457,7 +434,6 @@ void free_obj::xform_point_x2(point &p1, point &p2) const { // transform from gl
 	p1 /= radius; // scale by inverse of radius
 	p2 /= radius; // scale by inverse of radius
 }
-
 void free_obj::xform_point_inv_multi(upos_point_type *pts, unsigned npts) const {
 	calc_rotation_vectors();
 	rotate_vector3d_multi(upos_point_type(rv2), -ra2, pts, npts); // rotate up to <upv>
@@ -485,7 +461,6 @@ vector3d free_obj::calc_angular_vel(point const &cpos, vector3d const &axis, flo
 	if (dist_sq > c_radius*c_radius) {rate *= c_radius/sqrt(dist_sq);} // normalize to max dist
 	return cross_product((cpos - pos), axis)*TWO_PI*rate;
 }
-
 vector3d free_obj::get_tot_vel_at(point const &cpos) const {
 	return (velocity + calc_angular_vel(cpos, rot_axis, rot_rate));
 }
@@ -495,7 +470,6 @@ float free_obj::damage(float val, int type, point const &hit_pos, free_obj const
 	def_explode((10.0 + 0.1*min(100.0f, val)), ETYPE_ANIM_FIRE, dir, WCLASS_EXPLODE, alignment, 0, parent); // no shields or armor
 	return 0.0;
 }
-
 
 // get_all currently only works with free_objs, not uobjects
 void free_obj::large_obj_visibility_test(point const &lpos, float exp_radius, vector<uobject const*> &sobjs, bool get_all) const {
@@ -511,7 +485,6 @@ void free_obj::large_obj_visibility_test(point const &lpos, float exp_radius, ve
 	uobject const *const obj(line_intersect_objects(li_data, fobj, OBJ_TYPE_LARGE));
 	if (!get_all && obj != NULL) sobjs.push_back(obj);
 }
-
 
 void free_obj::rotate() const {
 	rotate_about(TO_DEG*ra1, rv1); // rotate in direction <dir>
@@ -606,9 +579,7 @@ void free_obj::draw(shader_t &shader, vpc_shader_t &upc_shader) const { // view 
 		dist, radius, c_radius/radius, (nlights > 0), 1, !partial_shadow, 1, (npasses == 1));
 	
 	if (ndiv > 3) {
-		for (unsigned i = 0; i < nlights; ++i) {
-			setup_br_light(exp_lights[i], pos, (EXPLOSION_LIGHT + i), udd.shader);
-		}
+		for (unsigned i = 0; i < nlights; ++i) {setup_br_light(exp_lights[i], pos, (EXPLOSION_LIGHT + i), udd.shader);}
 	}
 	for (unsigned pass = 0; pass < npasses; ++pass) {
 		if (pass > 0) {
@@ -622,7 +593,6 @@ void free_obj::draw(shader_t &shader, vpc_shader_t &upc_shader) const { // view 
 			shader.reset_subroutine(1, "do_lighting_op", "shadow_only");
 			fgPushMatrix();
 			global_translate(pos);
-
 			// draw shadow volume
 			setup_stencil_buffer_write();
 			glStencilOpSeparate(GL_FRONT, GL_INCR_WRAP, GL_INCR_WRAP, GL_KEEP);
@@ -634,12 +604,10 @@ void free_obj::draw(shader_t &shader, vpc_shader_t &upc_shader) const { // view 
 			glStencilOpSeparate(GL_FRONT_AND_BACK, GL_KEEP, GL_KEEP, GL_KEEP);
 			set_std_depth_func_with_eq(); // GL_EQUAL should be used, but there are more issues with z-fighting in this mode
 			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-
 			// draw second pass using stencil test
 			set_additive_blend_mode();
 			set_uobj_color(pos, c_radius, 0, 2, &sun_pos, nullptr, sobj, 0.0, 0.0, udd.shader); // enable diffuse/specular only
 			transform_and_draw_obj(udd, 1, 0, 1);
-
 			// reset state
 			end_stencil_write();
 			set_std_blend_mode();
@@ -713,10 +681,8 @@ void stationary_obj::draw_obj(uobj_draw_data &ddata) const {
 		case SO_BLACK_HOLE:
 			ddata.draw_black_hole();
 			break;
-		case SO_ASTEROID:
-			assert(0); // not implemented
-		default:
-			assert(0);
+		case SO_ASTEROID: assert(0); // not implemented
+		default: assert(0);
 	}
 }
 
@@ -774,12 +740,8 @@ bool uparticle::collision(point const &copos, vector3d const &vcoll, float obj_m
 		source->damage(damage_v, DAMAGE_HEAT, pos, this, WCLASS_HEAT); // damage the target (hot particle)
 		damage_v *= 0.95; // particle loses energy
 	}
-	if (PART_COLL_DESTROY) {
-		damage(1.0, DAMAGE_COLL, copos, source, SWCLASS_UNDEF);
-	}
-	else {
-		coll_physics(copos, vcoll, obj_mass, obj_radius, source, elastic);
-	}
+	if (PART_COLL_DESTROY) {damage(1.0, DAMAGE_COLL, copos, source, SWCLASS_UNDEF);}
+	else {coll_physics(copos, vcoll, obj_mass, obj_radius, source, elastic);}
 	return 1;
 }
 
@@ -991,8 +953,7 @@ void us_projectile::apply_physics() {
 
 	if (time > specs().lifetime) {
 		if (specs().bradius > 0.0 && !specs().no_exp_dam) {
-			explode(0.4*specs().damage, 0.4*specs().bradius, exp_type,
-				dir, 0, wclass, alignment, get_eflags(), parent); // smaller explosion than collision
+			explode(0.4*specs().damage, 0.4*specs().bradius, exp_type, dir, 0, wclass, alignment, get_eflags(), parent); // smaller explosion than collision
 		}
 		status = 1;
 	}
@@ -1006,8 +967,7 @@ void us_projectile::apply_physics() {
 			register_explosion(pos, exp_size, damage, (get_eflags() | EXP_FLAGS_NO_PART), wclass, this, parent);
 
 			if (exp_type != ETYPE_NONE) {
-				add_blastr(pos, dir, exp_size, 0.0, int(0.2*TICKS_PER_SECOND), alignment,
-					et_params[exp_type].c1, et_params[exp_type].c2, exp_type, parent);
+				add_blastr(pos, dir, exp_size, 0.0, int(0.2*TICKS_PER_SECOND), alignment, et_params[exp_type].c1, et_params[exp_type].c2, exp_type, parent);
 			}
 		}
 		free_obj::apply_physics();
@@ -1030,9 +990,7 @@ bool us_projectile::collision(point const &copos, vector3d const &vcoll, float o
 	float dscale(1.0);
 	float const energy(coll_physics(copos, vcoll, obj_mass, obj_radius, source, elastic, &dscale));
 
-	if (source != NULL && specs().bradius == 0.0 && dscale > 0.0 && specs().damage > 0.0 &&
-		(parent == NULL || !specs().no_ffire || !parent->is_related(source)))
-	{
+	if (source != NULL && specs().bradius == 0.0 && dscale > 0.0 && specs().damage > 0.0 && (parent == NULL || !specs().no_ffire || !parent->is_related(source))) {
 		source->damage(dscale*specs().damage, DAMAGE_PROJ, pos, this, wclass); // damage the target
 	}
 	damage(energy, DAMAGE_COLL, copos, source, SWCLASS_UNDEF); // explode on contact, no bounce (in most cases)

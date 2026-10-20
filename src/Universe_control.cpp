@@ -144,9 +144,7 @@ void setup_current_system(float sun_intensity) { // called in ground mode
 				player_ship().move_to(p_int); // move the player ship to the surface of the planet/moon
 			}
 		}
-		else {
-			// FIXME: what do we do here? still move the player ship? clear the closest planet? refuse to switch world mode? draw empty space?
-		}
+		// else what do we do here? still move the player ship? clear the closest planet? refuse to switch world mode? draw empty space?
 	}
 	if (clobj0.type == UTYPE_PLANET) { // determine atmosphere and cloud cover
 		uplanet const &planet(clobj0.get_planet());
@@ -276,7 +274,6 @@ void draw_universe(bool static_only, bool skip_closest, bool no_move, int no_dis
 		player_ship().try_fire_weapon(); // must be before process_univ_objects(), on master thread, since this can destroy objects and free VBOs
 	}
 	// clobj0 will not be set - need to draw cells before there are any sobjs
-#ifdef _OPENMP
 	// disable multiple threads when the player is away from the starting galaxy center to avoid crashing when allocating/freeing galaxies, systems, and clusters
 	bool const near_init_galaxy(dist_less_than(get_player_pos2(), universe_origin, GALAXY_MIN_SIZE));
 
@@ -288,9 +285,7 @@ void draw_universe(bool static_only, bool skip_closest, bool no_move, int no_dis
 			else {draw_universe_all(static_only, skip_closest, no_move, no_distant, gen_only, no_asteroid_dust);} // *must* be done by master thread
 		}
 	}
-	else
-#endif
-	{
+	else {
 		if (!static_only) {process_ships(timer1);}
 		draw_universe_all(static_only, skip_closest, no_move, no_distant, gen_only, no_asteroid_dust);
 	}
@@ -382,11 +377,8 @@ void process_univ_objects() {
 				
 				if (dist_to_cobj > 0.0 && is_ship && clobj.has_valid_system()) {
 					ussystem const &system(clobj.get_system());
-
-					if (system.asteroid_belt) {
-						// check distance to system asteroid fields (planet asteroid fields should be close enough to the planet already)
-						dist_to_cobj = min(dist_to_cobj, system.asteroid_belt->get_dist_to_boundary(obj_pos));
-					}
+					// check distance to system asteroid fields (planet asteroid fields should be close enough to the planet already)
+					if (system.asteroid_belt) {dist_to_cobj = min(dist_to_cobj, system.asteroid_belt->get_dist_to_boundary(obj_pos));}
 				}
 				uobj->set_sobj_dist(dist_to_cobj);
 
@@ -432,10 +424,7 @@ void process_univ_objects() {
 			if (!stat_objs.empty()) {
 				all_query_data qdata(&stat_objs, obj_pos, 10.0, urm_static, uobj, stat_obj_query_res);
 				get_all_close_objects(qdata);
-				
-				for (unsigned j = 0; j < stat_obj_query_res.size(); ++j) { // asteroid/black hole gravity
-					near_b_hole |= (stat_obj_query_res[j]->get_gravity(gravity, obj_pos) == 2);
-				}
+				for (unsigned j = 0; j < stat_obj_query_res.size(); ++j) {near_b_hole |= (stat_obj_query_res[j]->get_gravity(gravity, obj_pos) == 2);} // asteroid/black hole gravity
 			}
 			if (clobj.has_valid_system()) {
 				swp_accel = clobj.get_star().get_solar_wind_accel(obj_pos, uobj->get_mass(), uobj->get_surf_area());
@@ -450,10 +439,7 @@ void process_univ_objects() {
 				if (dist_sq > rval*rval) continue;
 				assert(ts.radius > TOLERANCE);
 				float const temp(ts.temp*min(1.0f, (rval - sqrt(dist_sq))/ts.radius)*min(1.0, 0.5*max(1.0f, ts.radius/radius)));
-				
-				if (temp > uobj->get_temp()) {
-					uobj->set_temp(temp, ts.pos, ts.source); // source should be valid (and should register as an attacker)
-				}
+				if (temp > uobj->get_temp()) {uobj->set_temp(temp, ts.pos, ts.source);} // source should be valid (and should register as an attacker)
 			} // for t
 			if (!orbiting) {
 				float const speed_factor(uobj->get_max_sf()); // SLOW_SPEED_FACTOR = 0.04, FAST_SPEED_FACTOR = 1.0
@@ -531,12 +517,10 @@ void fire_planet_killer(u_ship const *const ship, point const &ship_pos, vector3
 
 	point coll; // unused
 	s_object target;
-
 	// test for collisions with solid stellar objects
 	line_query_state lqs;
 	bool const sobj_coll((obj_types & OBJ_TYPE_UOBJ) ? universe.get_trajectory_collisions(lqs, target, coll, fire_dir, ship_pos, fire_range, 0.0) : 0);
 	bool sobjc(sobj_coll && target.is_solid());
-
 	// test for other ship collisions
 	int const itype(obj_types & ~OBJ_TYPE_UOBJ);
 	free_obj *fobj = NULL;
@@ -562,7 +546,7 @@ void fire_planet_killer(u_ship const *const ship, point const &ship_pos, vector3
 	if (sobjc) { // destroy a stellar object
 		if (!ship->invalid() && (target.type == UTYPE_PLANET || target.type == UTYPE_MOON)) {
 			int const owner(target.get_world().owner);
-			if (owner != NO_OWNER) register_attack_from(ship, owner); // team takes offense
+			if (owner != NO_OWNER) {register_attack_from(ship, owner);} // team takes offense
 		}
 		destroy_sobj(target);
 	}
@@ -577,7 +561,6 @@ bool universe_intersection_test(line_query_state &lqs, point const &pos, vector3
 }
 
 bool universe_ray_intersect(point const &start, point const &end, int obj_types, uobject const *cur=NULL, free_obj const *ignore=NULL) {
-
 	vector3d const dir((end - start).get_norm());
 	float const range(p2p_dist(start, end));
 	//if ((obj_types & OBJ_TYPE_UOBJ) && universe_intersection_test(lqs, start, dir, range)) return 1;
@@ -670,7 +653,6 @@ void draw_universe_stats() {
 	point const cpos(get_universe_display_camera_pos());
 	vector3d const dir(ps.get_dir().get_norm());
 	float const player_temp(player_ship().get_true_temp());
-	//sprintf(text, "Loc: (%i: %3.3f, %i: %3.3f, %i: %3.3f)  Dir: (%1.3f, %1.3f, %1.3f)", uxyz[0], camera_scaled.x, uxyz[1], camera_scaled.y, uxyz[2], camera_scaled.z, dir.x, dir.y, dir.z);
 	sprintf(text, "Loc: (%3.4f, %3.4f, %3.4f)  Dir: (%1.3f, %1.3f, %1.3f)  T: %3.1f", cpos.x, cpos.y, cpos.z, dir.x, dir.y, dir.z, player_temp);
 	draw_text(YELLOW, -0.009*aspect_ratio, -0.014, -0.028, text);
 
@@ -695,7 +677,6 @@ void draw_universe_stats() {
 	draw_text(WHITE, 0.0086*aspect_ratio, 0.0126, -0.025, text);
 	sprintf(text, "Deaths: %u", ps.get_num_deaths());
 	draw_text(WHITE, 0.0086*aspect_ratio, 0.0117, -0.025, text);
-
 	// draw message text (user typed)
 	if (!user_text.empty()) {draw_text(WHITE, -0.010*aspect_ratio, 0.010, -0.02, user_text);} // x and z are scaled
 }
@@ -710,7 +691,6 @@ void exec_universe_text(string const &text) {
 		destroy_player_ship(0);
 		return;
 	}
-	// more...
 }
 
 bool rename_obj(uobject *obj, unsigned alignment) { // a little difficult to use, have to enter the text first then click on an object
@@ -861,9 +841,7 @@ bool check_dest_ownership(int uobj_id, point const &pos, free_obj *own, bool che
 			owned   = 1;
 			defend -= 12.0;
 		}
-		if (defend > 0.0 || !owned) {
-			owned |= (add_orbiting_ship(USC_ANTI_MISS, 0, 0, 0, own, result) != NULL); // try to put an anti-missile drone in orbit
-		}
+		if (defend > 0.0 || !owned) {owned |= (add_orbiting_ship(USC_ANTI_MISS, 0, 0, 0, own, result) != NULL);} // try to put an anti-missile drone in orbit
 		float const rsc_val(world.resources - (homeworld ? 0.0 : 20.0));
 
 		if (rsc_val > 0.0 && t == 0) { // planets only - colonies (first homeworld only?)
@@ -1197,17 +1175,14 @@ void uobject::gen_moving_fragments(point const &hit_pos, unsigned num, int tid, 
 }
 
 float const *uobject::get_sphere_shadow_pmap(point const &sun_pos, point const &obj_pos, int ndiv) const {
-
 	if (!has_custom_shadow_profile()) return NULL;
 	assert(ndiv >= 3);
 	float const dist_to_sun(p2p_dist(pos, sun_pos)), shadow_scale_val((dist_to_sun + p2p_dist(pos, obj_pos))/dist_to_sun);
 	static vector<float> pmap_vector;
 	pmap_vector.resize(ndiv);
 	vector_point_norm const &vpn(gen_cylinder_data(pos, sun_pos, radius, 0.0, ndiv));
-
-	for (unsigned i = 0; i < (unsigned)ndiv; ++i) { // assumes the cylinder is more or less constant radius
-		pmap_vector[i] = shadow_scale_val*(get_radius_at(vpn.p[i<<1]) - radius);
-	}
+	// assumes the cylinder is more or less constant radius
+	for (unsigned i = 0; i < (unsigned)ndiv; ++i) {pmap_vector[i] = shadow_scale_val*(get_radius_at(vpn.p[i<<1]) - radius);}
 	return pmap_vector.data();
 }
 

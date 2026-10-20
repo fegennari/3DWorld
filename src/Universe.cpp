@@ -194,8 +194,7 @@ struct planet_draw_data_t {
 	upos_point_type pos; // pos cached before planet update
 	shadow_vars_t svars;
 	planet_draw_data_t() {}
-	planet_draw_data_t(unsigned ix_, float size_, upos_point_type const &pos_, shadow_vars_t const &svars_, bool sel) :
-		ix(ix_), size(size_), selected(sel), pos(pos_), svars(svars_) {}
+	planet_draw_data_t(unsigned ix_, float size_, upos_point_type const &pos_, shadow_vars_t const &svars_, bool sel) : ix(ix_), size(size_), selected(sel), pos(pos_), svars(svars_) {}
 };
 
 
@@ -760,7 +759,7 @@ void find_best_moon_shadower(uplanet const &planet, point_d const &targ_pos, flo
 				ss_radius   = moon.radius;
 			}
 		}
-	}
+	} // for l
 }
 
 
