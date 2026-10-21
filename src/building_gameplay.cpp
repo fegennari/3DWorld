@@ -1110,6 +1110,10 @@ public:
 					}
 					co.dim = co.dir = 0; // vertical
 				}
+				else if (type == TYPE_TPROLL) { // make it a cube with same edge lengths, in case it was taken from a holder in the horizontal position
+					float const radius((co.dx() + co.dy() + co.dz())/6.0); // average of dims
+					co.set_from_sphere(co.get_cube_center(), radius);
+				}
 				else if (type == TYPE_BOX) {
 					swap_obj_for_cview_dir(co); // swap AR if player is facing a dir resulting in zrot > 45 degrees when drawing
 					bool const cv_dim(fabs(cview_dir.x) < fabs(cview_dir.y));
