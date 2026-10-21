@@ -23,7 +23,7 @@ float const ATTIC_LIGHT_RADIUS_SCALE  = 2.0; // larger radius in attic, since sp
 
 vector<point> enabled_bldg_lights;
 
-extern bool camera_in_building, player_in_walkway, player_in_uge, some_person_has_idle_animation;
+extern bool camera_in_building, player_in_walkway, player_in_uge, some_person_has_idle_animation, en_building_indir_light;
 extern int display_mode, display_framerate, camera_surf_collide, animate2, frame_counter, building_action_key, player_in_basement, player_in_elevator, player_in_attic;
 extern unsigned LOCAL_RAYS, MAX_RAY_BOUNCES, NUM_THREADS;
 extern float fticks, indir_light_step_sz;
@@ -71,7 +71,7 @@ bool check_indir_enabled(bool in_basement, bool in_attic) {
 	return INDIR_BLDG_ENABLE; // not basement or attic
 }
 bool enable_building_indir_lighting_no_cib() {
-	if (!(display_mode & 0x10)) return 0; // key 5
+	if (en_building_indir_light ^ bool(display_mode & 0x10) ^ 1)   return 0; // key 5
 	if (!check_indir_enabled(player_in_basement, player_in_attic)) return 0;
 	if (MESH_SIZE[2] == 0) return 0; // no volume texture allocated
 	return 1;
