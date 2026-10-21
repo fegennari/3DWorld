@@ -432,9 +432,7 @@ void quad_batch_draw_untex::add_quad_pts(point const pts[4], color_wrapper const
 	verts.emplace_back(pts[2], n, cw);
 }
 
-void quad_batch_draw::add_quad_dirs(point const &pos, vector3d const &dx, vector3d const &dy,
-	colorRGBA const &c, vector3d const &n, tex_range_t const &tr)
-{
+void quad_batch_draw::add_quad_dirs(point const &pos, vector3d const &dx, vector3d const &dy, colorRGBA const &c, vector3d const &n, tex_range_t const &tr) {
 	color_wrapper cw(c);
 
 	if (tr.clip_quad) { // clip point to tex coords

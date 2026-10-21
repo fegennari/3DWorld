@@ -3493,18 +3493,41 @@ bool room_object_t::can_place_onto() const { // Note: excludes flat objects such
 }
 
 bool building_t::apply_toilet_paper(point const &pos, vector3d const &dir, float half_width) {
-	// for now, just drop a square of TP on the floor; could do better
-	assert(has_room_geom());
-	static point last_tp_pos;
-	if (dist_xy_less_than(pos, last_tp_pos, 1.5*half_width)) return 0; // too close to prev pos
-	last_tp_pos = pos;
+	static point last_pos;
+	static vector3d last_dir, last_delta;
+	static float last_zval=0.0;
 	float zval(pos.z);
+	assert(has_room_geom());
+	if (dist_xy_less_than(pos, last_pos, 1.5*half_width))      return 0; // too close to prev pos
 	if (!get_zval_for_obj_placement(pos, half_width, zval, 1)) return 0; // no suitable placement found; add_z_bias=1
 	vector3d d1(dir.x, dir.y, 0.0);
 	if (d1 == zero_vector) {d1 = plus_x;} else {d1.normalize();}
 	vector3d d2(cross_product(d1, plus_z));
 	if (d2 == zero_vector) {d2 = plus_y;} else {d2.normalize();}
-	interior->room_geom->decal_manager.tp_qbd.add_quad_dirs(point(pos.x, pos.y, zval), d1*half_width, d2*half_width, WHITE, plus_z);
+	vector3d const delta((pos - last_pos).get_norm());
+	quad_batch_draw &qbd(interior->room_geom->decal_manager.tp_qbd);
+	bool const can_connect(!qbd.empty() && dist_xy_less_than(pos, last_pos, 3.0*half_width) && fabs(zval - last_zval) < 0.5*half_width &&
+		dot_product(d1, last_dir) > 0.9 && dot_product(delta, last_delta) > 0.9);
+	point new_pos(pos.x, pos.y, zval);
+	last_zval  = zval;
+	last_dir   = d1;
+	last_delta = delta;
+	d1 *= half_width; d2 *= half_width;
+	
+	if (can_connect) { // extend existing strip
+		unsigned const nverts(qbd.verts.size());
+		assert((nverts % 6) == 0); // must be quads/triangle pairs
+		last_pos.z = zval; // move to the floor
+		vector3d delta(new_pos - last_pos);
+		new_pos  = last_pos + delta*(2.0*half_width/delta.mag()); // extend one width from last_pos
+		last_pos = point(new_pos.x, new_pos.y, pos.z);
+		point const pts[4] = {qbd.verts[nverts-4].v, (new_pos + d1 - d2), (new_pos + d1 + d2), qbd.verts[nverts-1].v}; // connect to prev quad
+		qbd.add_quad_pts(pts, WHITE, plus_z);
+	}
+	else { // start a new strip
+		last_pos = pos;
+		qbd.add_quad_dirs(new_pos, d1, d2, WHITE, plus_z);
+	}
 	interior->room_geom->modified_by_player = 1; // make sure TP stays in this building
 	// Note: no damage done for TP
 	return 1;
