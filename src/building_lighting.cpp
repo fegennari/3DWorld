@@ -975,6 +975,7 @@ class building_indir_light_mgr_t {
 				}
 				else if (b.is_restaurant() && b.interior->rooms.front().intersects(light_cube)) {base_num_rays = 2*base_num_rays/3;} // fewer rays in restaurant dining area
 				else if (b.is_attic_window(window)) {in_attic = 1; base_num_rays *= 8;} // attic window
+				else if (b.is_house) {base_num_rays *= 2;}
 			}
 			light_room_id = b.get_room_containing_pt(light_cube.get_cube_center());
 			// light intensity scales with surface area, since incoming light is a constant per unit area (large windows = more light)
@@ -1016,7 +1017,7 @@ class building_indir_light_mgr_t {
 					else                                {weight *= 0.4; base_num_rays *= 2;} // regular extended basement; more rays to reduce noise
 				}
 				else if (b.has_parking_garage) {weight *= 0.25; base_num_rays /= 4;} // parking garages are even darker
-				else {weight *= 0.5; base_num_rays *= 2;} // basement is darker
+				else {weight *= 0.5; base_num_rays *= (b.is_house ? 4 : 2);} // basement is darker
 			}
 			if (!is_lamp && (ro.flags & RO_FLAG_ROTATING)) { // rotated/hanging ceiling light
 				light_dir = ro.get_dir();
