@@ -1035,9 +1035,15 @@ class building_indir_light_mgr_t {
 		int const num_rays(base_num_rays/NUM_PRI_SPLITS);
 		building_colors_t bcolors;
 		b.set_building_colors(bcolors);
-		cube_t room_area;
+		cube_t room_area, light_clip_area(valid_area);
 		get_room_bvh(b, light_room_id, room_area); // build per-room BVH if needed
-		ray_cast_args_t const args(valid_area, room_area, bvh, room_bvh, in_attic, in_ext_basement, b.is_restroom_with_high_ceil(), bcolors);
+		
+		// include basement area of house if on ground floor because the basement stairs are open at the top and get their light from above, and are too dark without this;
+		// we don't need the lights in the basement or the coll cubes, we only need to not clip light rays to the ground floor zval
+		if (b.is_house && b.has_basement() && camera_pos.z > b.ground_floor_z1 && camera_pos.z < (b.ground_floor_z1 + b.get_window_vspace())) {
+			light_clip_area.z1() -= b.get_window_vspace();
+		}
+		ray_cast_args_t const args(light_clip_area, room_area, bvh, room_bvh, in_attic, in_ext_basement, b.is_restroom_with_high_ceil(), bcolors);
 		lmgr.set_step_sz(half_step_sz);
 		
 		// Note: dynamic scheduling is faster, and using blocks doesn't help
