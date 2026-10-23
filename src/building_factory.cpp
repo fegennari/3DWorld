@@ -280,12 +280,20 @@ cube_t building_t::add_factory_ladders_and_catwalks(rand_gen_t &rgen, room_t con
 				for (unsigned d = 0; d < 2; ++d) { // each side of catwalk
 					point center;
 					center[ edim] = bpos;
-					center[!edim] = catwalk.d[!edim][d] + (d ? 1.0 : -1.0)*0.9*rod_radius; // just outside the edge and slightly overlapping
+					center[!edim] = catwalk.d[!edim][d] + (d ? 1.0 : -1.0)*rod_radius; // just outside the edge
 					cube_t rod(center);
 					rod.expand_by_xy(rod_radius);
-					set_cube_zvals(rod, (catwalk.z1() + 1.0*rod_radius), beams_z1);
-					unsigned const pflags(RO_FLAG_IN_FACTORY | RO_FLAG_HANGING | RO_FLAG_ADJ_LO | RO_FLAG_NOCOLL | RO_FLAG_LIT); // draw bottom surface
+					set_cube_zvals(rod, catwalk.z1(), beams_z1);
+					unsigned const pflags(RO_FLAG_IN_FACTORY | RO_FLAG_HANGING | RO_FLAG_NOCOLL | RO_FLAG_LIT);
 					objs.emplace_back(rod, TYPE_PIPE, room_id, 0, 1, pflags, light_amt, SHAPE_CYLIN); // vertical
+
+					if (d == 0) { // add metal bar connecting supports at the bottom
+						cube_t bar(catwalk);
+						set_cube_zvals(bar, (catwalk.z1() - 2.0*rod_radius), catwalk.z1());
+						set_wall_width(bar, bpos, 2.0*rod_radius, edim);
+						bar.expand_in_dim(!edim, 3.0*rod_radius);
+						objs.emplace_back(bar, TYPE_METAL_BAR, room_id, !edim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, LT_GRAY, 0); // draw all faces
+					}
 				} // for d
 			} // for bpos
 			// try adding a ladder to the middle of the catwalk
