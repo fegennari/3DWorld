@@ -820,7 +820,7 @@ void building_t::add_wall_fans_to_room(rand_gen_t &rgen, room_t const &room, flo
 }
 
 void building_t::add_industrial_machines(rand_gen_t rgen, room_t const &room, cube_t const &place_area, float zval,
-	unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned objs_start_inc_beams, cube_t const &ladder)
+	unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned objs_start_inc_beams, cube_t const &blocker)
 {
 	assert(is_heavy_industrial() && has_ind_info());
 	bool const edim(interior->ind_info->entrance_dim), edir(interior->ind_info->entrance_dir);
@@ -869,7 +869,7 @@ void building_t::add_industrial_machines(rand_gen_t rgen, room_t const &room, cu
 				set_wall_width(cb, centerline, cb_hwidth, cb_dim);
 				cb.expand_in_dim(!cb_dim, -(0.5*spacing[!cb_dim] - cb_hwidth)); // reduce to the span of connecting conveyor belts so player and AI can walk around it
 				
-				if (cube_int_if_nonzero(cb, ladder) || overlaps_obj_or_placement_blocked(cb, room, objs_start)) {
+				if (cube_int_if_nonzero(cb, blocker) || overlaps_obj_or_placement_blocked(cb, room, objs_start)) {
 					swap(tank_dir, cbelt_dir); // try the other side
 					continue;
 				}
@@ -882,7 +882,7 @@ void building_t::add_industrial_machines(rand_gen_t rgen, room_t const &room, cu
 				crate.d[!cb_dim][!move_dir] = cb_end; // flush with conveyor belt
 				crate.d[!cb_dim][ move_dir] = cb_end + (move_dir ? 1.0 : -1.0)*1.5*cb_hwidth;
 
-				if (!cube_int_if_nonzero(crate, ladder) && !overlaps_obj_or_placement_blocked(crate, room, objs_start)) {
+				if (!cube_int_if_nonzero(crate, blocker) && !overlaps_obj_or_placement_blocked(crate, room, objs_start)) {
 					objs.emplace_back(crate, TYPE_CRATE, room_id, !cb_dim, move_dir, RO_FLAG_OPEN, tot_light_amt, SHAPE_TALL);
 				}
 				interior->room_geom->have_conv_belt = 1;
@@ -964,7 +964,7 @@ void building_t::add_industrial_machines(rand_gen_t rgen, room_t const &room, cu
 					cube_t tank(center);
 					tank.z2() = tank_z2;
 					tank.expand_by_xy(tank_radius); // tank is square
-					if (tank.intersects(avoid) || cube_int_if_nonzero(tank, ladder) || overlaps_obj_or_placement_blocked(tank, room, objs_start)) continue;
+					if (tank.intersects(avoid) || cube_int_if_nonzero(tank, blocker) || overlaps_obj_or_placement_blocked(tank, room, objs_start)) continue;
 					tank.expand_by_xy(-0.1*tank_radius);
 					room_object_t const tank_obj(tank, TYPE_CHEM_TANK, room_id, dim, dir, RO_FLAG_IN_FACTORY, tot_light_amt, SHAPE_CYLIN, WHITE, item_flags);
 					objs.push_back(tank_obj);
@@ -993,7 +993,7 @@ void building_t::add_industrial_machines(rand_gen_t rgen, room_t const &room, cu
 					// adjacent to side of machine in next row; or at least adjacent to the side of it's bcube, since there may be detail objects extending to here
 					cb.d[cb_dim][!cbelt_dir] = center[cb_dim] + (cbelt_dir ? 1.0 : -1.0)*(0.5*machine_sz[cb_dim] - spacing[cb_dim]);
 					assert(cb.is_strictly_normalized());
-					if (cb.intersects(avoid) || cube_int_if_nonzero(cb, ladder) || overlaps_obj_or_placement_blocked(cb, room, objs_start)) continue;
+					if (cb.intersects(avoid) || cube_int_if_nonzero(cb, blocker) || overlaps_obj_or_placement_blocked(cb, room, objs_start)) continue;
 					objs.emplace_back(cb, TYPE_CONV_BELT, room_id, cb_dim, cbelt_dir, 0, tot_light_amt, SHAPE_CUBE, LT_GRAY);
 					obj_grid[gix] = TYPE_CONV_BELT;
 				}
@@ -1005,16 +1005,16 @@ void building_t::add_industrial_machines(rand_gen_t rgen, room_t const &room, cu
 					cube_t c(center);
 					c.z2() += height;
 					c.expand_by_xy(0.5*machine_sz);
-					if (c.intersects(avoid) || cube_int_if_nonzero(c, ladder) || overlaps_obj_or_placement_blocked(c, room, objs_start)) continue;
+					if (c.intersects(avoid) || cube_int_if_nonzero(c, blocker) || overlaps_obj_or_placement_blocked(c, room, objs_start)) continue;
 					cube_t space_x(c), space_y(c);
 					space_x.x1() -= spacing.x;
 					space_y.y1() -= spacing.y;
 					
 					if (nx > 0 && obj_grid[gix - 1        ] == TYPE_MACHINE) { // has prev X neighbor	
-						if (!cube_int_if_nonzero(space_x, ladder)) {flags |= RO_FLAG_ADJ_LO;} // add pipes if not blocked by a ladder
+						if (!cube_int_if_nonzero(space_x, blocker)) {flags |= RO_FLAG_ADJ_LO;} // add pipes if not blocked
 					}
 					if (ny > 0 && obj_grid[gix - num_xy[0]] == TYPE_MACHINE) { // has prev Y neighbor
-						if (!cube_int_if_nonzero(space_y, ladder)) {flags |= RO_FLAG_ADJ_HI;} // add pipes if not blocked by a ladder
+						if (!cube_int_if_nonzero(space_y, blocker)) {flags |= RO_FLAG_ADJ_HI;} // add pipes if not blocked
 					}
 					objs.emplace_back(c, TYPE_MACHINE, room_id, dim, dir, flags, tot_light_amt, SHAPE_CUBE, LT_GRAY, item_flags);
 					room_object_t &machine(objs.back());
@@ -1064,7 +1064,7 @@ void building_t::add_industrial_machines(rand_gen_t rgen, room_t const &room, cu
 			float const conn_pipe_center(tank_conn_pipe.get_center_dim(tank_dim));
 			set_wall_width(tank_conn_pipe, tank_conn_pipe.z2(), merged_pipe_radius, 2); // set zvals
 			set_wall_width(tank_conn_pipe, conn_pipe_center,    merged_pipe_radius, tank_dim);
-			//if (cube_int_if_nonzero(tank_conn_pipe, ladder)) {} // what to do if pipe intersects ladder? it's possible, but I've never seen this happen
+			//if (cube_int_if_nonzero(tank_conn_pipe, blocker)) {} // what to do if pipe intersects blocker? it's possible, but I've never seen this happen
 			// add a bend and another segment to the ceiling, floor, or wall
 			bool const pri_ext_dir(rgen.rand_bool());
 			float const tank_gap(tank_radius + merged_pipe_radius), wall_gap(merged_pipe_radius + 0.26*floor_spacing); // leave wall gap for duct width

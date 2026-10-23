@@ -1682,6 +1682,25 @@ void building_room_geom_t::add_catwalk(room_object_t const &c) {
 	} // for end
 }
 
+void building_room_geom_t::add_staircase(room_object_t const &c) {
+	assert(c.shape == SHAPE_CYLIN); // currently only spiral staircases are supported
+	unsigned const num_floors(c.item_flags);
+	assert(num_floors > 1);
+	float const height(c.dz()), radius(c.get_radius()), xc(c.xc()), yc(c.yc()), floor_spacing(height/num_floors);
+	colorRGBA const color(apply_light_color(c)), pole_color(color), railing_color(color);
+	rgeom_mat_t &met_mat(get_metal_material(1, 0, 1)); // shadowed, specular metal, small
+	// add vertical center pole
+	cube_t pole(c);
+	pole.expand_by_xy(-0.92*radius);
+	met_mat.add_vcylin_to_verts(pole, pole_color, 0, 0); // sides only
+	// add the railing as a spring
+	point railing_bot_center(xc, yc, (c.z1() + 0.4*floor_spacing));
+	float const railing_height(height - 1.5*floor_spacing);
+	add_spring(railing_bot_center, radius, 0.04*radius, railing_height, floor_spacing, 2, railing_color, get_specular_color(railing_color));
+	// add stairs
+	// TODO
+}
+
 void building_room_geom_t::add_obj_with_top_texture(room_object_t const &c, string const &text_name, colorRGBA const &sides_color, bool is_small,
 	float spec, float shine, float metalness, float tscale)
 {

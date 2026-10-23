@@ -197,7 +197,7 @@ cube_t building_t::add_factory_ladders_and_catwalks(rand_gen_t &rgen, room_t con
 	cube_t const &entry(interior->ind_info->entrance_area);
 	float const doorway_width(get_doorway_width()), catwalk_width(1.1*doorway_width), catwalk_hwidth(0.5*catwalk_width), catwalk_height(0.5*window_vspace);
 	float const cw_lo(entry.d[edim][0] + 2.0*catwalk_hwidth), cw_hi(entry.d[edim][1] - 1.2*catwalk_hwidth), trim_thickness(get_trim_thickness());
-	cube_t center_ladder;
+	cube_t blocker;
 
 	if (cw_lo < cw_hi) { // should always be true
 		cube_t catwalk(entry);
@@ -296,30 +296,53 @@ cube_t building_t::add_factory_ladders_and_catwalks(rand_gen_t &rgen, room_t con
 					}
 				} // for d
 			} // for bpos
-			// try adding a ladder to the middle of the catwalk
+			// try adding a ladder or spiral staircase to the middle of the catwalk
 			bool const ldir(rgen.rand_bool());
-			float const edge_pos(catwalk.d[!edim][ldir]), ldsign(ldir ? 1.0 : -1.0), end_spacing(max(2.0*catwalk_hwidth, 0.2*room_sz[edim]));
+			float const staircase_radius(0.25*window_vspace);
+			float const edge_pos(catwalk.d[!edim][ldir]), ldsign(ldir ? 1.0 : -1.0), end_spacing(max(2.0*max(catwalk_hwidth, staircase_radius), 0.2*room_sz[edim]));
 			float const llo(catwalk.d[edim][0] + end_spacing), lhi(catwalk.d[edim][1] - end_spacing);
 			set_wall_width(ladder, edge_pos, 0.5*ladder_depth, !edim); // centered on the catwalk edge; if adjacent, the player will fall
+			cube_t staircase(ladder); // copy zvals
+			staircase.z2() = room.z2(); // all the way up to the ceiling?
+			set_wall_width(staircase, (edge_pos + ldsign*0.5*staircase_radius), staircase_radius, !edim);
 
 			for (unsigned n = 0; n < 20; ++n) { // some random attempts
-				if (llo >= lhi) continue; // shouldn't happen
-				set_wall_width(ladder, rgen.rand_uniform(llo, lhi), ladder_hwidth, edim);
-				cube_t tc(ladder);
-				tc.d[!edim][ldir] += ldsign*clearance; // add space in front
+				if (llo >= lhi) break; // shouldn't happen
+				bool const use_staircase(n < 10 && staircase.dz() > 2.0*window_vspace); // first half of iterations
+				float const center_pos(rgen.rand_uniform(llo, lhi));
+				cube_t tc;
+
+				if (use_staircase) {
+					set_wall_width(staircase, center_pos, staircase_radius, edim);
+					tc = staircase;
+					tc.d[!edim][!ldir] -= ldsign*clearance; // add space under catwalk
+				}
+				else { // ladder
+					set_wall_width(ladder, center_pos, ladder_hwidth, edim);
+					tc = ladder;
+					tc.d[!edim][ldir] += ldsign*clearance; // add space in front
+				}
 				if (overlaps_obj_or_placement_blocked(tc, room, objs_start) || has_bcube_int(tc, interior->ind_info->sub_rooms)) continue;
-				// ladder pos is valid; split the catwalk that was added into left, right, and center parts so that we can insert a cut into the railing
-				cube_t seg_split(ladder);
-				seg_split.expand_in_dim(edim, 0.25*doorway_width); // increase width beyond the ladder
+				// center_pos is valid; split the catwalk that was added into left, right, and center parts so that we can insert a cut into the railing
+				cube_t seg_split(tc);
+				if (!use_staircase) {seg_split.expand_in_dim(edim, 0.25*doorway_width);} // increase width beyond the ladder
 				room_object_t &far_end(catwalk_obj); // opposite the end ladder
 				room_object_t near_end(catwalk_obj), middle(catwalk_obj);
-				middle.flags |= (ldir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO); // disable side bars on ladder side for middle catwalk segment
+				middle.flags |= (ldir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO); // disable side bars on ladder/staircase side for middle catwalk segment
 				far_end .d[edim][!edir] = middle.d[edim][ edir] = seg_split.d[edim][ edir];
 				near_end.d[edim][ edir] = middle.d[edim][!edir] = seg_split.d[edim][!edir];
 				objs.push_back(near_end);
 				objs.push_back(middle  );
-				add_hanging_ladder(ladder, room_id, !edim, ldir, light_amt, clearance, catwalk.z1(), objs);
-				center_ladder = tc; // ladder + space; will be used in machine pipe routing
+
+				if (use_staircase) {
+					unsigned const num_floors(round_fp(staircase.dz()/window_vspace)); // sets number of turns; stored in item_flags
+					assert(num_floors > 1);
+					objs.emplace_back(staircase, TYPE_STAIRCASE, room_id, !edim, ldir, RO_FLAG_IN_FACTORY, light_amt, SHAPE_CYLIN, WHITE, num_floors);
+				}
+				else { // ladder
+					add_hanging_ladder(ladder, room_id, !edim, ldir, light_amt, clearance, catwalk.z1(), objs);
+				}
+				blocker = tc; // ladder/staircase + space; will be used in machine pipe routing
 				break; // success/done
 			} // for n
 			if (!add_sec_ladder) {catwalk_obj.flags |= (edir ? RO_FLAG_ADJ_TOP : RO_FLAG_ADJ_BOT);} // add end bars to non-ladder side unless there's a second ladder
@@ -327,7 +350,7 @@ cube_t building_t::add_factory_ladders_and_catwalks(rand_gen_t &rgen, room_t con
 			// connect with stairs along a wall?
 		}
 	} // end upper catwalk
-	return center_ladder;
+	return blocker;
 }
 
 void building_t::add_industrial_ducts_and_hvac(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float light_amt, float support_width, float ceil_zval,
@@ -783,7 +806,7 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 	add_ladders_to_nested_room_roofs(rgen, room, zval, room_id, light_amt, place_area_upper); // added for both factories and warehouses
 
 	if (room_is_factory || room_is_powergen) { // add factory/powerplant-specific objects
-		cube_t const center_ladder(add_factory_ladders_and_catwalks(rgen, room, zval, room_id, light_amt, place_area, place_area_upper,
+		cube_t const blocker(add_factory_ladders_and_catwalks(rgen, room, zval, room_id, light_amt, place_area, place_area_upper,
 			beams_z1, support_width, supports, lights, ladders, beam_pos));
 
 		if (room_is_powergen) { // add powerplant-specific objects (boilers)
@@ -833,7 +856,7 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 		}
 		// add machines
 		unsigned const machines_start(objs.size());
-		add_industrial_machines(rgen, room, place_area, zval, room_id, light_amt, objs_start, objs_start_inc_beams, center_ladder);
+		add_industrial_machines(rgen, room, place_area, zval, room_id, light_amt, objs_start, objs_start_inc_beams, blocker);
 
 		for (auto i = objs.begin()+machines_start; i != objs.end(); ++i) { // add some smoke emitters
 			if (i->type != TYPE_MACHINE)  continue;

@@ -238,6 +238,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_ROCK_WALL ] = bldg_obj_type_t(1, 0, 0, 0, 1, 0, 2,  0.0,  0.0,   "rock wall");
 	bldg_obj_types[TYPE_TV_REMOTE ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2,  16.0, 0.1,   "TV remote");
 	bldg_obj_types[TYPE_NV_GOGGLES] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 500.0, 1.0,   "night vision goggles");
+	bldg_obj_types[TYPE_STAIRCASE ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2,  0.0,  0.0,   "staircase"); // spiral
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");

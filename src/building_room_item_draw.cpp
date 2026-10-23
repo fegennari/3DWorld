@@ -856,6 +856,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_SPIWEB:     add_spider_web(c); break;
 		case TYPE_PET_CAGE:   add_pet_cage(c); break;
 		case TYPE_CATWALK:    add_catwalk(c); break;
+		case TYPE_STAIRCASE:  add_staircase(c); break;
 		case TYPE_DUCT:       add_duct(c); break;
 		case TYPE_WARN_LIGHT: add_warning_light(c); break;
 		case TYPE_PALLET:     add_pallet(c); break;

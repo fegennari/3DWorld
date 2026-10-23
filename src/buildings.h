@@ -957,6 +957,7 @@ struct building_room_geom_t {
 	void add_ext_ladder(room_object_t const &c);
 	void add_int_ladder(room_object_t const &c);
 	void add_catwalk   (room_object_t const &c);
+	void add_staircase (room_object_t const &c);
 	void add_machine_pipe_in_region(room_object_t const &c, cube_t const &region, float rmax, unsigned dim,
 		vect_sphere_t &pipe_ends, rand_gen_t &rgen, bool allow_valve=0, bool valve_on_cylin=0, bool add_coil=0, bool is_high=0);
 	void add_spring(point pos, float radius, float r_wire, float length, float coil_gap, unsigned dim,
@@ -1969,7 +1970,7 @@ struct building_t : public building_geom_t {
 	bool add_machines_to_room(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool less_clearance=0);
 	void add_wall_fans_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, cube_t const &avoid=cube_t());
 	void add_industrial_machines(rand_gen_t rgen, room_t const &room, cube_t const &place_area, float zval,
-		unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned objs_start_inc_beams, cube_t const &ladder);
+		unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned objs_start_inc_beams, cube_t const &blocker);
 	void add_chem_tank_gauge(room_object_t const &tank, float radius, float height);
 	void add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, cube_t const &hall, unsigned part_ix, unsigned num_floors,
 		unsigned rooms_start, bool use_hallway, bool first_part_this_stack, float window_hspacing[2], float window_border, bool is_single_floor);

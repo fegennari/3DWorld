@@ -1233,7 +1233,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 		// check for other objects to collide with (including stairs)
 		for (auto c = objs.begin(); c != objs.end(); ++c) {
 			if (!c->is_player_collidable()) continue;
-			if (obj_z - radius > c->z2()) continue; // above the object
+			if (obj_z - radius > c->z2())   continue; // above the object
 			room_object const type(c->type);
 			if (on_attic_ladder && type == TYPE_ATTIC_DOOR) continue; // collision with attic door/ladder is handled above
 			bool const dim(c->dim), dir(c->dir);
@@ -1316,7 +1316,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 				if (prev_coll && cur_coll) continue; // ignore if already colliding to avoid getting stuck
 			}
 			if (type == TYPE_ATTIC_DOOR) {c_extended.z1() -= camera_height;}
-			if (type  == TYPE_SHELVES) {c_extended.z1() = max(c->z1(), (c_extended.z1() - (float)camera_height));} // handle player walking under a tall shelf
+			if (type  == TYPE_SHELVES  ) {c_extended.z1()  = max(c->z1(), (c_extended.z1() - (float)camera_height));} // handle player walking under a tall shelf
 
 			if (type == TYPE_DIV_BOARD && c_extended.contains_pt_xy(pos)) {
 				// diving boards are special because the player can walk on them across different floor heights
@@ -1378,6 +1378,30 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 				pos.z = min(float(c->z2() - camera_height), max(float(c->z1() + radius), pos.z)); // clamp to ladder height range
 				obj_z = max(pos.z, p_last.z);
 				had_coll = 1;
+			}
+			else if (type == TYPE_STAIRCASE) {
+				assert(c->shape == SHAPE_CYLIN); // currently only spiral staircases are supported
+				float const radius(0.25*(c->dx() + c->dy()));
+				cylinder_3dw const cylin(c->get_cylinder());
+				vector3d const dir((point(cylin.p1.x, cylin.p1.y, pos.z) - pos).get_norm());
+
+				if (pos.z < c->z1() + floor_spacing || pos.z > c->z2() - floor_spacing) {
+					if (dot_product(dir, vector_from_dim_dir(c->dim, c->dir)) > 0.5) continue; // in entrance/exit cutout
+				}
+				if (dist_xy_less_than(pos, cylin.p1, cylin.r1)) { // inside stairs
+					cylinder_3dw pole(cylin);
+					pole.r1   = pole.r2 = 0.08*cylin.r1;
+					had_coll |= sphere_vert_cylin_intersect(pos, xy_radius, pole, cnorm);
+					float const dist(p2p_dist_xy(pos, cylin.p1)), r_inner(cylin.r1 - xy_radius);
+					
+					if (dist > r_inner) { // clamp to outer cylinder
+						pos += (dist - r_inner)*dir; // move toward center
+						if (cnorm) {*cnorm = dir;}
+					}
+				}
+				else { // outside stairs
+					had_coll |= sphere_vert_cylin_intersect(pos, xy_radius, cylin, cnorm);
+				}
 			}
 			// Note: only vert pipes have player coll; ducts are not vert and are treated as cubes
 			else if (c->is_vert_cylinder()) { // vertical cylinder
