@@ -1064,12 +1064,11 @@ void building_t::add_industrial_machines(rand_gen_t rgen, room_t const &room, cu
 			float const conn_pipe_center(tank_conn_pipe.get_center_dim(tank_dim));
 			set_wall_width(tank_conn_pipe, tank_conn_pipe.z2(), merged_pipe_radius, 2); // set zvals
 			set_wall_width(tank_conn_pipe, conn_pipe_center,    merged_pipe_radius, tank_dim);
-			//if (cube_int_if_nonzero(tank_conn_pipe, blocker)) {} // what to do if pipe intersects blocker? it's possible, but I've never seen this happen
 			// add a bend and another segment to the ceiling, floor, or wall
 			bool const pri_ext_dir(rgen.rand_bool());
 			float const tank_gap(tank_radius + merged_pipe_radius), wall_gap(merged_pipe_radius + 0.26*floor_spacing); // leave wall gap for duct width
 			cube_t h_pipe(tank_conn_pipe), v_pipe;
-			unsigned h_pipe_flags(RO_FLAG_NOCOLL | RO_FLAG_LIT);
+			unsigned const h_pipe_flags(RO_FLAG_NOCOLL | RO_FLAG_LIT);
 			bool connected(0), conn_dir(0), conn_up(0);
 
 			for (unsigned n = 0; n < 50 && !connected; ++n) { // 50 attempts to extend the horizontal pipe and connect it vertically
@@ -1082,7 +1081,7 @@ void building_t::add_industrial_machines(rand_gen_t rgen, room_t const &room, cu
 					cube_t ext_pipe(tank_conn_pipe);
 					ext_pipe.d[!tank_dim][!d] = pipe_end + dsign*tank_gap; // shift so as not to intersect the tank
 					ext_pipe.d[!tank_dim][ d] = cand_pos + dsign*merged_pipe_radius; // extend to outer edge
-					if (ext_pipe.intersects(avoid) || overlaps_obj_or_placement_blocked(ext_pipe, room, objs_start)) continue;
+					if (ext_pipe.intersects(avoid) || overlaps_obj_or_placement_blocked(ext_pipe, room, objs_start) || cube_int_if_nonzero(ext_pipe, blocker)) continue;
 					ext_pipe.d[!tank_dim][ d] = cand_pos; // clip off overlapping end so that we can add a bend
 					// horizontal pipe is okay, check vertical pipe up and down
 					v_pipe = ext_pipe;
@@ -1102,7 +1101,33 @@ void building_t::add_industrial_machines(rand_gen_t rgen, room_t const &room, cu
 					} // for e
 				} // for D
 			} // for n
-			objs.emplace_back(h_pipe, TYPE_PIPE, room_id, !tank_dim, 0, h_pipe_flags, tot_light_amt, SHAPE_CYLIN, pipe_color); // horizontal
+			if (cube_int_if_nonzero(tank_conn_pipe, blocker)) { // add a jog around the blocker
+				// ensure pipe length includes blocker
+				float const clearance(2.0*merged_pipe_radius), min_end_ext(2.0*clearance);
+				cube_t h_pipe_ext(h_pipe);
+				min_eq(h_pipe_ext.d[!tank_dim][0], blocker.d[!tank_dim][0]-min_end_ext);
+				max_eq(h_pipe_ext.d[!tank_dim][1], blocker.d[!tank_dim][1]+min_end_ext);
+				// split h_pipe and add jogs
+				unsigned const jog_pipe_flags(h_pipe_flags | RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI); // add bends at both ends
+				bool const move_dir(blocker.get_center_dim(tank_dim) < conn_pipe_center);
+				cube_t blocker_exp(blocker);
+				blocker_exp.expand_by_xy(clearance);
+				float const jog_pos(blocker_exp.d[tank_dim][move_dir]);
+				cube_t main_segs[3] = {h_pipe_ext, h_pipe_ext, h_pipe_ext}, jog_pipes[2] = {h_pipe, h_pipe};
+				main_segs[2].translate_dim(tank_dim, (jog_pos - conn_pipe_center));
+				
+				for (unsigned d = 0; d < 2; ++d) {
+					main_segs[d].d[!tank_dim][!d] = main_segs[2].d[!tank_dim][d] = blocker_exp.d[!tank_dim][d];
+					set_wall_width(jog_pipes[d], blocker_exp.d[!tank_dim][d], merged_pipe_radius, !tank_dim);
+					jog_pipes[d].d[tank_dim][!move_dir] = conn_pipe_center;
+					jog_pipes[d].d[tank_dim][ move_dir] = jog_pos;
+				}
+				for (unsigned d = 0; d < 3; ++d) {objs.emplace_back(main_segs[d], TYPE_PIPE, room_id, !tank_dim, 0, h_pipe_flags,   tot_light_amt, SHAPE_CYLIN, pipe_color);}
+				for (unsigned d = 0; d < 2; ++d) {objs.emplace_back(jog_pipes[d], TYPE_PIPE, room_id,  tank_dim, 0, jog_pipe_flags, tot_light_amt, SHAPE_CYLIN, pipe_color);}
+			}
+			else {
+				objs.emplace_back(h_pipe, TYPE_PIPE, room_id, !tank_dim, 0, h_pipe_flags, tot_light_amt, SHAPE_CYLIN, pipe_color); // horizontal
+			}
 			// add pipe fittings
 			unsigned const fittings_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING);
 			float const fitting_exp(0.2*merged_pipe_radius), fitting_hlen(1.2*merged_pipe_radius);

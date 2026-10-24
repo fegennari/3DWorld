@@ -316,6 +316,7 @@ cube_t building_t::add_factory_ladders_and_catwalks(rand_gen_t &rgen, room_t con
 					set_wall_width(staircase, center_pos, staircase_radius, edim);
 					tc = staircase;
 					tc.d[!edim][!ldir] -= ldsign*clearance; // add space under catwalk
+					tc.expand_by_xy(0.025*staircase_radius); // slightly larger to leave space for the railing and bars
 				}
 				else { // ladder
 					set_wall_width(ladder, center_pos, ladder_hwidth, edim);
