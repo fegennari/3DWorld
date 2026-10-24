@@ -298,13 +298,13 @@ cube_t building_t::add_factory_ladders_and_catwalks(rand_gen_t &rgen, room_t con
 			} // for bpos
 			// try adding a ladder or spiral staircase to the middle of the catwalk
 			bool const ldir(rgen.rand_bool());
-			float const staircase_radius(0.25*window_vspace);
+			float const staircase_radius(get_min_front_clearance());
 			float const edge_pos(catwalk.d[!edim][ldir]), ldsign(ldir ? 1.0 : -1.0), end_spacing(max(2.0*max(catwalk_hwidth, staircase_radius), 0.2*room_sz[edim]));
 			float const llo(catwalk.d[edim][0] + end_spacing), lhi(catwalk.d[edim][1] - end_spacing);
 			set_wall_width(ladder, edge_pos, 0.5*ladder_depth, !edim); // centered on the catwalk edge; if adjacent, the player will fall
 			cube_t staircase(ladder); // copy zvals
 			staircase.z2() = room.z2(); // all the way up to the ceiling?
-			set_wall_width(staircase, (edge_pos + ldsign*0.5*staircase_radius), staircase_radius, !edim);
+			set_wall_width(staircase, (edge_pos + ldsign*0.6*staircase_radius), staircase_radius, !edim);
 
 			for (unsigned n = 0; n < 20; ++n) { // some random attempts
 				if (llo >= lhi) break; // shouldn't happen
@@ -325,7 +325,8 @@ cube_t building_t::add_factory_ladders_and_catwalks(rand_gen_t &rgen, room_t con
 				if (overlaps_obj_or_placement_blocked(tc, room, objs_start) || has_bcube_int(tc, interior->ind_info->sub_rooms)) continue;
 				// center_pos is valid; split the catwalk that was added into left, right, and center parts so that we can insert a cut into the railing
 				cube_t seg_split(tc);
-				if (!use_staircase) {seg_split.expand_in_dim(edim, 0.25*doorway_width);} // increase width beyond the ladder
+				if (use_staircase) {seg_split.d[edim][edim ^ ldir] = center_pos;} // gap only over the stairs entrance side
+				else {seg_split.expand_in_dim(edim, 0.25*doorway_width);} // increase width beyond the ladder
 				room_object_t &far_end(catwalk_obj); // opposite the end ladder
 				room_object_t near_end(catwalk_obj), middle(catwalk_obj);
 				middle.flags |= (ldir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO); // disable side bars on ladder/staircase side for middle catwalk segment
@@ -337,7 +338,7 @@ cube_t building_t::add_factory_ladders_and_catwalks(rand_gen_t &rgen, room_t con
 				if (use_staircase) {
 					unsigned const num_floors(round_fp(staircase.dz()/window_vspace)); // sets number of turns; stored in item_flags
 					assert(num_floors > 1);
-					objs.emplace_back(staircase, TYPE_STAIRCASE, room_id, !edim, ldir, RO_FLAG_IN_FACTORY, light_amt, SHAPE_CYLIN, WHITE, num_floors);
+					objs.emplace_back(staircase, TYPE_STAIRCASE, room_id, !edim, !ldir, RO_FLAG_IN_FACTORY, light_amt, SHAPE_CYLIN, WHITE, num_floors);
 				}
 				else { // ladder
 					add_hanging_ladder(ladder, room_id, !edim, ldir, light_amt, clearance, catwalk.z1(), objs);

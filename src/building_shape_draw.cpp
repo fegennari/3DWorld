@@ -448,12 +448,16 @@ void rgeom_mat_t::add_triangle_to_verts(point const v[3], colorRGBA const &color
 		}
 	} // for side
 }
+
+void add_quad_ixs(vector<unsigned> &indices, unsigned vix) {
+	for (unsigned n = 0; n < 6; ++n) {indices.push_back(vix + quad_to_tris_ixs[n]);}
+}
 void rgeom_mat_t::add_quad_to_verts(point const v[4], colorRGBA const &color, float tscale) { // 4 points must be planar
 	color_wrapper cw(color);
 	norm_comp normal(get_poly_norm(v));
 	unsigned const vix(itri_verts.size());
 	float const ts[4] = {0.0, tscale, tscale, 0.0}, tt[4] = {0.0, 0.0, tscale, tscale}; // hard-coded for now, maybe pass in?
 	for (unsigned n = 0; n < 4; ++n) {itri_verts.emplace_back(v[n], normal, ts[n], tt[n], cw);}
-	for (unsigned n = 0; n < 6; ++n) {indices.push_back(vix + quad_to_tris_ixs[n]);}
+	add_quad_ixs(indices, vix);
 }
 

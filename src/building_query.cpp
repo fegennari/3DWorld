@@ -1381,12 +1381,11 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			}
 			else if (type == TYPE_STAIRCASE) {
 				assert(c->shape == SHAPE_CYLIN); // currently only spiral staircases are supported
-				float const radius(0.25*(c->dx() + c->dy()));
 				cylinder_3dw const cylin(c->get_cylinder());
 				vector3d const dir((point(cylin.p1.x, cylin.p1.y, pos.z) - pos).get_norm());
 
 				if (pos.z < c->z1() + floor_spacing || pos.z > c->z2() - floor_spacing) {
-					if (dot_product(dir, vector_from_dim_dir(c->dim, c->dir)) > 0.5) continue; // in entrance/exit cutout
+					if (dot_product(dir, vector_from_dim_dir(c->dim, !c->dir)) > 0.5) continue; // in entrance/exit cutout
 				}
 				if (dist_xy_less_than(pos, cylin.p1, cylin.r1)) { // inside stairs
 					cylinder_3dw pole(cylin);
@@ -1398,6 +1397,8 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 						pos += (dist - r_inner)*dir; // move toward center
 						if (cnorm) {*cnorm = dir;}
 					}
+					// now handle the vertical part
+					// TODO
 				}
 				else { // outside stairs
 					had_coll |= sphere_vert_cylin_intersect(pos, xy_radius, cylin, cnorm);

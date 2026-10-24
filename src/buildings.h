@@ -2937,6 +2937,7 @@ unsigned register_sign_text(std::string const &text);
 std::string const &get_sign_text(room_object_t const &obj);
 void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir, bool force_tsl, int use_texgen,
 	float water_damage=0.0, float crack_damage=0.0, bool enable_int_reflect=0);
+void add_quad_ixs(vector<unsigned> &indices, unsigned vix);
 void rotate_verts(vector<rgeom_mat_t::vertex_t> &verts, building_t const &building);
 void add_tquad_to_verts(building_geom_t const &bg, tquad_with_ix_t const &tquad, cube_t const &bcube, tid_nm_pair_t const &tex,
 	colorRGBA const &color, vect_vnctcc_t &verts, bool invert_tc_x=0, bool exclude_frame=0, bool no_tc=0, bool no_rotate=0, bool swap_tc_xy=0);

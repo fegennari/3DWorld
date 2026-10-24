@@ -48,6 +48,9 @@ void elevator_floor_to_7seg_digit_pair(string const &str, rgeom_mat_t &mat, cube
 // functions in city_terrain.cpp
 template<typename vertex_t> void calc_heightmap_normals(vector<vertex_t> &verts, unsigned nx, unsigned ny, unsigned verts_start=0);
 void calc_heightmap_indices(vector<unsigned> &indices, unsigned nx, unsigned ny, unsigned verts_start=0);
+// functions reused from snake drawing
+void draw_segment(rgeom_mat_t &mat, point const &p1, point const &p2, float radius1, float radius2, float seg_ix,
+	float tscale_x, float tscale_y, float ndiv_inv, color_wrapper const &cw, unsigned ndiv, unsigned &data_pos);
 
 unsigned get_face_mask(unsigned dim, bool dir) {return ~(1 << (2*(2-dim) + dir));} // draw only these faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2
 unsigned get_skip_mask_for_xy (bool       dim) {return (dim ? EF_Y12 : EF_X12);} // skip these faces
@@ -1684,21 +1687,94 @@ void building_room_geom_t::add_catwalk(room_object_t const &c) {
 
 void building_room_geom_t::add_staircase(room_object_t const &c) {
 	assert(c.shape == SHAPE_CYLIN); // currently only spiral staircases are supported
-	unsigned const num_floors(c.item_flags);
+	unsigned const num_floors(c.item_flags), num_steps(NUM_STAIRS_PER_FLOOR*num_floors), vbars_per_step(4), num_vbars(vbars_per_step*num_steps);
+	unsigned const railing_ndiv = 16;
 	assert(num_floors > 1);
 	float const height(c.dz()), radius(c.get_radius()), xc(c.xc()), yc(c.yc()), floor_spacing(height/num_floors);
-	colorRGBA const color(apply_light_color(c)), pole_color(color), railing_color(color);
-	rgeom_mat_t &met_mat(get_metal_material(1, 0, 1)); // shadowed, specular metal, small
+	float const railing_radius(0.028*radius), bar_radius(0.016*radius), step_radius(1.02*radius);
+	float const top_step_z(c.z2() - floor_spacing), railing_height(0.4*floor_spacing), railing_z1(c.z1() + railing_height), railing_dz(height - floor_spacing);
+	float const opening_angle((c.dim ? (c.dir ? 1 : 3) : (c.dir ? 0 : 2))*PI_TWO);
+	float const start_angle(opening_angle + PI/4.0), end_angle(start_angle + TWO_PI*num_floors - PI_TWO); // at 45 diagonals; leave 90 degree gap
+	float const delta_angle(end_angle - start_angle), step_da(delta_angle/num_steps), bar_da(delta_angle/num_vbars);
+	float const step_dz((top_step_z - c.z1())/num_steps), bar_dz(railing_dz/num_vbars), step_height(0.25*step_dz);
+	colorRGBA const color(apply_light_color(c)), pole_color(color), railing_color(color*0.5), bar_color(color*0.75), step_color(color);
+	rgeom_mat_t &met_mat(get_painted_metal_material(1, 0, 1, 0, 0)); // shadowed, specular metal, small
+	auto &verts(met_mat.itri_verts);
+	auto &ixs(met_mat.indices);
 	// add vertical center pole
 	cube_t pole(c);
 	pole.expand_by_xy(-0.92*radius);
-	met_mat.add_vcylin_to_verts(pole, pole_color, 0, 0); // sides only
-	// add the railing as a spring
-	point railing_bot_center(xc, yc, (c.z1() + 0.4*floor_spacing));
-	float const railing_height(height - 1.5*floor_spacing);
-	add_spring(railing_bot_center, radius, 0.04*radius, railing_height, floor_spacing, 2, railing_color, get_specular_color(railing_color));
-	// add stairs
-	// TODO
+	met_mat.add_vcylin_to_verts(pole, pole_color, 0, 0); // sides only*
+	// add top railing
+	unsigned data_pos(verts.size());
+	float rail_angle(start_angle), rail_zval(railing_z1);
+	point prev_rpos;
+	vector<point> bar_pts;
+
+	for (unsigned i = 0; i < num_vbars; ++i) {
+		point const rpos((xc + radius*cos(rail_angle)), (yc + radius*sin(rail_angle)), rail_zval);
+		if (i > 0) {draw_segment(met_mat, prev_rpos, rpos, railing_radius, railing_radius, i-1, 1.0, 1.0, 1.0/railing_ndiv, railing_color, railing_ndiv, data_pos);}
+		bar_pts.push_back(rpos);
+		rail_angle += bar_da;
+		rail_zval  += bar_dz;
+		prev_rpos   = rpos;
+	} // for i
+	met_mat.add_cylin_to_verts(bar_pts[0],           bar_pts[1],           railing_radius, railing_radius, railing_color, 1, 0, 0, 0, 1.0, 1.0, 1); // draw first end
+	met_mat.add_cylin_to_verts(bar_pts[num_vbars-2], bar_pts[num_vbars-1], railing_radius, railing_radius, railing_color, 0, 1, 0, 0, 1.0, 1.0, 1); // draw last end
+
+	// add vertical bars
+	for (unsigned i = 1; i+1 < num_vbars; ++i) { // skip first and last
+		cube_t bar(bar_pts[i]);
+		bar.z1() -= railing_height + 0.75*step_height;
+		bar.z1() -= ((i - 1) % vbars_per_step)*bar_dz; // ends at the top of the step
+		bar.expand_by_xy(bar_radius);
+		met_mat.add_vcylin_to_verts(bar, bar_color, 1, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, railing_ndiv); // draw sides and bottom
+	} // for i
+	// add steps as extruded triangles
+	color_wrapper const step_cw(step_color);
+	float step_angle(start_angle), step_zval(c.z1());
+
+	for (unsigned i = 0; i < num_steps; ++i) {
+		float const ztop(step_zval + step_height), next_angle(step_angle + step_da);
+		point const cent_top(xc, yc, ztop), cent_bot(xc, yc, step_zval);
+		point const prev_top((xc + step_radius*cos(step_angle)), (yc + step_radius*sin(step_angle)), ztop);
+		point const next_top((xc + step_radius*cos(next_angle)), (yc + step_radius*sin(next_angle)), ztop);
+		point const prev_bot(prev_top.x, prev_top.y, step_zval), next_bot(next_top.x, next_top.y, step_zval);
+		// top surface
+		ixs.push_back(verts.size()); verts.emplace_back(next_top, plus_z, 1.0, 0.0, step_cw);
+		ixs.push_back(verts.size()); verts.emplace_back(cent_top, plus_z, 0.5, 1.0, step_cw);
+		ixs.push_back(verts.size()); verts.emplace_back(prev_top, plus_z, 0.0, 0.0, step_cw);
+		// bottom surface
+		ixs.push_back(verts.size()); verts.emplace_back(prev_bot, -plus_z, 0.0, 0.0, step_cw);
+		ixs.push_back(verts.size()); verts.emplace_back(cent_bot, -plus_z, 0.5, 1.0, step_cw);
+		ixs.push_back(verts.size()); verts.emplace_back(next_bot, -plus_z, 1.0, 0.0, step_cw);
+		// front face
+		vector3d const front_n(cross_product((next_top - prev_top), plus_z).get_norm());
+		unsigned const ffix(verts.size());
+		verts.emplace_back(prev_bot, front_n, 0.0, 0.0, step_cw);
+		verts.emplace_back(next_bot, front_n, 0.0, 1.0, step_cw);
+		verts.emplace_back(next_top, front_n, 1.0, 1.0, step_cw);
+		verts.emplace_back(prev_top, front_n, 1.0, 0.0, step_cw);
+		add_quad_ixs(ixs, ffix);
+		// prev face
+		vector3d const prev_n(cross_product((prev_top - cent_top), plus_z).get_norm());
+		unsigned const pfix(verts.size());
+		verts.emplace_back(cent_bot, prev_n, 0.0, 0.0, step_cw);
+		verts.emplace_back(prev_bot, prev_n, 0.0, 1.0, step_cw);
+		verts.emplace_back(prev_top, prev_n, 1.0, 1.0, step_cw);
+		verts.emplace_back(cent_top, prev_n, 1.0, 0.0, step_cw);
+		add_quad_ixs(ixs, pfix);
+		// next face
+		vector3d const next_n(cross_product((cent_top - next_top), plus_z).get_norm());
+		unsigned const nfix(verts.size());
+		verts.emplace_back(next_bot, next_n, 0.0, 0.0, step_cw);
+		verts.emplace_back(cent_bot, next_n, 0.0, 1.0, step_cw);
+		verts.emplace_back(cent_top, next_n, 1.0, 1.0, step_cw);
+		verts.emplace_back(next_top, next_n, 1.0, 0.0, step_cw);
+		add_quad_ixs(ixs, nfix);
+		step_angle += step_da;
+		step_zval  += step_dz;
+	} // for i
 }
 
 void building_room_geom_t::add_obj_with_top_texture(room_object_t const &c, string const &text_name, colorRGBA const &sides_color, bool is_small,
@@ -2491,10 +2567,6 @@ void building_room_geom_t::add_jar(room_object_t const &c) {
 	spice.expand_by_xy(-glass_thick); // small shrink
 	get_untextured_material(1, 0, 1, 0, 0, 1).add_vcylin_to_verts(spice, apply_light_color(c), 0, 1); // shadowed; draw sides and top
 }
-
-// functions reused from snake drawing
-void draw_segment(rgeom_mat_t &mat, point const &p1, point const &p2, float radius1, float radius2, float seg_ix,
-	float tscale_x, float tscale_y, float ndiv_inv, color_wrapper const &cw, unsigned ndiv, unsigned &data_pos);
 
 void building_room_geom_t::add_vase(room_object_t const &c) { // or urn
 	colorRGBA color(apply_light_color(c));
