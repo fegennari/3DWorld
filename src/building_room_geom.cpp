@@ -1699,14 +1699,12 @@ void building_room_geom_t::add_staircase(room_object_t const &c) {
 	float const step_dz((top_step_z - c.z1())/num_steps), bar_dz(railing_dz/num_vbars), step_height(0.25*step_dz);
 	colorRGBA const color(apply_light_color(c)), pole_color(color), railing_color(color*0.5), bar_color(color*0.75), step_color(color);
 	rgeom_mat_t &met_mat(get_painted_metal_material(1, 0, 1, 0, 0)); // shadowed, specular metal, small
-	auto &verts(met_mat.itri_verts);
-	auto &ixs(met_mat.indices);
 	// add vertical center pole
 	cube_t pole(c);
 	pole.expand_by_xy(-0.92*radius);
 	met_mat.add_vcylin_to_verts(pole, pole_color, 0, 0); // sides only*
 	// add top railing
-	unsigned data_pos(verts.size());
+	unsigned data_pos(met_mat.itri_verts.size());
 	float rail_angle(start_angle), rail_zval(railing_z1);
 	point prev_rpos;
 	vector<point> bar_pts;
@@ -1731,6 +1729,10 @@ void building_room_geom_t::add_staircase(room_object_t const &c) {
 		met_mat.add_vcylin_to_verts(bar, bar_color, 1, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, railing_ndiv); // draw sides and bottom
 	} // for i
 	// add steps as extruded triangles
+	rgeom_mat_t &grate_mat(mats_amask.get_material(get_metal_grate_tex(4.0/radius, 0))); // shadowed, alpha mask
+	auto &verts(grate_mat.itri_verts);
+	auto &ixs(grate_mat.indices);
+	unsigned const verts_start(verts.size()), ixs_start(ixs.size());
 	color_wrapper const step_cw(step_color);
 	float step_angle(start_angle), step_zval(c.z1());
 
@@ -1749,32 +1751,34 @@ void building_room_geom_t::add_staircase(room_object_t const &c) {
 		ixs.push_back(verts.size()); verts.emplace_back(cent_bot, -plus_z, 0.5, 1.0, step_cw);
 		ixs.push_back(verts.size()); verts.emplace_back(next_bot, -plus_z, 1.0, 0.0, step_cw);
 		// front face
+		float const tcz(0.17);
 		vector3d const front_n(cross_product((next_top - prev_top), plus_z).get_norm());
 		unsigned const ffix(verts.size());
 		verts.emplace_back(prev_bot, front_n, 0.0, 0.0, step_cw);
 		verts.emplace_back(next_bot, front_n, 0.0, 1.0, step_cw);
-		verts.emplace_back(next_top, front_n, 1.0, 1.0, step_cw);
-		verts.emplace_back(prev_top, front_n, 1.0, 0.0, step_cw);
+		verts.emplace_back(next_top, front_n, tcz, 1.0, step_cw);
+		verts.emplace_back(prev_top, front_n, tcz, 0.0, step_cw);
 		add_quad_ixs(ixs, ffix);
 		// prev face
 		vector3d const prev_n(cross_product((prev_top - cent_top), plus_z).get_norm());
 		unsigned const pfix(verts.size());
 		verts.emplace_back(cent_bot, prev_n, 0.0, 0.0, step_cw);
 		verts.emplace_back(prev_bot, prev_n, 0.0, 1.0, step_cw);
-		verts.emplace_back(prev_top, prev_n, 1.0, 1.0, step_cw);
-		verts.emplace_back(cent_top, prev_n, 1.0, 0.0, step_cw);
+		verts.emplace_back(prev_top, prev_n, tcz, 1.0, step_cw);
+		verts.emplace_back(cent_top, prev_n, tcz, 0.0, step_cw);
 		add_quad_ixs(ixs, pfix);
 		// next face
 		vector3d const next_n(cross_product((cent_top - next_top), plus_z).get_norm());
 		unsigned const nfix(verts.size());
 		verts.emplace_back(next_bot, next_n, 0.0, 0.0, step_cw);
 		verts.emplace_back(cent_bot, next_n, 0.0, 1.0, step_cw);
-		verts.emplace_back(cent_top, next_n, 1.0, 1.0, step_cw);
-		verts.emplace_back(next_top, next_n, 1.0, 0.0, step_cw);
+		verts.emplace_back(cent_top, next_n, tcz, 1.0, step_cw);
+		verts.emplace_back(next_top, next_n, tcz, 0.0, step_cw);
 		add_quad_ixs(ixs, nfix);
 		step_angle += step_da;
 		step_zval  += step_dz;
 	} // for i
+	add_inverted_triangles(verts, ixs, verts_start, ixs_start); // make steps double sided
 }
 
 void building_room_geom_t::add_obj_with_top_texture(room_object_t const &c, string const &text_name, colorRGBA const &sides_color, bool is_small,
