@@ -304,7 +304,7 @@ cube_t building_t::add_factory_ladders_and_catwalks(rand_gen_t &rgen, room_t con
 			set_wall_width(ladder, edge_pos, 0.5*ladder_depth, !edim); // centered on the catwalk edge; if adjacent, the player will fall
 			cube_t staircase(ladder); // copy zvals
 			staircase.z2() = room.z2(); // all the way up to the ceiling?
-			set_wall_width(staircase, (edge_pos + ldsign*0.68*staircase_radius), staircase_radius, !edim);
+			set_wall_width(staircase, (edge_pos + ldsign*0.66*staircase_radius), staircase_radius, !edim);
 
 			for (unsigned n = 0; n < 20; ++n) { // some random attempts
 				if (llo >= lhi) break; // shouldn't happen

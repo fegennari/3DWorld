@@ -1405,7 +1405,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 						}
 					}
 					// now handle the vertical part
-					pos.z = get_staircase_floor_zval(*c, point(pos.x, pos.y, obj_z)) + camera_height;
+					pos.z = get_staircase_floor_zval(*c, point(pos.x, pos.y, obj_z)) + radius;
 					obj_z = max(pos.z, p_last.z);
 					had_coll = 1;
 				}

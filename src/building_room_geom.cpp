@@ -1692,23 +1692,28 @@ float get_staircase_start_angle(room_object_t const &c) {
 float get_staircase_floor_zval(room_object_t const &c, point const &pos) {
 	if (pos.z < c.z1() || pos.z > c.z2()) return pos.z; // below or above stairs
 	assert(c.shape == SHAPE_CYLIN); // currently only spiral staircases are supported
-	unsigned const num_floors(c.item_flags);
+	unsigned const num_floors(c.item_flags); // Note: includes space to the roof, so the top floor has no spiral
 	float const height(c.dz()), floor_spacing(height/num_floors), dz(height - floor_spacing);
-	float const start_angle(get_staircase_start_angle(c)), end_angle(start_angle + TWO_PI*num_floors - PI_TWO), delta_angle(end_angle - start_angle);
-	float const t(CLIP_TO_01((pos.z - c.z1())/dz)), angle_est(start_angle + t*delta_angle), pos_angle(atan2((pos.y - c.yc()), (pos.x - c.xc())));
-	int const num_turns(round_fp((angle_est - pos_angle)/TWO_PI));
-	float const cur_angle(pos_angle + num_turns*TWO_PI), pos_da(cur_angle - TWO_PI);
-	return c.z1() + CLIP_TO_01(pos_da/delta_angle)*dz;
+	float const start_angle(get_staircase_start_angle(c)), end_angle(start_angle + TWO_PI*(num_floors - 1) - PI_TWO), delta_angle(end_angle - start_angle);
+	float const theta_local(atan2((pos.y - c.yc()), (pos.x - c.xc())));
+	float rel_angle(fmod((theta_local - start_angle), TWO_PI)); // how far ahead the player is relative to start_angle
+	if (rel_angle < 0) {rel_angle += TWO_PI;}
+	float const t_z(CLIP_TO_01((pos.z - c.z1())/dz)); // current Z height to estimate which floor/loop the player is on
+	float const rel_angle_est(t_z*delta_angle);
+	float const loop_index(round((rel_angle_est - rel_angle)/TWO_PI));
+	float const theta_current(start_angle + rel_angle + (TWO_PI * loop_index)); // absolute continuous angle of the player
+	float const t_floor(CLIP_TO_01((theta_current - start_angle)/delta_angle));
+	return c.z1() + t_floor * dz;
 }
 void building_room_geom_t::add_staircase(room_object_t const &c) {
 	assert(c.shape == SHAPE_CYLIN); // currently only spiral staircases are supported
 	unsigned const num_floors(c.item_flags), num_steps(NUM_STAIRS_PER_FLOOR*num_floors), vbars_per_step(4), num_vbars(vbars_per_step*num_steps);
 	unsigned const railing_ndiv = 16;
-	assert(num_floors > 1);
+	assert(num_floors > 1); // Note: includes space to the roof, so the top floor has no spiral
 	float const height(c.dz()), radius(c.get_radius()), xc(c.xc()), yc(c.yc()), floor_spacing(height/num_floors);
 	float const railing_radius(0.028*radius), bar_radius(0.016*radius), step_radius(1.02*radius);
 	float const top_step_z(c.z2() - floor_spacing), railing_height(0.4*floor_spacing), railing_z1(c.z1() + railing_height), railing_dz(height - floor_spacing);
-	float const start_angle(get_staircase_start_angle(c)), end_angle(start_angle + TWO_PI*num_floors - PI_TWO); // at 45 diagonals; leave 90 degree gap
+	float const start_angle(get_staircase_start_angle(c)), end_angle(start_angle + TWO_PI*(num_floors - 1) - PI_TWO); // at 45 diagonals; leave 90 degree gap
 	float const delta_angle(end_angle - start_angle), step_da(delta_angle/num_steps), bar_da(delta_angle/num_vbars);
 	float const step_dz((top_step_z - c.z1())/num_steps), bar_dz(railing_dz/num_vbars), step_height(0.25*step_dz);
 	colorRGBA const color(apply_light_color(c)), pole_color(color), railing_color(color*0.5), bar_color(color*0.75), step_color(color);
