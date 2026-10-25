@@ -30,6 +30,7 @@ void get_shelf_brackets(room_object_t const &c, cube_t shelves[MAX_SHELVES], uns
 void get_catwalk_cubes(room_object_t const &c, cube_t cubes[5]);
 unsigned get_machine_part_cubes(room_object_t const &c, float floor_ceil_gap, cube_t cubes[4]);
 cube_t get_parking_gate_arm(room_object_t const &c);
+float get_staircase_floor_zval(room_object_t const &c, point const &pos);
 
 
 // called by player_in_windowless_building(); assumes player is in this building; handles windows and exterior doors but not attics and basements
@@ -1383,24 +1384,32 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 				assert(c->shape == SHAPE_CYLIN); // currently only spiral staircases are supported
 				cylinder_3dw const cylin(c->get_cylinder());
 				vector3d const dir((point(cylin.p1.x, cylin.p1.y, pos.z) - pos).get_norm());
+				float const eye_z(obj_z + camera_height);
+				bool in_entrance(0);
 
-				if (pos.z < c->z1() + floor_spacing || pos.z > c->z2() - floor_spacing) {
-					if (dot_product(dir, vector_from_dim_dir(c->dim, !c->dir)) > 0.5) continue; // in entrance/exit cutout
+				if (dot_product(dir, vector_from_dim_dir(c->dim, !c->dir)) > 0.5) { // in entrance cutout section
+					if (eye_z < c->z1() + floor_spacing) continue; // bottom floor entrance, no coll
+					in_entrance = (eye_z > c->z2() - floor_spacing); // top floor entrance
 				}
 				if (dist_xy_less_than(pos, cylin.p1, cylin.r1)) { // inside stairs
 					cylinder_3dw pole(cylin);
-					pole.r1   = pole.r2 = 0.08*cylin.r1;
-					had_coll |= sphere_vert_cylin_intersect(pos, xy_radius, pole, cnorm);
-					float const dist(p2p_dist_xy(pos, cylin.p1)), r_inner(cylin.r1 - xy_radius);
+					pole.r1 = pole.r2 = 0.08*cylin.r1;
+					sphere_vert_cylin_intersect(pos, xy_radius, pole, cnorm);
+
+					if (!in_entrance) {
+						float const dist(p2p_dist_xy(pos, cylin.p1)), r_inner(cylin.r1 - xy_radius);
 					
-					if (dist > r_inner) { // clamp to outer cylinder
-						pos += (dist - r_inner)*dir; // move toward center
-						if (cnorm) {*cnorm = dir;}
+						if (dist > r_inner) { // clamp to outer cylinder
+							pos += (dist - r_inner)*dir; // move toward center
+							if (cnorm) {*cnorm = dir;}
+						}
 					}
 					// now handle the vertical part
-					// TODO
+					pos.z = get_staircase_floor_zval(*c, point(pos.x, pos.y, obj_z)) + camera_height;
+					obj_z = max(pos.z, p_last.z);
+					had_coll = 1;
 				}
-				else { // outside stairs
+				else if (!in_entrance) { // outside stairs
 					had_coll |= sphere_vert_cylin_intersect(pos, xy_radius, cylin, cnorm);
 				}
 			}

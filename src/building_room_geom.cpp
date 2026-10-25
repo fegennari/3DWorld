@@ -1685,6 +1685,21 @@ void building_room_geom_t::add_catwalk(room_object_t const &c) {
 	} // for end
 }
 
+float get_staircase_start_angle(room_object_t const &c) {
+	float const opening_angle((c.dim ? (c.dir ? 1 : 3) : (c.dir ? 0 : 2))*PI_TWO);
+	return (opening_angle + PI/4.0);
+}
+float get_staircase_floor_zval(room_object_t const &c, point const &pos) {
+	if (pos.z < c.z1() || pos.z > c.z2()) return pos.z; // below or above stairs
+	assert(c.shape == SHAPE_CYLIN); // currently only spiral staircases are supported
+	unsigned const num_floors(c.item_flags);
+	float const height(c.dz()), floor_spacing(height/num_floors), dz(height - floor_spacing);
+	float const start_angle(get_staircase_start_angle(c)), end_angle(start_angle + TWO_PI*num_floors - PI_TWO), delta_angle(end_angle - start_angle);
+	float const t(CLIP_TO_01((pos.z - c.z1())/dz)), angle_est(start_angle + t*delta_angle), pos_angle(atan2((pos.y - c.yc()), (pos.x - c.xc())));
+	int const num_turns(round_fp((angle_est - pos_angle)/TWO_PI));
+	float const cur_angle(pos_angle + num_turns*TWO_PI), pos_da(cur_angle - TWO_PI);
+	return c.z1() + CLIP_TO_01(pos_da/delta_angle)*dz;
+}
 void building_room_geom_t::add_staircase(room_object_t const &c) {
 	assert(c.shape == SHAPE_CYLIN); // currently only spiral staircases are supported
 	unsigned const num_floors(c.item_flags), num_steps(NUM_STAIRS_PER_FLOOR*num_floors), vbars_per_step(4), num_vbars(vbars_per_step*num_steps);
@@ -1693,8 +1708,7 @@ void building_room_geom_t::add_staircase(room_object_t const &c) {
 	float const height(c.dz()), radius(c.get_radius()), xc(c.xc()), yc(c.yc()), floor_spacing(height/num_floors);
 	float const railing_radius(0.028*radius), bar_radius(0.016*radius), step_radius(1.02*radius);
 	float const top_step_z(c.z2() - floor_spacing), railing_height(0.4*floor_spacing), railing_z1(c.z1() + railing_height), railing_dz(height - floor_spacing);
-	float const opening_angle((c.dim ? (c.dir ? 1 : 3) : (c.dir ? 0 : 2))*PI_TWO);
-	float const start_angle(opening_angle + PI/4.0), end_angle(start_angle + TWO_PI*num_floors - PI_TWO); // at 45 diagonals; leave 90 degree gap
+	float const start_angle(get_staircase_start_angle(c)), end_angle(start_angle + TWO_PI*num_floors - PI_TWO); // at 45 diagonals; leave 90 degree gap
 	float const delta_angle(end_angle - start_angle), step_da(delta_angle/num_steps), bar_da(delta_angle/num_vbars);
 	float const step_dz((top_step_z - c.z1())/num_steps), bar_dz(railing_dz/num_vbars), step_height(0.25*step_dz);
 	colorRGBA const color(apply_light_color(c)), pole_color(color), railing_color(color*0.5), bar_color(color*0.75), step_color(color);
