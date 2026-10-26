@@ -376,11 +376,12 @@ void building_t::add_industrial_ducts_and_hvac(rand_gen_t &rgen, room_t const &r
 	for (unsigned i = ducts_start; i < ducts_end; ++i) {
 		room_object_t const duct(objs[i]); // deep copy to avoid invalidating the reference
 		if (duct.type != TYPE_DUCT || duct.dim != edim) continue; // not the long duct
+		bool const is_round(duct.shape == SHAPE_CYLIN); // else rectangular
 		room_obj_shape const duct_shape(duct.shape);
 		unsigned const duct_flags(RO_FLAG_IN_MALL | RO_FLAG_ADJ_TOP | RO_FLAG_ADJ_BOT); // skip top and bottom
 		float const hwidth(0.5*duct.dz());
 		cube_t vduct(duct);
-		set_cube_zvals(vduct, duct.zc(), ceil_zval);
+		set_cube_zvals(vduct, (is_round ? duct.zc() : duct.z2()), ceil_zval); // overlap if round, abut if rectangular
 		// Note: duct is invalidated at this point
 		// add HVAC unit along the duct; must be placed on a support
 		float const length(hwidth*hvac_sz.x), depth(hwidth*hvac_sz.y), height(0.7*length); // height set relative to length for 1:1 texture mapping; clipped smaller in width below
