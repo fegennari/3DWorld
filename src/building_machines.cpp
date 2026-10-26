@@ -844,7 +844,7 @@ void building_t::add_industrial_machines(rand_gen_t rgen, room_t const &room, cu
 		cube_t center_area(place_area), conveyor_belt;
 		center_area.expand_by_xy(-(max_place_sz + 0.5*doorway_width)); // space for machines along the wall
 		vector2d const center_sz(center_area.get_size_xy());
-		bool const tank_dim(rgen.rand_bool()), cb_dim(tank_dim);
+		bool const tank_dim(rgen.rand_bool()), cb_dim(tank_dim); // tanks, conveyor belts, generators, and boilers are all in the same dim
 		bool tank_dir(rgen.rand_bool()), cbelt_dir(!tank_dir); // side of grid the tank/conveyor belt is on
 		float const cb_height(0.35*floor_spacing), cb_hwidth(0.25*machine_sz[cb_dim]); // half the machine's width
 		colorRGBA const pipe_color(COPPER_C), fitting_color(BRASS_C);
@@ -858,6 +858,7 @@ void building_t::add_industrial_machines(rand_gen_t rgen, room_t const &room, cu
 		bool const add_tanks(num_xy[tank_dim] >= 3);
 		bool add_cbelt(is_factory() && num_xy[cb_dim] >= 5);
 		bool const add_generators(is_powerplant() && num_xy[cb_dim] >= 5 && building_obj_model_loader.is_model_valid(OBJ_MODEL_GENERATOR));
+		bool const add_boilers   (is_powerplant() && num_xy[cb_dim] >= 4);
 
 		if (add_cbelt) { // add conveyor belt
 			add_cbelt = 0; // will be reset below if valid
@@ -941,10 +942,13 @@ void building_t::add_industrial_machines(rand_gen_t rgen, room_t const &room, cu
 		unsigned machine_range[2][2] = {{0, num_xy[0]-1}, {0, num_xy[1]-1}};
 
 		if (add_tanks) {
-			if (tank_dir ) {--machine_range[tank_dim][1];} else {++machine_range[tank_dim][0];} // clip off tank row/column
+			if ( tank_dir ) {--machine_range[tank_dim][1];} else {++machine_range[tank_dim][0];} // clip off tank row/column
 		}
-		if (add_cbelt) {
-			if (cbelt_dir) {--machine_range[cb_dim  ][1];} else {++machine_range[cb_dim  ][0];} // clip off conveyor belt row/column
+		if (add_cbelt || add_generators) {
+			if ( cbelt_dir) {--machine_range[cb_dim  ][1];} else {++machine_range[cb_dim  ][0];} // clip off conveyor belt/generator row/column
+		}
+		if (add_boilers) {
+			if (!cbelt_dir) {--machine_range[tank_dim][1];} else {++machine_range[tank_dim][0];} // clip off boiler row/column
 		}
 		vector<room_object> obj_grid(num_xy[0]*num_xy[1], TYPE_NONE);
 		vector<point> tank_conn_pts;
@@ -953,10 +957,10 @@ void building_t::add_industrial_machines(rand_gen_t rgen, room_t const &room, cu
 
 		for (unsigned ny = 0; ny < num_xy[1]; ++ny) {
 			for (unsigned nx = 0; nx < num_xy[0]; ++nx) {
-				bool const is_tank     (add_tanks      && (tank_dim ? ny : nx) == (tank_dir  ? num_xy[tank_dim]-1 : 0));
-				bool const is_cbelt    (add_cbelt      && (cb_dim   ? ny : nx) == (cbelt_dir ? num_xy[cb_dim  ]-1 : 0));
-				bool const is_generator(add_generators && (cb_dim   ? ny : nx) == (cbelt_dir ? num_xy[cb_dim  ]-1 : 0));
-				bool const is_boiler(0/*is_powerplant()*/);
+				bool const is_tank     (add_tanks      && (tank_dim ? ny : nx) == (  tank_dir   ? num_xy[tank_dim]-1 : 0));
+				bool const is_cbelt    (add_cbelt      && (cb_dim   ? ny : nx) == (  cbelt_dir  ? num_xy[cb_dim  ]-1 : 0));
+				bool const is_generator(add_generators && (cb_dim   ? ny : nx) == (  cbelt_dir  ? num_xy[cb_dim  ]-1 : 0));
+				bool const is_boiler   (add_boilers    && (tank_dim ? ny : nx) == ((!cbelt_dir) ? num_xy[tank_dim]-2 : 1)); // opposite generators and one level inward, next to tanks
 				point const center((center_area.x1() + (nx + 0.5)*spacing.x), (center_area.y1() + (ny + 0.5)*spacing.y), zval);
 				unsigned const gix(ny*num_xy[0] + nx);
 
@@ -997,8 +1001,22 @@ void building_t::add_industrial_machines(rand_gen_t rgen, room_t const &room, cu
 					objs.emplace_back(cb, TYPE_CONV_BELT, room_id, cb_dim, cbelt_dir, 0, tot_light_amt, SHAPE_CUBE, LT_GRAY);
 					obj_grid[gix] = TYPE_CONV_BELT;
 				}
-				else if (is_boiler) {
-					// add boiler
+				else if (is_boiler) { // boiler, facing the tanks
+					cube_t boiler(center);
+					boiler.z2() += machine_sz[!tank_dim]; // height == width
+					boiler.expand_by_xy(0.5*machine_sz);
+					if (boiler.intersects(avoid) || cube_int_if_nonzero(boiler, blocker) || overlaps_obj_or_placement_blocked(boiler, room, objs_start)) continue;
+					// add a vertical vent pipe before placing the boiler
+					cube_t pipe(center);
+					pipe.z2() = ceil_zval;
+					pipe.expand_by_xy(0.12*tank_radius);
+
+					if (!pipe.intersects(avoid) && !cube_int_if_nonzero(pipe, blocker) && !overlaps_obj_or_placement_blocked(pipe, room, objs_start)) {
+						objs.emplace_back(pipe, TYPE_DUCT, room_id, 0, 1, (RO_FLAG_ADJ_TOP | RO_FLAG_ADJ_BOT), tot_light_amt, SHAPE_CYLIN); // vertical
+					}
+					objs.emplace_back(boiler, TYPE_BOILER, room_id, tank_dim, !cbelt_dir, 0, tot_light_amt, SHAPE_CYLIN, LT_GRAY);
+					obj_grid[gix] = TYPE_BOILER;
+					// connect to the adjacent tank in the next row? but it may not have been placed yet, and could be skipped
 				}
 				else { // make it a machine
 					unsigned flags(RO_FLAG_IN_FACTORY | RO_FLAG_FROM_SET); // tag as part of a group
