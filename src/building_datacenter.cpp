@@ -659,10 +659,10 @@ void building_t::add_dc_utility_objs(rand_gen_t rgen, room_t const &room, float 
 	float cur_place_pos(place_area.d[dim][dir]); // start at front wall adjacent to server room
 	unsigned const conduit_flags(RO_FLAG_NOCOLL | RO_FLAG_LIT);
 	// place batteries, represented as kitchen fridges, against the wall shared with the server room
-	int const bat_model(select_dc_battery_model());
 	cube_t batteries_bcube;
 
-	if (bat_model >= 0) {
+	if (enable_kitchen_app_models()) {
+		unsigned const bat_model(combine_model_submodel_id(OBJ_MODEL_CK_APP, KCA_LP_FRIDGE)); // seems like a fridge can pass as a data center battery
 		float const bat_height(0.55*floor_spacing), wall_pos(cur_place_pos);
 		unsigned const bat_start(objs.size());
 		add_row_of_models(place_area, zval, room_id, tot_light_amt, bat_height, 0.08, bat_model, TYPE_KITCH_APP, dim, dir, dim, !dir, get_sub_model_id(bat_model), cur_place_pos);

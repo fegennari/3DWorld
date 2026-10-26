@@ -433,10 +433,6 @@ void building_t::add_objects_in_sink(rand_gen_t &rgen, cube_t const &sink, bool 
 	} // for n
 }
 
-// commercial kitchen appliances, read from model config file; should agree with the set of models specified in the config file
-enum {KCA_BI_OVEN=0, KCA_DEEP_FRYER, KCA_SINK, KCA_SINK2, KCA_OVEN, KCA_OMWC, KCA_LP_FRYER, KCA_LP_DISHWASHER, KCA_LP_FRIDGE, KCA_LP_GRILL, KCA_LP_OVEN, KCA_LP_STOVE, NUM_KC_APP};
-unsigned const cka_classes[NUM_KC_APP] = {1, 0, 2, 2, 1, 1, 0, 2, 2, 0, 1, 0}; // 0=needs hood, 1=cooks, 2=doesn't cook
-
 bool enable_kitchen_app_models() {
 	return (building_obj_model_loader.is_model_valid(OBJ_MODEL_CK_APP) && building_obj_model_loader.get_num_sub_models(OBJ_MODEL_CK_APP) == NUM_KC_APP);
 }
@@ -464,10 +460,6 @@ int select_app_store_model(rand_gen_t &rgen, float &hscale, bool plumbing) {
 	hscale = 0.5*building_obj_model_loader.get_model(model_id).scale;
 	if (sub_model == KCA_LP_FRIDGE) {hscale *= 0.7;} // make smaller so that we can fit more
 	return model_id;
-}
-int select_dc_battery_model() {
-	if (!enable_kitchen_app_models()) return -1; // no model
-	return combine_model_submodel_id(OBJ_MODEL_CK_APP, KCA_LP_FRIDGE); // seems like a fridge can pass as a data center battery
 }
 
 cube_t get_com_kitchen_app_coll_bcube(room_object_t const &app) {

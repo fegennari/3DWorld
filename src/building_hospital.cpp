@@ -9,7 +9,6 @@ extern object_model_loader_t building_obj_model_loader;
 
 
 unsigned get_metal_table_num_legs_per_side(room_object_t const &c);
-bool enable_kitchen_app_models();
 int select_lab_model(rand_gen_t &rgen, unsigned &types_used, float &hscale);
 cube_t get_trolley_place_area(room_object_t const &trolley);
 
@@ -722,7 +721,7 @@ bool building_t::add_lab_room_objs(rand_gen_t rgen, room_t &room, float zval, un
 
 		if (enable_kitchen_app_models() && rgen.rand_float() < 0.75) {
 			// add a small deep fryer to table since it looks like it could be a piece of lab equipment; it can't be picked up though
-			unsigned const model_id(combine_model_submodel_id(OBJ_MODEL_CK_APP, 1/*KCA_DEEP_FRYER*/)), model_orient(2*table_dim + (!table_dir));
+			unsigned const model_id(combine_model_submodel_id(OBJ_MODEL_CK_APP, KCA_DEEP_FRYER)), model_orient(2*table_dim + (!table_dir));
 			float const dp_height(0.55*0.5*building_obj_model_loader.get_model(model_id).scale); // smaller version
 			place_model_along_wall(model_id, TYPE_KITCH_APP, room, dp_height, rgen, table.z2(), room_id, tot_light_amt, table, table_obj_ix+1, 0.0, model_orient);
 		}

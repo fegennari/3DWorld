@@ -294,6 +294,10 @@ ball_type_t const ball_types[NUM_BALL_TYPES] = {
 };
 ball_type_t const pool_ball_type("pool ball", "balls/pool_balls.png", "",                     1.125, 1.70,  2.0, 0.37, 0, 1, 1, 0.9, 100.0,0.5, 2.5);
 
+// commercial kitchen appliances, read from model config file; should agree with the set of models specified in the config file
+enum {KCA_BI_OVEN=0, KCA_DEEP_FRYER, KCA_SINK, KCA_SINK2, KCA_OVEN, KCA_OMWC, KCA_LP_FRYER, KCA_LP_DISHWASHER, KCA_LP_FRIDGE, KCA_LP_GRILL, KCA_LP_OVEN, KCA_LP_STOVE, NUM_KC_APP};
+unsigned const cka_classes[NUM_KC_APP] = {1, 0, 2, 2, 1, 1, 0, 2, 2, 0, 1, 0}; // 0=needs hood, 1=cooks, 2=doesn't cook
+
 // object flags
 unsigned const RO_FLAG_LIT     = 0x01; // light is on
 unsigned const RO_FLAG_TOS     = 0x02; // at top of stairs; used for railings and lights; used for objects on open top shelves of shelf racks

@@ -2946,6 +2946,7 @@ void get_city_road_segs_in_region(cube_t const &region, vect_cube_t &out);
 bool check_buildings_cube_coll(cube_t const &c, bool xy_only=0, bool inc_basement=1, building_t const *exclude1=nullptr, building_t const *exclude2=nullptr);
 bool have_buildings_ext_paint();
 void draw_buildings_ext_paint(shader_t &s);
+bool enable_kitchen_app_models();
 void subtract_cube_xy(cube_t const &c, cube_t const &r, cube_t *out);
 void accumulate_shared_xy_area(cube_t const &c, cube_t const &sc, float &area);
 bool have_secondary_buildings();
