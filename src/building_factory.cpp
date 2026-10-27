@@ -487,8 +487,12 @@ void building_t::add_industrial_ducts_and_hvac(rand_gen_t &rgen, room_t const &r
 				cube_t vent(vduct);
 				vent.expand_in_dim(edim, 0.5*hwidth); // widen
 				set_cube_zvals(vent, room.z2(), room.z2()+0.2*hwidth);
-				//if (!has_bcube_int(vent, details)) // no, may intersect roof wall
-				objs.emplace_back(vent, TYPE_VENT, room_id, edim, 1, (RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_EXTERIOR), 1.0); // dir=1; fully lit
+				bool is_blocked(0);
+
+				for (roof_obj_t const &o : details) {
+					if (o.type != ROOF_OBJ_WALL && o.intersects(vent)) {is_blocked = 1; break;} // ignore roof walls
+				}
+				if (!is_blocked) {objs.emplace_back(vent, TYPE_VENT, room_id, edim, 1, (RO_FLAG_NOCOLL | RO_FLAG_HANGING | RO_FLAG_EXTERIOR), 1.0);} // dir=1; fully lit
 			}
 		}
 	} // for i
