@@ -390,9 +390,10 @@ void building_t::add_industrial_ducts_and_hvac(rand_gen_t &rgen, room_t const &r
 		cube_t hvac_area(duct);
 		hvac_area.expand_in_dim(!edim, support_width); // extend to cover supports
 		hvac_area.expand_in_dim( edim, -edge_spacing);
+		vect_cube_t const &side_supports(supports[!edim]);
 		vector<float> cand_pos;
 
-		for (cube_t const &support : supports[!edim]) {
+		for (cube_t const &support : side_supports) {
 			if (support.intersects(hvac_area)) {cand_pos.push_back(support.get_center_dim(edim));}
 		}
 		if (!cand_pos.empty()) { // should always be true
@@ -431,6 +432,30 @@ void building_t::add_industrial_ducts_and_hvac(rand_gen_t &rgen, room_t const &r
 					}
 				}
 				vduct.expand_in_dim(!edim, 0.1*hwidth); // undo the slight shrink
+				// add exterior wall vents
+				float const back_edge(hvac.d[!edim][!hvac_dir]), wall_pos(room.d[!edim][!hvac_dir]);
+				cube_t ext_duct(hvac);
+				ext_duct.z1() = duct.z2(); // resting on top of duct
+				ext_duct.z2() = hvac.z2() - 0.05*height;
+
+				if (ext_duct.dz() > 0.05*height) { // if it's tall enough; should be true
+					float const window_spacing(room.get_sz_dim(edim)/get_num_windows_on_side(room, edim)), window_border(get_window_h_border());
+					ext_duct.d[!edim][ hvac_dir] = back_edge;
+					ext_duct.d[!edim][!hvac_dir] = wall_pos; // exterior wall
+
+					for (unsigned d = 0; d < 2; ++d) { // each side of central beam
+						cube_t educt(ext_duct);
+						educt.d[edim][!d] = hvac_pos; // center
+						educt.expand_in_dim(edim, -0.5*side_supports.front().get_sz_dim(edim)); // narrower, and avoid the beam
+						if (is_val_inside_window(room, edim, educt.d[edim][d], window_spacing, window_border)) continue;
+						objs.emplace_back(educt, TYPE_DUCT, room_id, !edim, !hvac_dir, (RO_FLAG_ADJ_HI | RO_FLAG_ADJ_LO), light_amt, SHAPE_CUBE); // horizontal, skip ends
+						cube_t ext_vent(educt);
+						ext_vent.expand_in_z(0.1*ext_duct.dz());
+						ext_vent.d[!edim][ hvac_dir] = wall_pos;
+						ext_vent.d[!edim][!hvac_dir] = wall_pos - (hvac_dir ? 1.0 : -1.0)*0.05*depth;
+						objs.emplace_back(ext_vent, TYPE_VENT, room_id, !edim, hvac_dir, (RO_FLAG_NOCOLL | RO_FLAG_EXTERIOR), 1.0); // dir=0; fully lit
+					} // for d
+				}
 				// add pipes from the top or bottom of the HVAC unit into the ceiling or floor
 				unsigned const hvac_pipes_start(objs.size());
 				float const pipe_radius(0.1*hwidth), edge_pad(2.0*pipe_radius), place_lo(hvac.d[edim][0] + edge_pad), place_hi(hvac.d[edim][1] - edge_pad);
@@ -467,7 +492,7 @@ void building_t::add_industrial_ducts_and_hvac(rand_gen_t &rgen, room_t const &r
 							cube_t h_pipe(pipe);
 							set_wall_width(h_pipe, pipe.z2(), radius, 2); // Z
 							h_pipe.d[!edim][!hvac_dir] += (hvac_dir ? 1.0 : -1.0)*radius; // move to centerline
-							h_pipe.d[!edim][ hvac_dir]  = hvac.d[!edim][!hvac_dir]; // connect to back of HVAC
+							h_pipe.d[!edim][ hvac_dir]  = back_edge; // connect to back of HVAC
 							unsigned const flags(RO_FLAG_NOCOLL | (hvac_dir ? RO_FLAG_ADJ_LO : RO_FLAG_ADJ_HI));
 							objs.emplace_back(h_pipe, TYPE_PIPE, room_id, !edim, 0, flags, light_amt, SHAPE_CYLIN, pipe_colors[N]); // horizontal
 						}
