@@ -1307,6 +1307,13 @@ void building_room_geom_t::add_box(room_object_t const &c) { // is_small=1
 	add_box_to_material(c, mat);
 }
 
+void building_room_geom_t::add_barrel(room_object_t const &c) { // is_small=1
+	assert(c.shape == SHAPE_CYLIN);
+	//float const radius(c.get_radius());
+	rgeom_mat_t &mat(get_wood_material(1.0/c.dz(), 1, 0, 1, 0, WOOD_TYPE_FENCE)); // shadowed, small
+	mat.add_vcylin_to_verts(c, apply_light_color(c), 0, 1); // draw sides and top
+}
+
 void building_room_geom_t::add_food_tub(room_object_t const &c) {
 	colorRGBA const color(apply_light_color(c));
 	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
@@ -8445,6 +8452,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_FLOORING: return texture_color(get_flooring_texture(*this)).modulate_with(color);
 	case TYPE_CRATE:    return texture_color(get_crate_tid(*this)).modulate_with(color);
 	case TYPE_BOX:      return texture_color(get_box_tid()).modulate_with(color);
+	case TYPE_BARREL:   return get_textured_wood_color();
 	case TYPE_CUBICLE:  return texture_color(get_carpet_tid(*this));
 	case TYPE_STALL:    return ((shape == SHAPE_SHORT && !is_hanging()) ? texture_color(get_carpet_tid(*this)).modulate_with(color) : color); // visit room separator is textured
 	case TYPE_SHELVES:  return texture_color(WOOD2_TEX);

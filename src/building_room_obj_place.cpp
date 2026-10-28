@@ -2360,6 +2360,22 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 			}
 		} // for n
 	}
+	if (is_basement && min(room_bounds.dx(), room_bounds.dy()) > 1.2*window_vspacing) { // add barrels; all the same size
+		unsigned const num_barrels(1 + (rgen.rand() & 3)); // 1-4
+		float const height(window_vspacing*rgen.rand_uniform(0.3, 0.4)), radius(height*rgen.rand_uniform(0.3, 0.4));
+		cube_t place_area(room_bounds);
+		place_area.z1() = zval;
+
+		for (unsigned n = 0; n < num_barrels; ++n) {
+			for (unsigned N = 0; N < 10; ++N) { // 10 tries to place
+				cube_t barrel;
+				gen_xy_pos_for_round_obj(barrel, place_area, radius, height, 1.25*radius, rgen, 1); // place_at_z1=1
+				if (overlaps_obj_or_placement_blocked(barrel, room, objs_start)) continue; // bad placement
+				objs.emplace_back(barrel, TYPE_BARREL, room_id, rgen.rand_bool(), rgen.rand_bool(), 0, tot_light_amt, SHAPE_CYLIN, WHITE);
+				break;
+			}
+		} // for n
+	}
 	unsigned const num_max(is_house ? (is_basement ? 12 : 5) : (is_house_like ? 10 : 30)); // 4-33 for offices, 4-8 for houses, 4-16 for house basements
 	add_boxes_and_crates(rgen, room, zval, room_id, tot_light_amt, objs_start, num_max, is_basement, room_bounds, crate_bounds, exclude);
 	// add a ladder leaning against the wall if storage room is on the ground floor or basement

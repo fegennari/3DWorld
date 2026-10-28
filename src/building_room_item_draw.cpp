@@ -777,6 +777,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_TREE:      add_tree(c, 0, 1); break; // tree only
 		case TYPE_CRATE:     add_crate    (c); break; // not small but only added to windowless rooms
 		case TYPE_BOX:       add_box      (c); break; // not small but only added to windowless rooms
+		case TYPE_BARREL:    add_barrel   (c); break;
 		case TYPE_FOOD_TUB:  add_food_tub (c); break;
 		case TYPE_SHELVES:   add_shelves  (c, tscale); break; // not small but only added to windowless rooms
 		case TYPE_SHELFRACK: add_rack(c, 0, 1, 0); break; // add_rack=0, add_objs=1, obj_text_pass=0

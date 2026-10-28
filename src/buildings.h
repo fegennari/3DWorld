@@ -949,6 +949,7 @@ struct building_room_geom_t {
 	void add_crate(room_object_t const &c);
 	void add_box_to_material(room_object_t const &c, rgeom_mat_t &mat);
 	void add_box(room_object_t const &c);
+	void add_barrel(room_object_t const &c);
 	void add_food_tub(room_object_t const &c);
 	void add_paint_can(room_object_t const &c);
 	void add_shelves(room_object_t const &c, float tscale);
