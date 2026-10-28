@@ -146,10 +146,13 @@ rgeom_mat_t &building_room_geom_t::get_crack_material(room_object_t const &c, in
 }
 rgeom_mat_t &building_room_geom_t::get_wood_material(float tscale, bool inc_shadows, bool dynamic, unsigned small, bool exterior, unsigned type) {
 	int tid(-1), nm_tid(-1);
-	if      (type == WOOD_TYPE_DARK   ) {tid = WOOD2_TEX; nm_tid = get_texture_by_name("normal_maps/wood_NRM.jpg", 1);} // dark wood/bark, horizontal
-	else if (type == WOOD_TYPE_OAK    ) {tid = get_texture_by_name("interiors/oak_wood.jpg"); nm_tid = get_texture_by_name("interiors/oak_wood_normal.jpg", 1);} // oak veneer, vertical
-	else if (type == WOOD_TYPE_PLYWOOD) {tid = get_texture_by_name("interiors/plywood2.jpg"); nm_tid = get_texture_by_name("interiors/plywood2_normal.jpg", 1);} // plywood, horizontal
+	if      (type == WOOD_TYPE_DARK    ) {tid = WOOD2_TEX; nm_tid = get_texture_by_name("normal_maps/wood_NRM.jpg", 1);} // dark wood/bark, horizontal
+	else if (type == WOOD_TYPE_OAK     ) {tid = get_texture_by_name("interiors/oak_wood.jpg"); nm_tid = get_texture_by_name("interiors/oak_wood_normal.jpg", 1);} // oak veneer, vertical
+	else if (type == WOOD_TYPE_PLYWOOD ) {tid = get_texture_by_name("interiors/plywood2.jpg"); nm_tid = get_texture_by_name("interiors/plywood2_normal.jpg", 1);} // plywood, horizontal
+	else if (type == WOOD_TYPE_PANELING) {tid = PANELING_TEX;}
+	else if (type == WOOD_TYPE_FENCE   ) {tid = FENCE_TEX   ;}
 	else {assert(0);}
+	if (nm_tid < 0) {nm_tid = get_normal_map_for_bldg_tid(tid);} // assign if not set above
 	return get_material(tid_nm_pair_t(tid, nm_tid, 3.0*tscale, 3.0*tscale, 0.0, 0.0, inc_shadows), dynamic, small, 0, exterior);
 }
 
