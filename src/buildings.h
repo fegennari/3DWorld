@@ -2575,6 +2575,7 @@ private:
 	void add_prison_cells(vect_cube_with_ix_t const &cells, cube_t const &cell_block, unsigned part_id, unsigned skip_ix_mask=0);
 	void replace_prison_cell_with_ext_door(float door_height, bool for_courtyard, rand_gen_t &rgen);
 	void add_garage_objs     (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
+	void add_workshop_objs   (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	void add_floor_clutter_objs(rand_gen_t  rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	void add_floor_clutter_and_trash(rand_gen_t &rgen, room_t const &room, cube_t place_area, float zval, unsigned room_id,
 		float tot_light_amt, unsigned objs_start, bool add_bottles, bool add_trash, bool add_papers, bool add_glass, bool add_cigarettes);

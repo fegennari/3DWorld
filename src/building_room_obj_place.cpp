@@ -2570,6 +2570,10 @@ void building_t::add_garage_objs(rand_gen_t rgen, room_t const &room, float zval
 	interior->room_geom->has_garage_car = 1;
 }
 
+void building_t::add_workshop_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	// TODO
+}
+
 void building_t::add_floor_clutter_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	if (!is_residential()) return; // houses only for now
 
