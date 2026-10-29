@@ -2360,21 +2360,9 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 			}
 		} // for n
 	}
-	if (is_basement && min(room_bounds.dx(), room_bounds.dy()) > 1.2*window_vspacing) { // add barrels; all the same size
-		unsigned const num_barrels(1 + (rgen.rand() & 3)); // 1-4
-		float const height(window_vspacing*rgen.rand_uniform(0.24, 0.32)), radius(height*rgen.rand_uniform(0.36, 0.42));
-		cube_t place_area(room_bounds);
-		place_area.z1() = zval;
-
-		for (unsigned n = 0; n < num_barrels; ++n) {
-			for (unsigned N = 0; N < 10; ++N) { // 10 tries to place
-				cube_t barrel;
-				gen_xy_pos_for_round_obj(barrel, place_area, radius, height, 1.25*radius, rgen, 1); // place_at_z1=1
-				if (overlaps_obj_or_placement_blocked(barrel, room, objs_start)) continue; // bad placement
-				objs.emplace_back(barrel, TYPE_BARREL, room_id, rgen.rand_bool(), rgen.rand_bool(), 0, tot_light_amt, SHAPE_CYLIN, WHITE);
-				break;
-			}
-		} // for n
+	if (is_basement && min(room_bounds.dx(), room_bounds.dy()) > 1.5*window_vspacing && rgen.rand_bool()) { // add barrels
+		unsigned const num_barrels(1 + (rgen.rand() % 3)); // 1-4
+		add_barrels_to_room(rgen, room, crate_bounds, zval, room_id, tot_light_amt, objs_start, num_barrels);
 	}
 	unsigned const num_max(is_house ? (is_basement ? 12 : 5) : (is_house_like ? 10 : 30)); // 4-33 for offices, 4-8 for houses, 4-16 for house basements
 	add_boxes_and_crates(rgen, room, zval, room_id, tot_light_amt, objs_start, num_max, is_basement, room_bounds, crate_bounds, exclude);
@@ -2452,6 +2440,21 @@ void building_t::add_boxes_and_crates(rand_gen_t &rgen, room_t const &room, floa
 	for (unsigned i = boxes_start; i < objs.size(); ++i) { // check for other boxes or crates blocking box flaps
 		if (objs[i].type == TYPE_BOX) {check_for_blocked_box_flags(objs, objs_start, i);}
 	}
+}
+
+void building_t::add_barrels_to_room(rand_gen_t &rgen, cube_t const &room, cube_t place_area, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned num) {
+	float const height(get_window_vspace()*rgen.rand_uniform(0.24, 0.30)), radius(height*rgen.rand_uniform(0.36, 0.42)); // all the same size
+	place_area.z1() = zval;
+
+	for (unsigned n = 0; n < num; ++n) {
+		for (unsigned N = 0; N < 10; ++N) { // 10 tries to place
+			cube_t barrel;
+			gen_xy_pos_for_round_obj(barrel, place_area, radius, height, 1.25*radius, rgen, 1); // place_at_z1=1
+			if (overlaps_obj_or_placement_blocked(barrel, room, objs_start)) continue; // bad placement
+			interior->room_geom->objs.emplace_back(barrel, TYPE_BARREL, room_id, rgen.rand_bool(), rgen.rand_bool(), 0, tot_light_amt, SHAPE_CYLIN, WHITE);
+			break;
+		}
+	} // for n
 }
 
 void building_t::add_shelves(cube_t const &c, bool dim, bool dir, unsigned room_id, float tot_light_amt, unsigned flags, unsigned item_flags, rand_gen_t &rgen) {
