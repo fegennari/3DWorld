@@ -2590,7 +2590,14 @@ void building_t::add_garage_objs(rand_gen_t rgen, room_t const &room, float zval
 }
 
 void building_t::add_workshop_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	// TODO
+	bool const in_basement(zval < ground_floor_z1);
+	cube_t const room_bounds(get_walkable_room_bounds(room));
+	colorRGBA const &chair_color(chair_colors[rgen.rand() % NUM_CHAIR_COLORS]);
+	add_desk_to_room(rgen, room, vect_cube_t(), chair_color, zval, room_id, tot_light_amt, objs_start, in_basement, 0, 1); // no_computer=1
+	add_barrels_to_room (rgen, room, room_bounds, zval, room_id, tot_light_amt, objs_start, 1); // 1 barrel
+	add_boxes_and_crates(rgen, room, zval, room_id, tot_light_amt, objs_start, 4, in_basement, room_bounds, room_bounds); // up to 4
+	add_buckets_to_room (rgen, room_bounds, zval, room_id, tot_light_amt, objs_start, 1); // 1 bucket
+	if (!is_house) {add_door_sign("Workshop", room, zval, room_id);}
 }
 
 void building_t::add_floor_clutter_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
