@@ -2362,7 +2362,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 	}
 	if (is_basement && min(room_bounds.dx(), room_bounds.dy()) > 1.2*window_vspacing) { // add barrels; all the same size
 		unsigned const num_barrels(1 + (rgen.rand() & 3)); // 1-4
-		float const height(window_vspacing*rgen.rand_uniform(0.3, 0.4)), radius(height*rgen.rand_uniform(0.3, 0.4));
+		float const height(window_vspacing*rgen.rand_uniform(0.24, 0.32)), radius(height*rgen.rand_uniform(0.36, 0.42));
 		cube_t place_area(room_bounds);
 		place_area.z1() = zval;
 

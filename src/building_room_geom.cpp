@@ -1309,9 +1309,35 @@ void building_room_geom_t::add_box(room_object_t const &c) { // is_small=1
 
 void building_room_geom_t::add_barrel(room_object_t const &c) { // is_small=1
 	assert(c.shape == SHAPE_CYLIN);
-	//float const radius(c.get_radius());
-	rgeom_mat_t &mat(get_wood_material(1.0/c.dz(), 1, 0, 1, 0, WOOD_TYPE_FENCE)); // shadowed, small
-	mat.add_vcylin_to_verts(c, apply_light_color(c), 0, 1); // draw sides and top
+	colorRGBA const wood_color(apply_light_color(c)), metal_color(apply_light_color(c, WHITE));
+	rgeom_mat_t &wood_mat (get_wood_material(1.0/c.dz(), 1, 0, 1, 0, WOOD_TYPE_FENCE));    //   shadowed, small
+	rgeom_mat_t &metal_mat(get_material(tid_nm_pair_t(get_rust_met_tid(), 0.0, 0), 0, 1)); // unshadowed, small
+	unsigned const ndiv(N_SPHERE_DIV), num_stacks(16), num_bands(4);
+	float const tscale_x(3.0), tscale_y(1.0), ndiv_inv(1.0/ndiv), num_stacks_inv(1.0/num_stacks), zstep(c.dz()*num_stacks_inv);
+	float const radius(c.get_radius()), rbase(0.7*radius), delta_r(radius - rbase);
+	unsigned data_pos(wood_mat.itri_verts.size());
+	color_wrapper const cw(wood_color);
+	point p1(cube_bot_center(c)), p2(p1 + vector3d(0.0, 0.0, zstep));
+
+	for (unsigned n=0, rix=0; n < num_stacks; ++n) {
+		float const t1(n  * num_stacks_inv), rs1(2.0*fabs(t1 - 0.5f)), r1(radius - delta_r*rs1*rs1);
+		float const t2(t1 + num_stacks_inv), rs2(2.0*fabs(t2 - 0.5f)), r2(radius - delta_r*rs2*rs2);
+		draw_segment(wood_mat, p1, p2, r1, r2, n, tscale_x, tscale_y, ndiv_inv, cw, ndiv, data_pos);
+		
+		if (n == 0 || n == 2 || n == 5 || n == 10 || n == 13 || n == 15) { // draw bands at these stacks
+			metal_mat.add_cylin_to_verts(p1, p2, 1.01*r1, 1.01*r2, metal_color, 0, 0, 0, 0, 4.0, 1.0, 0, ndiv, 0.0, 0, 0.2); // sides only, slightly wider than barrel
+		}
+		p1.z   = p2.z;
+		p2.z  += zstep;
+	} // for n
+	wood_mat.add_vert_disk_to_verts(cube_top_center(c), rbase, 0, wood_color); // top surface
+	// draw the plug
+	float const plug_radius(0.12*radius);
+	cube_t plug;
+	set_wall_width(plug, c.zc(), plug_radius, 2); // Z
+	set_wall_width(plug, c.get_center_dim(!c.dim), plug_radius, !c.dim);
+	set_wall_width(plug, c.d[c.dim][c.dir], 0.02*radius, c.dim); // set depth
+	wood_mat.add_ortho_cylin_to_verts(plug, wood_color*0.6, c.dim, !c.dir, c.dir);
 }
 
 void building_room_geom_t::add_food_tub(room_object_t const &c) {
@@ -2620,7 +2646,7 @@ void building_room_geom_t::add_vase(room_object_t const &c) { // or urn
 			tex_scale_h = 2 + (rgen.rand()%7); // must be an integer, 2-8
 		}
 	}
-	// ship shadows for vases on shelf racks as these are very slow; would be nice to enable shadows for vases with on_top=1, but even that is slower
+	// skip shadows for vases on shelf racks as these are very slow; would be nice to enable shadows for vases with on_top=1, but even that is slower
 	bool const on_shelfrack(c.is_on_srack()), on_top(c.flags & RO_FLAG_TOS), shadowed(!on_shelfrack);
 	rgeom_mat_t &side_mat(get_material(tid_nm_pair_t(tid, 0.0f, shadowed, 0, 1), 0, 1)); // small, no_reflect=1
 	unsigned const ndiv(get_def_cylin_ndiv(c)), num_stacks(ndiv), itris_start(side_mat.itri_verts.size()), ixs_start(side_mat.indices.size());
@@ -8452,7 +8478,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_FLOORING: return texture_color(get_flooring_texture(*this)).modulate_with(color);
 	case TYPE_CRATE:    return texture_color(get_crate_tid(*this)).modulate_with(color);
 	case TYPE_BOX:      return texture_color(get_box_tid()).modulate_with(color);
-	case TYPE_BARREL:   return get_textured_wood_color();
+	case TYPE_BARREL:   return texture_color(FENCE_TEX).modulate_with(color);
 	case TYPE_CUBICLE:  return texture_color(get_carpet_tid(*this));
 	case TYPE_STALL:    return ((shape == SHAPE_SHORT && !is_hanging()) ? texture_color(get_carpet_tid(*this)).modulate_with(color) : color); // visit room separator is textured
 	case TYPE_SHELVES:  return texture_color(WOOD2_TEX);
