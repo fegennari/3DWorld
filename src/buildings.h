@@ -2306,6 +2306,7 @@ public:
 	bool point_in_or_above_pool(point const &pt) const;
 	bool set_float_height(point &pos, float radius, float ceil_zval, float density=0.5) const;
 	bool find_mirror_needing_reflection(vector3d const &xlate) const;
+	bool is_light_occluder(room_object_t const &c) const;
 	void get_rooftop_cars(vector<car_t> &cars) const;
 	bool get_zval_for_obj_placement(point const &pos, float radius, float &zval, bool add_z_bias) const;
 	unsigned get_floor_for_zval(float zval) const {return unsigned((zval - get_bcube_z1_inc_ext_basement())/get_window_vspace());}

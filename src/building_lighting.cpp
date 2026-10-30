@@ -305,6 +305,49 @@ colorRGBA building_t::get_avg_ceil_color (cube_t const &ceil_cube ) const {
 	return color.modulate_with(tex.get_avg_color());
 }
 
+bool building_t::is_light_occluder(room_object_t const &c) const { // for indir lighting
+	room_object const type(c.type);
+	if (!c.is_visible())         return 0;
+	if (type == TYPE_ELEVATOR)   return 0; // elevator cars/internals can move so should not contribute to lighting
+	if (type == TYPE_INT_WINDOW) return 0; // transparent + small objects
+	if (type == TYPE_BLOCKER || type == TYPE_COLLIDER) return 0; // blockers and colliders are not drawn
+	if (c.shape == SHAPE_ANGLED) return 0; // sloped objects such as parking garage and pool ramps aren't cubes
+	if (c.is_exterior())         return 0; // interior objects only
+	// skip other object types that are too small, not cube shaped, transparent, or not interior
+	if (type == TYPE_WALL_TRIM || type == TYPE_BOOK || type == TYPE_PLANT || type == TYPE_RAILING || type == TYPE_BUCKET || type == TYPE_LBASKET || c.is_a_drink() ||
+		type == TYPE_PEN || type == TYPE_PENCIL || is_ball_type(type) || type == TYPE_HANGER_ROD || type == TYPE_DRAIN || type == TYPE_MONEY || type == TYPE_PHONE ||
+		type == TYPE_TPROLL || type == TYPE_SPRAYCAN || type == TYPE_MARKER || type == TYPE_BUTTON || type == TYPE_SWITCH || type == TYPE_TAPE || type == TYPE_OUTLET ||
+		type == TYPE_PARK_SPACE || type == TYPE_RAMP || type == TYPE_PIPE || type == TYPE_VENT || type == TYPE_BREAKER || type == TYPE_KEY || type == TYPE_HANGER ||
+		type == TYPE_FESCAPE || type == TYPE_CUP || type == TYPE_CLOTHES || type == TYPE_LAMP || type == TYPE_OFF_CHAIR || type == TYPE_LIGHT || type == TYPE_SIGN ||
+		type == TYPE_PAPER || type == TYPE_WALL_LAMP || type == TYPE_RCHAIR || type == TYPE_SILVER || type == TYPE_STAPLER || type == TYPE_WIND_SILL || type == TYPE_BALCONY ||
+		type == TYPE_TOY_MODEL || type == TYPE_CEIL_FAN || type == TYPE_PLANT_MODEL || type == TYPE_POOL_FLOAT || type == TYPE_PAINTCAN || type == TYPE_DIV_BOARD ||
+		type == TYPE_POOL_LAD || type == TYPE_FLASHLIGHT || type == TYPE_CANDLE || type == TYPE_CAMERA || type == TYPE_CLOCK || type == TYPE_BAR_STOOL || type == TYPE_PADLOCK ||
+		type == TYPE_PAN || type == TYPE_BANANA || type == TYPE_BAN_PEEL || type == TYPE_VALVE || type == TYPE_INT_LADDER || type == TYPE_CONF_PHONE ||
+		type == TYPE_SPIWEB || type == TYPE_TREE || type == TYPE_THEFT_SENS || type == TYPE_ELEC_WIRE || type == TYPE_ERASER || type == TYPE_PET_CAGE || type == TYPE_SHOE ||
+		type == TYPE_SHOEBOX || type == TYPE_LADDER || type == TYPE_CATWALK || type == TYPE_WARN_LIGHT || type == TYPE_GAUGE || type == TYPE_FORKLIFT || type == TYPE_TESTTUBE ||
+		type == TYPE_US_FLAG || type == TYPE_BLDG_FOUNT || type == TYPE_WHEELCHAIR || type == TYPE_OP_TABLE || type == TYPE_TROLLEY || type == TYPE_STRETCHER ||
+		type == TYPE_HARDHAT || type == TYPE_TOPHAT || type == TYPE_COMP_MOUSE || type == TYPE_APPLE || type == TYPE_JAIL_BARS || type == TYPE_HANDGUN ||
+		type == TYPE_STICK_NOTE || type == TYPE_GYM_WEIGHT || type == TYPE_FOOD_TRAY || type == TYPE_EX_MACHINE || type == TYPE_BAR_SOAP || type == TYPE_COAT_RACK ||
+		type == TYPE_VIS_PHONE || type == TYPE_JUMPSUIT || type == TYPE_O_SHOWER || type == TYPE_CARD_DECK || type == TYPE_CIGARETTE || type == TYPE_BULLETS ||
+		type == TYPE_MUSHROOM || type == TYPE_POOL_CUE || type == TYPE_CEIL_TILE || type == TYPE_SHELL_CASE || type == TYPE_SHOP_CART || type == TYPE_JAR ||
+		type == TYPE_RADIATOR || type == TYPE_RAD_FAN || type == TYPE_FIRE_EXT || type == TYPE_FOLD_SHIRT || type == TYPE_CASHREG || type == TYPE_FOOD_FISH ||
+		type == TYPE_MILK || type == TYPE_TRASH || type == TYPE_PLATE || type == TYPE_SPRINKLER || type == TYPE_TOASTER || type == TYPE_FOOD_TUB || type == TYPE_KEYBOARD ||
+		type == TYPE_LAPTOP || type == TYPE_VASE || type == TYPE_URN || type == TYPE_LAVALAMP || type == TYPE_TOY || type == TYPE_EASEL || type == TYPE_GENERATOR ||
+		type == TYPE_TV_REMOTE || type == TYPE_WETF_SIGN || type == TYPE_POOL_BALL || type == TYPE_GBIKE || type == TYPE_NV_GOGGLES || type == TYPE_FLOOR_LAMP ||
+		type == TYPE_STAIRCASE) return 0;
+	if (type == TYPE_FISHTANK && c.z1() < ground_floor_z1)     return 0; // skip  mall fishtanks
+	if (type == TYPE_TCAN && !(c.in_mall() || c.in_hallway())) return 0; // skip small trashcans
+	if (type == TYPE_DBG_SHAPE && !c.is_lit())                 return 0; // skip debug shapes without the lit flag set
+	if (type == TYPE_DUCT && c.get_depth() < c.get_width())    return 0; // skip short ducts/vents
+	if (type >= TYPE_RAT)                                      return 0; // skip animals (for example, roaches in sinks)
+
+	if (type == TYPE_METAL_BAR) { // potentially small object; skip if small in at least 2 dims
+		float const sz_thresh(1.0*get_wall_thickness());
+		if (unsigned(c.dx() > sz_thresh) + unsigned(c.dy() > sz_thresh) + unsigned(c.dz() > sz_thresh) < 2) return 0;
+	}
+	return 1;
+}
+
 void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ext_bcube) const {
 	if (!interior) return; // nothing to do
 	building_mat_t const &mat(get_material());
@@ -370,47 +413,11 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 	//map<unsigned, zi_unsigned> counts;
 		
 	for (auto c = objs.begin(); c != objs.end(); ++c) { // Note: ignores expanded objects (including shelf rack objects)
+		if (!is_light_occluder(*c))       continue;
+		if (!c->intersects_xy(ext_bcube)) continue;
 		room_object const type(c->type);
-		if (!c->is_visible())         continue;
-		if (type == TYPE_ELEVATOR)    continue; // elevator cars/internals can move so should not contribute to lighting
-		if (type == TYPE_INT_WINDOW)  continue; // transparent + small objects
-		if (type == TYPE_BLOCKER || type == TYPE_COLLIDER) continue; // blockers and colliders are not drawn
-		if (c->shape == SHAPE_ANGLED) continue; // sloped objects such as parking garage and pool ramps aren't cubes
-		if (c->is_exterior())         continue; // interior objects only
-		// skip other object types that are too small, not cube shaped, transparent, or not interior
-		if (type == TYPE_WALL_TRIM || type == TYPE_BOOK || type == TYPE_PLANT || type == TYPE_RAILING || type == TYPE_BUCKET || type == TYPE_LBASKET || c->is_a_drink() ||
-			type == TYPE_PEN || type == TYPE_PENCIL || is_ball_type(type) || type == TYPE_HANGER_ROD || type == TYPE_DRAIN || type == TYPE_MONEY || type == TYPE_PHONE ||
-			type == TYPE_TPROLL || type == TYPE_SPRAYCAN || type == TYPE_MARKER || type == TYPE_BUTTON || type == TYPE_SWITCH || type == TYPE_TAPE || type == TYPE_OUTLET ||
-			type == TYPE_PARK_SPACE || type == TYPE_RAMP || type == TYPE_PIPE || type == TYPE_VENT || type == TYPE_BREAKER || type == TYPE_KEY || type == TYPE_HANGER ||
-			type == TYPE_FESCAPE || type == TYPE_CUP || type == TYPE_CLOTHES || type == TYPE_LAMP || type == TYPE_OFF_CHAIR || type == TYPE_LIGHT || type == TYPE_SIGN ||
-			type == TYPE_PAPER || type == TYPE_WALL_LAMP || type == TYPE_RCHAIR || type == TYPE_SILVER || type == TYPE_STAPLER || type == TYPE_WIND_SILL || type == TYPE_BALCONY ||
-			type == TYPE_TOY_MODEL || type == TYPE_CEIL_FAN || type == TYPE_PLANT_MODEL || type == TYPE_POOL_FLOAT || type == TYPE_PAINTCAN || type == TYPE_DIV_BOARD ||
-			type == TYPE_POOL_LAD || type == TYPE_FLASHLIGHT || type == TYPE_CANDLE || type == TYPE_CAMERA || type == TYPE_CLOCK || type == TYPE_BAR_STOOL || type == TYPE_PADLOCK ||
-			type == TYPE_PAN || type == TYPE_BANANA || type == TYPE_BAN_PEEL || type == TYPE_VALVE || type == TYPE_INT_LADDER || type == TYPE_CONF_PHONE ||
-			type == TYPE_SPIWEB || type == TYPE_TREE || type == TYPE_THEFT_SENS || type == TYPE_ELEC_WIRE || type == TYPE_ERASER || type == TYPE_PET_CAGE || type == TYPE_SHOE ||
-			type == TYPE_SHOEBOX || type == TYPE_LADDER || type == TYPE_CATWALK || type == TYPE_WARN_LIGHT || type == TYPE_GAUGE || type == TYPE_FORKLIFT || type == TYPE_TESTTUBE ||
-			type == TYPE_US_FLAG || type == TYPE_BLDG_FOUNT || type == TYPE_WHEELCHAIR || type == TYPE_OP_TABLE || type == TYPE_TROLLEY || type == TYPE_STRETCHER ||
-			type == TYPE_HARDHAT || type == TYPE_TOPHAT || type == TYPE_COMP_MOUSE || type == TYPE_APPLE || type == TYPE_JAIL_BARS || type == TYPE_HANDGUN ||
-			type == TYPE_STICK_NOTE || type == TYPE_GYM_WEIGHT || type == TYPE_FOOD_TRAY || type == TYPE_EX_MACHINE || type == TYPE_BAR_SOAP || type == TYPE_COAT_RACK ||
-			type == TYPE_VIS_PHONE || type == TYPE_JUMPSUIT || type == TYPE_O_SHOWER || type == TYPE_CARD_DECK || type == TYPE_CIGARETTE || type == TYPE_BULLETS ||
-			type == TYPE_MUSHROOM || type == TYPE_POOL_CUE || type == TYPE_CEIL_TILE || type == TYPE_SHELL_CASE || type == TYPE_SHOP_CART || type == TYPE_JAR ||
-			type == TYPE_RADIATOR || type == TYPE_RAD_FAN || type == TYPE_FIRE_EXT || type == TYPE_FOLD_SHIRT || type == TYPE_CASHREG || type == TYPE_FOOD_FISH ||
-			type == TYPE_MILK || type == TYPE_TRASH || type == TYPE_PLATE || type == TYPE_SPRINKLER || type == TYPE_TOASTER || type == TYPE_FOOD_TUB || type == TYPE_KEYBOARD ||
-			type == TYPE_LAPTOP || type == TYPE_VASE || type == TYPE_URN || type == TYPE_LAVALAMP || type == TYPE_TOY || type == TYPE_EASEL || type == TYPE_GENERATOR ||
-			type == TYPE_TV_REMOTE || type == TYPE_WETF_SIGN || type == TYPE_POOL_BALL || type == TYPE_GBIKE || type == TYPE_NV_GOGGLES || type == TYPE_FLOOR_LAMP ||
-			type == TYPE_STAIRCASE) continue;
-		if (type == TYPE_FISHTANK && c->z1() < ground_floor_z1)      continue; // skip  mall fishtanks
-		if (type == TYPE_TCAN && !(c->in_mall() || c->in_hallway())) continue; // skip small trashcans
-		if (type == TYPE_DBG_SHAPE && !c->is_lit()) continue; // skip debug shapes without the lit flag set
-		if (type >= TYPE_RAT) continue; // skip animals (for example, roaches in sinks)
 		bool const is_stairs(type == TYPE_STAIR || type == TYPE_STAIR_WALL);
 		if (c->z1() > (is_stairs ? stairs_z2 : z2) || c->z2() < (is_stairs ? stairs_z1 : z1)) continue;
-		if (!c->intersects_xy(ext_bcube)) continue;
-		
-		if (type == TYPE_METAL_BAR) { // potentially small object; skip if small in at least 2 dims
-			if (unsigned(c->dx() > sz_thresh) + unsigned(c->dy() > sz_thresh) + unsigned(c->dz() > sz_thresh) < 2) continue;
-		}
-		if (type == TYPE_DUCT && c->get_depth() < c->get_width()) continue; // skip short ducts/vents 376
 		colorRGBA const color(c->get_color());
 		bool const dim(c->dim), dir(c->dir);
 		//++counts[type].v;
