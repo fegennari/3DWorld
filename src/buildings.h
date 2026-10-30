@@ -2243,7 +2243,9 @@ public:
 	bool check_shelfrack_occlusion (point const &viewer, point const *const pts, unsigned npts, cube_t const &occ_area) const;
 	bool check_warehouse_shelf_occlusion(point const &viewer, point const *const pts, unsigned npts, cube_t const &occ_area) const;
 	bool is_entire_building_occluded(point const &viewer, occlusion_checker_noncity_t const &oc) const;
-	bool register_indir_lighting_state_change(unsigned light_ix, bool is_door_change=0) const;
+	bool register_indir_lighting_state_change(unsigned light_ix, bool is_door_change=0, bool is_obj_move=0, bool remove_only=0) const;
+	void update_room_object_and_update_indir_lighting(room_object_t &obj, room_object_t const &new_obj) const;
+	void remove_room_object_and_update_indir_lighting(room_object_t &obj) const;
 	bool is_attic_roof(tquad_with_ix_t const &tq, bool type_roof_only) const;
 	bool has_ext_basement() const {return (interior && !interior->basement_ext_bcube.is_all_zeros());}
 	bool has_pool        () const {return (interior &&  interior->pool.valid);}
@@ -2836,12 +2838,12 @@ private:
 	bool is_obj_above_ramp(cube_t const &c) const;
 	bool is_room_above_ramp(cube_t const &room, float zval) const;
 	bool is_room_lit(int room_id, float zval) const;
+	void set_rgen_state_for_building(rand_gen_t &rgen) const;
+public:
 	void get_rooms_for_door(door_t const &door, int room_ix[2]) const;
 	void get_lights_for_room_and_floor(unsigned room_ix, unsigned floor_ix, vector<unsigned> &light_ids) const;
 	void get_lights_near_door(unsigned door_ix, vector<unsigned> &light_ids) const;
 	bool is_cube_visible_through_door(point const &viewer, cube_t const &c, door_t const &door) const;
-	void set_rgen_state_for_building(rand_gen_t &rgen) const;
-public:
 	// ray queries
 	bool check_line_intersect_doors(point const &p1, point const &p2, bool inc_open=0) const;
 	bool is_pt_visible(point const &p1, point const &p2) const;

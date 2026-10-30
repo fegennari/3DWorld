@@ -2392,7 +2392,8 @@ void building_room_geom_t::remove_object(unsigned obj_id, point const &at_pos, b
 			float const radius(((type == TYPE_SINK) ? 0.045 : 0.08)*obj.dz()), height(0.02*obj.dz());
 			drain = get_cube_height_radius(cube_bot_center(obj), radius, height);
 		}
-		obj = room_object_t(drain, TYPE_DRAIN, obj.room_id, ddim, ddir, flags, obj.light_amt, SHAPE_CYLIN, DK_GRAY); // replace with drain
+		room_object_t const new_obj(drain, TYPE_DRAIN, obj.room_id, ddim, ddir, flags, obj.light_amt, SHAPE_CYLIN, DK_GRAY); // replace with drain
+		building.update_room_object_and_update_indir_lighting(obj, new_obj);
 		invalidate_draw_data_for_obj(obj);
 	}
 	else if (type == TYPE_TOY) { // take one ring at a time then the base (5 parts)
@@ -2432,7 +2433,7 @@ void building_room_geom_t::remove_object(unsigned obj_id, point const &at_pos, b
 			obj.flags &= ~RO_FLAG_LIT; // remove the lit flag so that it's indir light is removed
 			must_keep_light = building.register_indir_lighting_state_change(obj_id);
 		}
-		obj.remove();
+		building.remove_room_object_and_update_indir_lighting(obj);
 	}
 	if (type == TYPE_MED_CAB && old_obj.obj_expanded()) {
 		remove_objs_contained_in(old_obj, expanded_objs, building); // search for and remove any contained medicine or other objects
@@ -2699,8 +2700,8 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 				if (!i->get_for_closet()) {interior->door_state_updated = 1;} // trigger AI update if this is a door between rooms
 			} // for i
 			// update this object
-			obj = moved_obj; // keep this placement
-			if (!keep_in_room) {assign_correct_room_to_object(obj);}
+			if (!keep_in_room) {assign_correct_room_to_object(moved_obj);}
+			update_room_object_and_update_indir_lighting(obj, moved_obj); // keep this placement
 			if (!obj.was_moved()) {interior->room_geom->moved_obj_ids.push_back(closest_obj_id);} // add to moved_obj_ids on first movement
 			obj.flags |= RO_FLAG_MOVED;
 			interior->room_geom->modified_by_player = 1; // flag so that we avoid re-generating room geom if the player leaves and comes back

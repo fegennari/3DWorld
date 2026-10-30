@@ -1281,11 +1281,14 @@ public:
 			mark_light_done(cur_job);
 			cur_job = get_next_light(b, target);
 			if (!cur_job.is_valid()) return; // no lights to update
-			init_lmgr(b);
-			lighting_updated = 1;
-			highres_timer_t timer("Ray Cast Building Light"); // 2354 in mall with 368 lights
-			cast_light_rays(b);
+			highres_timer_t timer("Ray Cast Building Light"); // 2354ms in mall with 368 lights
+			proc_cur_job_serial(b);
 		}
+	}
+	void proc_cur_job_serial(building_t const &b) {
+		init_lmgr(b);
+		cast_light_rays(b);
+		lighting_updated = 1;
 	}
 	unsigned add_light_jobs(building_t const &b, point const &target) {
 		unsigned const num_pend(light_queue.size());
@@ -1345,12 +1348,27 @@ public:
 	void mark_light_done(light_job_t const &job) {
 		if (job.is_valid()) {
 			if (!job.neg) {lights_complete.insert(job.lix);} // mark the most recent light as complete if not a light removal
-			lights_pend.erase (job.lix);
+			lights_pend.erase(job.lix);
 		}
 	}
-	void register_light_state_change(unsigned light_ix, bool light_is_on, bool in_elevator, bool geom_changed) {
+	void register_light_state_change(building_t const &b, unsigned light_ix, bool light_is_on, bool in_elevator, bool is_door_change, bool is_obj_move, bool remove_only) {
+		bool const geom_changed(is_door_change || is_obj_move);
+
 		if (geom_changed) {
-			// TODO: have to first remove the lighting with the old geom, and then re-add it - but the geometry has already been updated
+			//cout << TXT(light_ix) << TXT(light_is_on) << TXT(is_door_change) << TXT(is_obj_move) << TXT(remove_only) << TXT(is_running) << endl; // TESTING
+			if (is_running) return; // too difficult to handle this case
+
+			if (remove_only) { // remove lighting with the old geom
+				lights_complete.erase(light_ix); // light is no longer completed; erase its state
+				cur_job = light_job_t(light_ix, 1); // is_neg=1
+				proc_cur_job_serial(b); // must be serial so that it completes before the door or object is moved
+			}
+			// we can do nothing here and the lighting will get updated, but there may be a frame where indir lighting flickers; updating looks better but adds more frame lag
+			else if (0/*is_obj_move*/) { // re-add lighting with the new geom
+				cur_job = light_job_t(light_ix, 0); // is_neg=0
+				proc_cur_job_serial(b);
+				mark_light_done(cur_job);
+			}
 			return;
 		}
 		unsigned const num_erased(lights_complete.erase(light_ix)); // light is no longer completed; erase its state
@@ -1606,14 +1624,15 @@ void building_t::get_all_windows(vect_cube_with_ix_t &windows) const { // Note: 
 	}
 }
 
-bool building_t::register_indir_lighting_state_change(unsigned light_ix, bool is_door_change) const {
+bool building_t::register_indir_lighting_state_change(unsigned light_ix, bool is_door_change, bool is_obj_move, bool remove_only) const {
 	if (!enable_building_indir_lighting()) return 0; // no update needed
 	assert(has_room_geom());
 	assert(light_ix < interior->room_geom->objs.size());
 	room_object_t const &obj(interior->room_geom->objs[light_ix]);
 	assert(obj.is_light_type());
-	if (is_door_change && !obj.is_light_on()) return 0; // light off, no state change
-	building_indir_light_mgr.register_light_state_change(light_ix, obj.is_light_on(), obj.in_elevator(), is_door_change);
+	bool const light_is_on(obj.is_light_on());
+	if ((is_door_change || is_obj_move) && !light_is_on) return 0; // light off, no state change
+	building_indir_light_mgr.register_light_state_change(*this, light_ix, light_is_on, obj.in_elevator(), is_door_change, is_obj_move, remove_only);
 	return 1;
 }
 void building_t::register_indir_lighting_geom_change() const {
@@ -1622,6 +1641,36 @@ void building_t::register_indir_lighting_geom_change() const {
 void building_t::register_blinds_state_change() const {
 	building_indir_light_mgr.invalidate_windows();
 	register_indir_lighting_geom_change();
+}
+
+void building_t::update_room_object_and_update_indir_lighting(room_object_t &obj, room_object_t const &new_obj) const {
+	if (!enable_building_indir_lighting() || !is_light_occluder(obj)) {obj = new_obj; return;}
+	float const floor_spacing(get_window_vspace());
+	unsigned const floor_ix(get_room(obj.room_id).get_floor_containing_zval(obj.zc(), floor_spacing));
+	static vector<unsigned> light_ids;
+	light_ids.clear();
+	get_lights_for_room_and_floor(obj.room_id, floor_ix, light_ids);
+	bool do_update(light_ids.size() <= 2); // only update for 1-2 light rooms to avoid too much frame time
+
+	if (obj.room_id != new_obj.room_id) { // include second room if object changed rooms
+		unsigned const floor_ix2(get_room(new_obj.room_id).get_floor_containing_zval(new_obj.zc(), floor_spacing));
+		get_lights_for_room_and_floor(new_obj.room_id, floor_ix2, light_ids);
+		do_update &= (light_ids.size() <= 3); // allow one more
+	}
+	if (do_update) {
+		for (unsigned lix : light_ids) {register_indir_lighting_state_change(lix, 0, 1, 1);} // remove; is_door_change=0, is_obj_move=1, remove_only=1
+	}
+	obj = new_obj; // update object between passes
+	register_indir_lighting_geom_change();
+
+	if (do_update) {
+		for (unsigned lix : light_ids) {register_indir_lighting_state_change(lix, 0, 1, 0);} // re-add; is_door_change=0, is_obj_move=1, remove_only=0
+	}
+}
+void building_t::remove_room_object_and_update_indir_lighting(room_object_t &obj) const {
+	room_object_t new_obj(obj);
+	new_obj.remove();
+	update_room_object_and_update_indir_lighting(obj, new_obj);
 }
 
 bool building_t::is_light_occluded(point const &lpos, point const &camera_bs) const {

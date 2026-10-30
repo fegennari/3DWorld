@@ -1119,7 +1119,27 @@ bool building_t::adjust_blinds_state(unsigned obj_ix) {
 void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_building, bool by_player, point const &actor_pos) { // called by the player or AI
 	assert(interior);
 	door_t &door(interior->get_door(door_ix));
-	door.toggle_open_state(/*by_player*/player_in_this_building); // allow partial open/animated door if player is in this building
+
+	// update indir lighting state if needed; for now this is only for player actions to avoid thread safety issues and too many updates
+	if (by_player && enable_building_indir_lighting()) {
+		// Note: only have to register geom change if the light is on the same floor as the player, but this should always be true if the player just closed this door
+		static vector<unsigned> light_ids;
+		get_lights_near_door(door_ix, light_ids);
+		bool do_update(light_ids.size() <= 3); // only update for a few lights to avoid too much frame time from retail, parking garage, backrooms, etc.
+
+		if (do_update) {
+			for (unsigned lix : light_ids) {register_indir_lighting_state_change(lix, 1, 0, 1);} // remove; is_door_change=1, is_obj_move=0, remove_only=1
+		}
+		door.toggle_open_state(player_in_this_building);
+		register_indir_lighting_geom_change();
+
+		if (do_update) {
+			for (unsigned lix : light_ids) {register_indir_lighting_state_change(lix, 1, 0, 0);} // remove; is_door_change=1, is_obj_move=0, remove_only=0
+		}
+	}
+	else {
+		door.toggle_open_state(/*by_player*/player_in_this_building); // allow partial open/animated door if player is in this building
+	}
 	// we changed the door state, but navigation should adapt to this, except for doors on stairs (which are special)
 	if ( door.on_stairs) {invalidate_nav_graph();} // any in-progress paths may have people walking to and stopping at closed/locked doors
 	if (!door.get_for_closet()) {interior->door_state_updated = 1;} // required for AI navigation logic to adjust to this change; what about backrooms doors?
@@ -1137,14 +1157,6 @@ void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_buildin
 			// rather than targeting the exact center of the doorway and possibly clipping through the wall (for example, if in a hallway)
 			door_center[door.dim] += get_wall_thickness()*((door_center[door.dim] < actor_pos[door.dim]) ? 1.0 : -1.0);
 			register_building_sound(door_center, 0.5);
-		}
-		// update indir lighting state if needed; for now this is only for player actions to avoid thread safety issues and too many updates
-		if (by_player && enable_building_indir_lighting()) {
-			// Note: only have to register geom change if the light is on the same floor as the player, but this should always be true if the player just closed this door
-			register_indir_lighting_geom_change();
-			static vector<unsigned> light_ids;
-			get_lights_near_door(door_ix, light_ids);
-			for (unsigned light_ix : light_ids) {register_indir_lighting_state_change(light_ix, 1);} // is_door_change=1
 		}
 	}
 	handle_items_intersecting_closed_door(door); // check if we need to move any objects out of the way
