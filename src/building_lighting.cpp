@@ -1283,12 +1283,12 @@ public:
 			if (!cur_job.is_valid()) return; // no lights to update
 			highres_timer_t timer("Ray Cast Building Light"); // 2354ms in mall with 368 lights
 			proc_cur_job_serial(b);
+			lighting_updated = 1;
 		}
 	}
 	void proc_cur_job_serial(building_t const &b) {
 		init_lmgr(b);
 		cast_light_rays(b);
-		lighting_updated = 1;
 	}
 	unsigned add_light_jobs(building_t const &b, point const &target) {
 		unsigned const num_pend(light_queue.size());
@@ -1363,7 +1363,7 @@ public:
 				cur_job = light_job_t(light_ix, 1); // is_neg=1
 				proc_cur_job_serial(b); // must be serial so that it completes before the door or object is moved
 			}
-			// we can do nothing here and the lighting will get updated, but there may be a frame where indir lighting flickers; updating looks better but adds more frame lag
+			// we can do nothing here and the lighting will get updated, but there may be a frame where indir lighting flickers or lags behind; updating looks better but adds more frame time
 			else if (0/*is_obj_move*/) { // re-add lighting with the new geom
 				cur_job = light_job_t(light_ix, 0); // is_neg=0
 				proc_cur_job_serial(b);
@@ -1662,6 +1662,7 @@ void building_t::update_room_object_and_update_indir_lighting(room_object_t &obj
 	}
 	obj = new_obj; // update object between passes
 	register_indir_lighting_geom_change();
+	building_indir_light_mgr.build_bvh(*this, get_camera_building_space());
 
 	if (do_update) {
 		for (unsigned lix : light_ids) {register_indir_lighting_state_change(lix, 0, 1, 0);} // re-add; is_door_change=0, is_obj_move=1, remove_only=0
