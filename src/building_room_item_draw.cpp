@@ -1392,7 +1392,7 @@ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, 
 		add_box_to_material(c, mat);
 		rotate_verts(mat.quad_verts, plus_z, (get_camera_z_rotate() + (c.dir ? PI : 0.0)), obj_center, 0); // rotate all quad verts about Z axis
 	}
-	else if (c.type == TYPE_NV_GOGGLES) { // wearing them; anything to draw?
+	else if (c.type == TYPE_NV_GOGGLES) { // wearing them; nothing to draw
 		return;
 	}
 	else if (c.type == TYPE_NONE) {

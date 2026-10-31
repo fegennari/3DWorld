@@ -2533,7 +2533,7 @@ bool building_room_geom_t::add_room_object(room_object_t const &obj, building_t 
 
 	if (!set_obj_id && obj.was_expanded()) { // if object was expanded, and it's not a dynamic object, use an expanded slot (books, etc.)
 		assert(velocity == zero_vector);
-		add_expanded_object(obj);
+		add_expanded_object(obj); // no indir lighting update
 	}
 	else {
 		int obj_id(-1);
@@ -2545,7 +2545,7 @@ bool building_room_geom_t::add_room_object(room_object_t const &obj, building_t 
 		if (obj_id < 0) {obj_id = find_avail_obj_slot();} // select an ID if not yet assigned
 		if (obj_id < 0) return 0; // no slot found
 		room_object_t &added_obj(get_room_object_by_index(obj_id));
-		added_obj = obj; // overwrite with new object
+		building.update_room_object_and_update_indir_lighting(added_obj, obj); // overwrite with new object; only boxes update indir lighting
 		if (set_obj_id) {added_obj.obj_id = (uint16_t)(obj.has_dstate() ? allocate_dynamic_state() : obj_id);}
 		if (velocity != zero_vector) {assert(added_obj.has_dstate()); get_dstate(added_obj).velocity = velocity;}
 	}

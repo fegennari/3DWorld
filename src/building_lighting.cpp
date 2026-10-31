@@ -1644,7 +1644,7 @@ void building_t::register_blinds_state_change() const {
 }
 
 void building_t::update_room_object_and_update_indir_lighting(room_object_t &obj, room_object_t const &new_obj) const {
-	if (!enable_building_indir_lighting() || !is_light_occluder(obj)) {obj = new_obj; return;}
+	if (!enable_building_indir_lighting() || !(is_light_occluder(obj) || is_light_occluder(new_obj))) {obj = new_obj; return;}
 	assert(has_room_geom());
 	float const floor_spacing(get_window_vspace());
 	static vector<unsigned> light_ids;
