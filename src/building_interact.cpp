@@ -1124,14 +1124,14 @@ void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_buildin
 	if (by_player && enable_building_indir_lighting()) {
 		// Note: only have to register geom change if the light is on the same floor as the player, but this should always be true if the player just closed this door
 		static vector<unsigned> light_ids;
-		get_lights_near_door(door_ix, light_ids);
-		bool do_update(light_ids.size() <= 3); // only update for a few lights to avoid too much frame time from retail, parking garage, backrooms, etc.
+		get_lights_near_door(door_ix, light_ids); // what about windows?
+		bool do_update(light_ids.size() <= 2); // only update for 1-2 lights to avoid too much frame time from retail, parking garage, backrooms, etc.
 
 		if (do_update) {
 			for (unsigned lix : light_ids) {register_indir_lighting_state_change(lix, 1, 0, 1);} // remove; is_door_change=1, is_obj_move=0, remove_only=1
 		}
 		door.toggle_open_state(player_in_this_building);
-		register_indir_lighting_geom_change();
+		register_indir_lighting_geom_change(1); // rebuild_bvh=1
 
 		if (do_update) {
 			for (unsigned lix : light_ids) {register_indir_lighting_state_change(lix, 1, 0, 0);} // remove; is_door_change=1, is_obj_move=0, remove_only=0

@@ -2792,7 +2792,7 @@ private:
 	cube_t get_parking_structure_roof() const;
 	void get_parking_rooftop_avoid(vect_cube_t &avoid) const;
 	void add_parking_roof_lights();
-	void register_indir_lighting_geom_change() const;
+	void register_indir_lighting_geom_change(bool rebuild_bvh=0) const;
 	void register_blinds_state_change() const;
 	bool is_light_occluded(point const &lpos, point const &camera_bs) const;
 	void clip_ray_to_walls(point const &p1, point &p2, vect_cube_t const walls[2]) const;

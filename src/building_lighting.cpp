@@ -1634,8 +1634,9 @@ bool building_t::register_indir_lighting_state_change(unsigned light_ix, bool is
 	building_indir_light_mgr.register_light_state_change(*this, light_ix, light_is_on, obj.in_elevator(), is_door_change, is_obj_move, remove_only);
 	return 1;
 }
-void building_t::register_indir_lighting_geom_change() const {
-	building_indir_light_mgr.invalidate_bvh();
+void building_t::register_indir_lighting_geom_change(bool rebuild_bvh) const {
+	if (rebuild_bvh) {building_indir_light_mgr.build_bvh(*this, get_camera_building_space());}
+	else {building_indir_light_mgr.invalidate_bvh();} // lazy rebuild
 }
 void building_t::register_blinds_state_change() const {
 	building_indir_light_mgr.invalidate_windows();
@@ -1648,20 +1649,19 @@ void building_t::update_room_object_and_update_indir_lighting(room_object_t &obj
 	unsigned const floor_ix(get_room(obj.room_id).get_floor_containing_zval(obj.zc(), floor_spacing));
 	static vector<unsigned> light_ids;
 	light_ids.clear();
-	get_lights_for_room_and_floor(obj.room_id, floor_ix, light_ids);
-	bool do_update(light_ids.size() <= 2); // only update for 1-2 light rooms to avoid too much frame time
+	get_lights_for_room_and_floor(obj.room_id, floor_ix, light_ids); // what about windows?
 
 	if (obj.room_id != new_obj.room_id) { // include second room if object changed rooms
 		unsigned const floor_ix2(get_room(new_obj.room_id).get_floor_containing_zval(new_obj.zc(), floor_spacing));
 		get_lights_for_room_and_floor(new_obj.room_id, floor_ix2, light_ids);
-		do_update &= (light_ids.size() <= 3); // allow one more
 	}
+	bool do_update(light_ids.size() <= 2); // only update for 1-2 light rooms to avoid too much frame time
+
 	if (do_update) {
 		for (unsigned lix : light_ids) {register_indir_lighting_state_change(lix, 0, 1, 1);} // remove; is_door_change=0, is_obj_move=1, remove_only=1
 	}
 	obj = new_obj; // update object between passes
-	register_indir_lighting_geom_change();
-	building_indir_light_mgr.build_bvh(*this, get_camera_building_space());
+	register_indir_lighting_geom_change(1); // rebuild_bvh=1
 
 	if (do_update) {
 		for (unsigned lix : light_ids) {register_indir_lighting_state_change(lix, 0, 1, 0);} // re-add; is_door_change=0, is_obj_move=1, remove_only=0
