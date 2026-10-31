@@ -1709,9 +1709,10 @@ struct building_t : public building_geom_t {
 	bool has_int_fplace=0, has_parking_garage=0, has_small_part=0, has_basement_door=0, has_basement_pipes=0, parts_generated=0, is_in_city=0, has_skylight_light=0;
 	bool pri_hall_stairs_to_pg=0, have_walkway_ext_door=0, have_hall_side_stairs=0;
 	mutable bool has_missing_stairs=0; // only used for printing a warning
+	mutable bool player_visited=0; // for stats tracking
+	uint8_t num_attic_lights=0; // 0-2
 	uint8_t retail_floor_levels=0, has_clipped_wall=0; // has_clipped_wall: 1 bit for stairs, 2 bit for elevator
 	int8_t courtyard_door_ix=-1;
-	mutable bool player_visited=0; // for stats tracking
 	colorRGBA side_color=WHITE, roof_color=WHITE, detail_color=BLACK, door_color=WHITE, wall_color=WHITE;
 	cube_t bcube, coll_bcube, pri_hall, driveway, porch, assigned_plot, exterior_flag, ladder, deck_bounds;
 	mutable cube_t city_driveway, city_walkway; // set by city gen, which only has a const ref to the building; cached city state, and not directly used by the building

@@ -294,7 +294,7 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 	point const light_center(part.xc(), part.yc(), (interior_z2 - 1.2*light_radius - beam_depth)); // center of the part near the ceiling
 	cube_t light;
 	point light_pos[2] = {light_center, light_center}; // start centered
-	unsigned num_lights(1);
+	num_attic_lights = 1;
 	assert(attic_height > 0.0);
 
 	if (sep_dist > 0.25*attic_height) { // consider adding two lights
@@ -311,10 +311,10 @@ void building_t::add_attic_objects(rand_gen_t rgen) {
 		if (valid) {
 			light_pos[0][long_dim] -= move_dist;
 			light_pos[1][long_dim] += move_dist;
-			num_lights = 2;
+			num_attic_lights = 2;
 		}
 	}
-	for (unsigned n = 0; n < num_lights; ++n) {
+	for (unsigned n = 0; n < num_attic_lights; ++n) {
 		light.set_from_sphere(light_pos[n], light_radius);
 		unsigned const light_flags(RO_FLAG_EMISSIVE | RO_FLAG_NOCOLL | obj_flags); // start off and auto turn on when the player enters the attic
 		objs.emplace_back(light, TYPE_LIGHT, room_id, 0, 0, light_flags, light_amt, SHAPE_SPHERE, get_light_color_temp(0.45)); // yellow-shite

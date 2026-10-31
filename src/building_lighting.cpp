@@ -1002,7 +1002,7 @@ class building_indir_light_mgr_t {
 			in_attic        = ro.in_attic();
 			in_ext_basement = (light_in_basement && b.point_in_extended_basement_not_basement(light_center));
 			in_jail_cell    = (in_ext_basement && b.interior->has_jail && is_jail_room(b.get_room(ro.room_id).get_room_type(0)));
-			if (in_attic) {base_num_rays *= 8;} // more rays in attic, since light is large and there are only 1-2 of them
+			if (in_attic) {base_num_rays *= ((b.num_attic_lights > 1) ? 4 : 8);} // more rays in attic, since light is large and there are only 1-2 of them
 			if (is_lamp ) {base_num_rays /= 2;} // half the rays for lamps
 			if (is_lamp ) {dir = 2;} // onmidirectional; dim stays at 2/Z
 			else if (ro.flags & (RO_FLAG_ADJ_HI | RO_FLAG_ROTATING)) {dim = ro.dim; dir = ro.dir;} // wall light or rotated/hanging
