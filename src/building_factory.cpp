@@ -1094,23 +1094,11 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 			add_boxes_and_crates(rgen, room, zval, room_id, light_amt, objs_start, 13, 0, interior->ind_info->floor_space, crate_bounds, exclude); // 4-16; is_basement=0
 		} // for n
 	}
-	if (room_is_factory) {
-		// add buckets
+	if (room_is_factory) { // add buckets and paint cans
 		unsigned const num_buckets((rgen.rand() % 4) + 1); // 1-4
 		add_buckets_to_room(rgen, place_area, zval, room_id, light_amt, objs_start, num_buckets);
-		// add paint cans
-		unsigned const num_pcans((rgen.rand() % 4) + 1); // 1-4
-
-		for (unsigned n = 0; n < num_pcans; ++n) {
-			float const height(rgen.rand_uniform(0.08, 0.1)*window_vspace), radius(0.44*height);
-
-			for (unsigned N = 0; N < 10; ++N) { // 10 place attempts
-				cube_t const pcan(place_cylin_object(rgen, place_area, radius, height, (radius + trim_thickness), 1)); // place_at_z1=1
-				if (overlaps_obj_or_placement_blocked(pcan, place_area, objs_start)) continue; // bad placement
-				objs.emplace_back(pcan, TYPE_PAINTCAN, room_id, 0, 0, 0, light_amt, SHAPE_CYLIN, WHITE);
-				break; // success
-			}
-		} // for n
+		unsigned const num_pcans  ((rgen.rand() % 4) + 1); // 1-4
+		add_paint_cans_to_room(rgen, place_area, zval, room_id, light_amt, objs_start, num_pcans);
 	}
 	// add floor clutter and stains
 	bool const add_bottles(1), add_papers(0), add_glass(1), add_trash(rgen.rand_float() < 0.65), add_cigarettes(rgen.rand_bool()); // trash in 65% of rooms

@@ -2542,9 +2542,25 @@ void building_t::add_buckets_to_room(rand_gen_t &rgen, cube_t place_area, float 
 
 		for (unsigned N = 0; N < 10; ++N) { // 10 place attempts
 			cube_t const bucket(place_cylin_object(rgen, place_area, radius, height, (radius + trim_thickness), 1)); // place_at_z1=1
-			if (is_obj_placement_blocked(bucket, place_area, 1) || overlaps_other_room_obj(bucket, objs_start)) continue; // bad placement
+			if (overlaps_obj_or_placement_blocked(bucket, place_area, objs_start)) continue; // bad placement
 			objs.emplace_back(bucket, TYPE_BUCKET, room_id, rgen.rand_bool(), 0, 0, tot_light_amt, SHAPE_CYLIN, LT_GRAY); // dir=0 (unused)
 			set_obj_id(objs); // used for setting water/liquid properties
+			break; // success
+		}
+	} // for n
+}
+void building_t::add_paint_cans_to_room(rand_gen_t &rgen, cube_t place_area, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned num) {
+	float const floor_spacing(get_window_vspace()), trim_thickness(get_trim_thickness());
+	vect_room_object_t &objs(interior->room_geom->objs);
+	place_area.z1() = zval + 1.5*get_flooring_thick(); // slightly above the flooring/rug to avoid z-fighting
+
+	for (unsigned n = 0; n < num; ++n) {
+		float const height(rgen.rand_uniform(0.08, 0.1)*floor_spacing), radius(0.44*height);
+
+		for (unsigned N = 0; N < 10; ++N) { // 10 place attempts
+			cube_t const pcan(place_cylin_object(rgen, place_area, radius, height, (radius + trim_thickness), 1)); // place_at_z1=1
+			if (overlaps_obj_or_placement_blocked(pcan, place_area, objs_start)) continue; // bad placement
+			objs.emplace_back(pcan, TYPE_PAINTCAN, room_id, 0, 0, 0, tot_light_amt, SHAPE_CYLIN, WHITE);
 			break; // success
 		}
 	} // for n
@@ -2592,11 +2608,19 @@ void building_t::add_garage_objs(rand_gen_t rgen, room_t const &room, float zval
 bool building_t::add_workshop_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	bool const in_basement(zval < ground_floor_z1);
 	cube_t const room_bounds(get_walkable_room_bounds(room));
+	// add TYPE_COUNTER? would there be space?
 	colorRGBA const &chair_color(chair_colors[rgen.rand() % NUM_CHAIR_COLORS]);
 	if (!add_desk_to_room(rgen, room, vect_cube_t(), chair_color, zval, room_id, tot_light_amt, objs_start, in_basement, 0, 1)) return 0; // no_computer=1
-	add_barrels_to_room (rgen, room, room_bounds, zval, room_id, tot_light_amt, objs_start, 1); // 1 barrel
-	add_boxes_and_crates(rgen, room, zval, room_id, tot_light_amt, objs_start, 4, in_basement, room_bounds, room_bounds); // up to 4
-	add_buckets_to_room (rgen, room_bounds, zval, room_id, tot_light_amt, objs_start, 1); // 1 bucket
+	add_room_lockers(rgen, room, zval, room_id, tot_light_amt, objs_start, room_bounds, RTYPE_WORKSHOP, rgen.rand_bool(), 0, 0); // may or may not fit
+	add_barrels_to_room   (rgen, room, room_bounds, zval, room_id, tot_light_amt, objs_start, 1); // 1 barrel
+	add_boxes_and_crates  (rgen, room, zval, room_id, tot_light_amt, objs_start, 4, in_basement, room_bounds, room_bounds); // up to 4
+	add_buckets_to_room   (rgen, room_bounds, zval, room_id, tot_light_amt, objs_start, 1); // 1 bucket
+	add_paint_cans_to_room(rgen, room_bounds, zval, room_id, tot_light_amt, objs_start, 1); // 1 paint can
+	bool const fext_dim(rgen.rand_bool()), fext_dir(rgen.rand_bool());
+
+	for (unsigned d = 0; d < 2; ++d) { // try two opposite walls; may or may not be placed
+		if (add_fire_ext_along_wall(room, zval, room_id, tot_light_amt, fext_dim, (fext_dir ^ bool(d)), rgen)) break;
+	}
 	if (!is_house) {add_door_sign("Workshop", room, zval, room_id);}
 	return 1;
 }

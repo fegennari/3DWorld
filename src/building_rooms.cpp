@@ -1304,7 +1304,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					r->assign_to(RTYPE_LAUNDRY, f);
 					added_laundry = 1;
 				}
-				else if (is_basement && !added_tc && !has_stairs && rgen.rand_bool() && add_workshop_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start)) { // workshop
+				else if (is_basement && !added_tc && !has_stairs && add_workshop_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start)) { // workshop
 					r->assign_to(RTYPE_WORKSHOP, f);
 				}
 				else if (!added_obj && !has_fireplace) { // unassigned empty room - make it a storage room
