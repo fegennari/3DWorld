@@ -1312,14 +1312,14 @@ void building_room_geom_t::add_barrel(room_object_t const &c) { // is_small=1
 	colorRGBA const wood_color(apply_light_color(c)), metal_color(apply_light_color(c, WHITE));
 	rgeom_mat_t &wood_mat (get_wood_material(1.0/c.dz(), 1, 0, 1, 0, WOOD_TYPE_FENCE));    //   shadowed, small
 	rgeom_mat_t &metal_mat(get_material(tid_nm_pair_t(get_rust_met_tid(), 0.0, 0), 0, 1)); // unshadowed, small
-	unsigned const ndiv(N_SPHERE_DIV), num_stacks(16), num_bands(4);
+	unsigned const ndiv(N_SPHERE_DIV), num_stacks(16);
 	float const tscale_x(3.0), tscale_y(1.0), ndiv_inv(1.0/ndiv), num_stacks_inv(1.0/num_stacks), zstep(c.dz()*num_stacks_inv);
 	float const radius(c.get_radius()), rbase(0.7*radius), delta_r(radius - rbase);
 	unsigned data_pos(wood_mat.itri_verts.size());
 	color_wrapper const cw(wood_color);
 	point p1(cube_bot_center(c)), p2(p1 + vector3d(0.0, 0.0, zstep));
 
-	for (unsigned n=0, rix=0; n < num_stacks; ++n) {
+	for (unsigned n = 0; n < num_stacks; ++n) {
 		float const t1(n  * num_stacks_inv), rs1(2.0*fabs(t1 - 0.5f)), r1(radius - delta_r*rs1*rs1);
 		float const t2(t1 + num_stacks_inv), rs2(2.0*fabs(t2 - 0.5f)), r2(radius - delta_r*rs2*rs2);
 		draw_segment(wood_mat, p1, p2, r1, r2, n, tscale_x, tscale_y, ndiv_inv, cw, ndiv, data_pos);
