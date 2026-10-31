@@ -2723,7 +2723,10 @@ void building_t::assign_correct_room_to_object(room_object_t &obj) const {
 	if (interior && obj.room_id < interior->rooms.size() && get_room(obj.room_id).contains_pt(center)) return; // already has the correct room
 	int const room_id(get_room_containing_pt(center));
 
-	if (room_id >= 0 && room_id != obj.room_id) { // room should be valid, but okay if not; don't update lighting if it's the same room
+	if (room_id < 0) { // room should be valid, except for attic
+		if (obj.room_id >= interior->rooms.size()) {obj.room_id = 0;} // at least ensure it's a valid index
+	}
+	else if (room_id != obj.room_id) { // don't update lighting if it's the same room
 		room_t const &room(get_room(room_id));
 		obj.room_id   = room_id;
 		obj.light_amt = 0.5f + 0.5f*(get_room_light_amt(room) + room.light_intensity); // blend 50% max light to avoid harsh changes when moving between rooms

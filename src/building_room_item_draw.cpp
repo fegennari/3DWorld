@@ -2146,6 +2146,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 			if (sw.empty() || sw.front().is_u_shape() || !sw.front().line_intersects(camera_bs, obj_center)) continue;
 		}
 		//if (shadow_only && type == TYPE_SHOEBOX) {} // draw as a cube? maybe TYPE_TOASTER and TYPE_FOLD_SHIRT as well?
+		assert(obj.room_id < building.interior->rooms.size());
 		room_t const &room(building.get_room(obj.room_id)); // incorrect but mostly unused for in_attic==1
 
 		if (player_in_building && !in_attic && obj.room_id != last_culled_room_ix && !obj.is_exterior()) { // new room; apply room-based VFC + occlusion culling
