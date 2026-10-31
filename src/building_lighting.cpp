@@ -1645,15 +1645,24 @@ void building_t::register_blinds_state_change() const {
 
 void building_t::update_room_object_and_update_indir_lighting(room_object_t &obj, room_object_t const &new_obj) const {
 	if (!enable_building_indir_lighting() || !is_light_occluder(obj)) {obj = new_obj; return;}
+	assert(has_room_geom());
 	float const floor_spacing(get_window_vspace());
-	unsigned const floor_ix(get_room(obj.room_id).get_floor_containing_zval(obj.zc(), floor_spacing));
 	static vector<unsigned> light_ids;
 	light_ids.clear();
-	get_lights_for_room_and_floor(obj.room_id, floor_ix, light_ids); // what about windows?
 
-	if (obj.room_id != new_obj.room_id) { // include second room if object changed rooms
-		unsigned const floor_ix2(get_room(new_obj.room_id).get_floor_containing_zval(new_obj.zc(), floor_spacing));
-		get_lights_for_room_and_floor(new_obj.room_id, floor_ix2, light_ids);
+	if (point_in_attic(obj.get_cube_center())) { // attic
+		for (auto i = interior->room_geom->objs.begin(); i != interior->room_geom->objs.end(); ++i) {
+			if (i->is_light_type() && i->in_attic()) {light_ids.push_back(i - interior->room_geom->objs.begin());}
+		}
+	}
+	else { // normal room
+		unsigned const floor_ix(get_room(obj.room_id).get_floor_containing_zval(obj.zc(), floor_spacing));
+		get_lights_for_room_and_floor(obj.room_id, floor_ix, light_ids); // what about windows?
+
+		if (obj.room_id != new_obj.room_id) { // include second room if object changed rooms
+			unsigned const floor_ix2(get_room(new_obj.room_id).get_floor_containing_zval(new_obj.zc(), floor_spacing));
+			get_lights_for_room_and_floor(new_obj.room_id, floor_ix2, light_ids);
+		}
 	}
 	bool do_update(light_ids.size() <= 2); // only update for 1-2 light rooms to avoid too much frame time
 
