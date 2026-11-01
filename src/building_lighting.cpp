@@ -946,6 +946,7 @@ class building_indir_light_mgr_t {
 			unsigned const window_ix(cur_job.lix & ~IS_WINDOW_BIT);
 			assert(window_ix < windows.size());
 			cube_with_ix_t const &window(windows[window_ix]);
+			assert(window.z1() < window.z2());
 			float surface_area(0.0);
 			light_cube = window;
 
@@ -994,6 +995,7 @@ class building_indir_light_mgr_t {
 			room_object_t const &ro(objs[cur_job.lix]);
 			// maybe light was removed by the player and re-assigned as another object
 			if (!ro.is_light_type() && ro.type != TYPE_BLOCKER) {is_running = 0; return;} // nothing to do?
+			assert(ro.is_strictly_normalized());
 			bool const light_in_basement(ro.z1() < b.ground_floor_z1), is_lamp(ro.type == TYPE_LAMP);
 			light_cube      = ro;
 			light_cube.z1() = light_cube.z2() = (ro.z1() - 0.01*ro.dz()); // set slightly below bottom of light
@@ -1549,7 +1551,7 @@ void building_t::get_all_windows(vect_cube_with_ix_t &windows) const { // Note: 
 		for (room_object_t const &c : interior->room_geom->objs) {
 			if (c.type != TYPE_BLINDS) continue;
 			blinds.push_back(c);
-			blinds.back().expand_in_dim(c.dim, wall_thickness); // make sure the intersect the windows
+			blinds.back().expand_in_dim(c.dim, wall_thickness); // make sure they intersect the windows
 		}
 	}
 	vect_vnctcc_t const &wall_quad_verts(get_all_drawn_window_verts_as_quads());
@@ -1568,9 +1570,10 @@ void building_t::get_all_windows(vect_cube_with_ix_t &windows) const { // Note: 
 
 		for (float z = tz1; z < tz2; z += 1.0) { // each floor
 			float const bot_edge(c.z1() + (z - tz1)*window_height);
-			set_cube_zvals(window, bot_edge+border_z, bot_edge+window_height-border_z); // subtract off border to get interior/open part of window
 
 			for (float xy = tx1; xy < tx2; xy += 1.0) { // windows along each wall
+				// subtract off border to get interior/open part of window; reset each window in case it was clipped by blinds
+				set_cube_zvals(window, bot_edge+border_z, bot_edge+window_height-border_z);
 				float const low_edge(c.d[!dim][0] + (xy - tx1)*window_width);
 				window.d[!dim][0] = low_edge + border_xy; // subtract off border to get interior/open part of window
 				window.d[!dim][1] = low_edge + window_width - border_xy;
