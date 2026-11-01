@@ -1685,11 +1685,11 @@ void building_t::update_room_object_and_update_indir_lighting(room_object_t &obj
 		}
 	}
 	else { // normal room
-		unsigned const floor_ix(get_room(obj.room_id).get_floor_containing_zval(obj.zc(), floor_spacing));
+		unsigned const floor_ix(get_floor_for_zval(obj.zc()));
 		get_lights_for_room_and_floor(obj.room_id, floor_ix, light_ids, 1); // lit_only=1; what about windows?
 
 		if (obj.room_id != new_obj.room_id) { // include second room if object changed rooms
-			unsigned const floor_ix2(get_room(new_obj.room_id).get_floor_containing_zval(new_obj.zc(), floor_spacing));
+			unsigned const floor_ix2(get_floor_for_zval(new_obj.zc()));
 			get_lights_for_room_and_floor(new_obj.room_id, floor_ix2, light_ids, 1); // lit_only=1
 		}
 	}

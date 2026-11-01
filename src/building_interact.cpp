@@ -986,14 +986,15 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 			door.expand_in_dim(obj.dim, get_wall_thickness());
 			remove_paint_in_cube(door, 1); // use the door before it's opened; inc_bullet_holes=1
 		}
-		obj.flags ^= RO_FLAG_OPEN; // toggle open/close
+		room_object_t new_obj(obj);
+		new_obj.flags ^= RO_FLAG_OPEN; // toggle open/close
+		update_room_object_and_update_indir_lighting(obj, new_obj);
 
 		if (type == TYPE_CLOSET) {
 			interior->room_geom->expand_object(obj, *this); // expand any boxes so that the player can pick them up
 			sound_scale = 0.25; // closets are quieter, to allow players to more easily hide
 		}
 		play_open_close_sound(obj, sound_origin);
-		register_indir_lighting_geom_change();
 		update_draw_data = 1;
 	}
 	else if (type == TYPE_MED_CAB) { // medicine cabinet
