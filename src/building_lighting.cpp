@@ -1378,6 +1378,33 @@ public:
 		// Note: if door state changed since this light was turned on, removing it may leave some light
 		if ((geom_changed || !light_is_on || (in_elevator && num_erased)) && (num_erased || is_cur_light)) {add_to_remove_queue(light_ix);} // must remove the light instead
 	}
+	void update_windows_blinds_change(building_t const &b) {
+		vect_cube_with_ix_t new_windows;
+		b.get_all_windows(new_windows);
+		assert(new_windows.size() == windows.size());
+		bool const do_update(!is_running && new_windows.size() == windows.size()); // should always be true?
+		
+		if (do_update) { // there should be only one window that gets here
+			for (unsigned w = 0; w < windows.size(); ++w) {
+				if (windows[w] == new_windows[w] || (windows[w].ix & 4)) continue; // no change or blocked bit is set, skip
+				cur_job = light_job_t((w | IS_WINDOW_BIT), 1); // is_neg=1
+				proc_cur_job_serial(b); // using old windows; must be serial
+			}
+		}
+		windows.swap(new_windows);
+		update_windows = 0; // windows is now current; may be unnecessary
+		build_bvh(b, get_camera_building_space()); // update blinds geom
+
+		if (do_update) {
+			for (unsigned w = 0; w < windows.size(); ++w) {
+				if (windows[w] == new_windows[w] || (windows[w].ix & 4)) continue; // no change or blocked bit is set, skip
+				cur_job = light_job_t((w | IS_WINDOW_BIT), 0); // is_neg=0
+				proc_cur_job_serial(b); // using new windows
+				mark_light_done(cur_job); // not needed?
+			}
+			lighting_updated = 1;
+		}
+	}
 	static cube_t get_valid_area(building_t const &b, point const &target, unsigned target_floor) {
 		cube_t VA;
 
@@ -1642,8 +1669,7 @@ void building_t::register_indir_lighting_geom_change(bool rebuild_bvh) const {
 	else {building_indir_light_mgr.invalidate_bvh();} // lazy rebuild
 }
 void building_t::register_blinds_state_change() const {
-	building_indir_light_mgr.invalidate_windows();
-	register_indir_lighting_geom_change();
+	building_indir_light_mgr.update_windows_blinds_change(*this);
 }
 
 void building_t::update_room_object_and_update_indir_lighting(room_object_t &obj, room_object_t const &new_obj) const {
