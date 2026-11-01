@@ -3460,13 +3460,14 @@ void building_t::get_rooms_for_door(door_t const &door, int room_ix[2]) const {
 		room_ix[side] = (r - interior->rooms.begin());
 	} // for r
 }
-void building_t::get_lights_for_room_and_floor(unsigned room_ix, unsigned floor_ix, vector<unsigned> &light_ids, bool lit_only) const {
+void building_t::get_lights_for_room_and_floor(unsigned room_ix, unsigned floor_ix, vector<unsigned> &light_ids, bool lit_only, bool no_closet) const {
 	assert(has_room_geom());
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
 		if (!i->is_light_type() || i->room_id != room_ix || get_floor_for_zval(i->z1()) != floor_ix) continue; // not a light, wrong room, or wrong floor
-		if (lit_only && !i->is_light_on()) continue;
+		if (lit_only  && !i->is_light_on()) continue;
+		if (no_closet &&  i->in_closet  ()) continue;
 		light_ids.push_back(i - interior->room_geom->objs.begin());
 	}
 }
@@ -3476,10 +3477,11 @@ void building_t::get_lights_near_door(unsigned door_ix, vector<unsigned> &light_
 	if (door.is_bars()) return; // jail bar doors do not affect lighting
 	int room_ix[2] = {};
 	get_rooms_for_door(door, room_ix);
+	bool const no_closet(!door.get_for_closet()); // ignore closet light if not a closet door
 	unsigned const floor_ix(get_floor_for_zval(get_door(door_ix).get_center_dim(2)));
 
 	for (unsigned d = 0; d < 2; ++d) {
-		if (room_ix[d] >= 0) {get_lights_for_room_and_floor((unsigned)room_ix[d], floor_ix, light_ids, lit_only);}
+		if (room_ix[d] >= 0) {get_lights_for_room_and_floor((unsigned)room_ix[d], floor_ix, light_ids, lit_only, no_closet);}
 	}
 }
 

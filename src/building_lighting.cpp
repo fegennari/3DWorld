@@ -1685,12 +1685,13 @@ void building_t::update_room_object_and_update_indir_lighting(room_object_t &obj
 		}
 	}
 	else { // normal room
+		bool const lit_only(1), no_closet(0); // could set no_closet=1 if we know obj/new_obj isn't in a closet
 		unsigned const floor_ix(get_floor_for_zval(obj.zc()));
-		get_lights_for_room_and_floor(obj.room_id, floor_ix, light_ids, 1); // lit_only=1; what about windows?
+		get_lights_for_room_and_floor(obj.room_id, floor_ix, light_ids, lit_only, no_closet); // what about windows?
 
 		if (obj.room_id != new_obj.room_id) { // include second room if object changed rooms
 			unsigned const floor_ix2(get_floor_for_zval(new_obj.zc()));
-			get_lights_for_room_and_floor(new_obj.room_id, floor_ix2, light_ids, 1); // lit_only=1
+			get_lights_for_room_and_floor(new_obj.room_id, floor_ix2, light_ids, lit_only, no_closet);
 		}
 	}
 	if (light_ids.size() > 2) {light_ids.clear();} // only update for 1-2 light rooms to avoid too much frame time

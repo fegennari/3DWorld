@@ -2843,7 +2843,7 @@ private:
 	void set_rgen_state_for_building(rand_gen_t &rgen) const;
 public:
 	void get_rooms_for_door(door_t const &door, int room_ix[2]) const;
-	void get_lights_for_room_and_floor(unsigned room_ix, unsigned floor_ix, vector<unsigned> &light_ids, bool lit_only) const;
+	void get_lights_for_room_and_floor(unsigned room_ix, unsigned floor_ix, vector<unsigned> &light_ids, bool lit_only, bool no_closet=0) const;
 	void get_lights_near_door(unsigned door_ix, vector<unsigned> &light_ids, bool lit_only) const;
 	bool is_cube_visible_through_door(point const &viewer, cube_t const &c, door_t const &door) const;
 	// ray queries
