@@ -1693,17 +1693,11 @@ void building_t::update_room_object_and_update_indir_lighting(room_object_t &obj
 			get_lights_for_room_and_floor(new_obj.room_id, floor_ix2, light_ids, 1); // lit_only=1
 		}
 	}
-	bool do_update(light_ids.size() <= 2); // only update for 1-2 light rooms to avoid too much frame time
-
-	if (do_update) {
-		for (unsigned lix : light_ids) {register_indir_lighting_state_change(lix, 0, 1, 1);} // remove; is_door_change=0, is_obj_move=1, remove_only=1
-	}
+	if (light_ids.size() > 2) {light_ids.clear();} // only update for 1-2 light rooms to avoid too much frame time
+	for (unsigned lix : light_ids) {register_indir_lighting_state_change(lix, 0, 1, 1);} // remove; is_door_change=0, is_obj_move=1, remove_only=1
 	obj = new_obj; // update object between passes
 	register_indir_lighting_geom_change(1); // rebuild_bvh=1
-
-	if (do_update) {
-		for (unsigned lix : light_ids) {register_indir_lighting_state_change(lix, 0, 1, 0);} // re-add; is_door_change=0, is_obj_move=1, remove_only=0
-	}
+	for (unsigned lix : light_ids) {register_indir_lighting_state_change(lix, 0, 1, 0);} // re-add; is_door_change=0, is_obj_move=1, remove_only=0
 }
 void building_t::remove_room_object_and_update_indir_lighting(room_object_t &obj) const {
 	room_object_t new_obj(obj);

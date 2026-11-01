@@ -1120,27 +1120,17 @@ bool building_t::adjust_blinds_state(unsigned obj_ix) {
 void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_building, bool by_player, point const &actor_pos) { // called by the player or AI
 	assert(interior);
 	door_t &door(interior->get_door(door_ix));
+	bool const update_indir(by_player && enable_building_indir_lighting());
+	static vector<unsigned> light_ids;
 
-	// update indir lighting state if needed; for now this is only for player actions to avoid thread safety issues and too many updates
-	if (by_player && enable_building_indir_lighting()) {
-		// Note: only have to register geom change if the light is on the same floor as the player, but this should always be true if the player just closed this door
-		static vector<unsigned> light_ids;
+	// update indir lighting state if needed; for now this is only for player actions to avoid thread safety issues and too many updates;
+	// only have to register geom change if the light is on the same floor as the player, but this should always be true if the player just closed this door
+	if (update_indir) {
 		get_lights_near_door(door_ix, light_ids, 1); // lit_only=1; what about windows?
-		bool do_update(light_ids.size() <= 2); // only update for 1-2 lights to avoid too much frame time from retail, parking garage, backrooms, etc.
-
-		if (do_update) {
-			for (unsigned lix : light_ids) {register_indir_lighting_state_change(lix, 1, 0, 1);} // remove; is_door_change=1, is_obj_move=0, remove_only=1
-		}
-		door.toggle_open_state(player_in_this_building);
-		register_indir_lighting_geom_change(1); // rebuild_bvh=1
-
-		if (do_update) {
-			for (unsigned lix : light_ids) {register_indir_lighting_state_change(lix, 1, 0, 0);} // remove; is_door_change=1, is_obj_move=0, remove_only=0
-		}
+		if (light_ids.size() > 2) {light_ids.clear();} // only update for 1-2 lights to avoid too much frame time from retail, parking garage, backrooms, etc.
+		for (unsigned lix : light_ids) {register_indir_lighting_state_change(lix, 1, 0, 1);} // remove; is_door_change=1, is_obj_move=0, remove_only=1
 	}
-	else {
-		door.toggle_open_state(/*by_player*/player_in_this_building); // allow partial open/animated door if player is in this building
-	}
+	door.toggle_open_state(/*by_player*/player_in_this_building); // allow partial open/animated door if player is in this building
 	// we changed the door state, but navigation should adapt to this, except for doors on stairs (which are special)
 	if ( door.on_stairs) {invalidate_nav_graph();} // any in-progress paths may have people walking to and stopping at closed/locked doors
 	if (!door.get_for_closet()) {interior->door_state_updated = 1;} // required for AI navigation logic to adjust to this change; what about backrooms doors?
@@ -1167,6 +1157,10 @@ void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_buildin
 		cube_t door_exp(door);
 		door_exp.expand_in_dim(door.dim, 0.6*get_wall_thickness()); // make sure decals are included
 		remove_paint_in_cube(door_exp, 1); // remove any paint/markers/bullet holes that was over the closed door; inc_bullet_holes=1
+	}
+	if (update_indir) { // after toggling closet open flag, etc.
+		register_indir_lighting_geom_change(1); // rebuild_bvh=1
+		for (unsigned lix : light_ids) {register_indir_lighting_state_change(lix, 1, 0, 0);} // remove; is_door_change=1, is_obj_move=0, remove_only=0
 	}
 }
 void building_t::notify_door_fully_closed_state(door_t const &door) {
