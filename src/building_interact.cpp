@@ -785,8 +785,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		}
 	}
 	else if (type == TYPE_LOCKER) {
-		if (!obj.is_open() && (obj.flags & RO_FLAG_NONEMPTY)) { // RO_FLAG_NONEMPTY indicates locked
-			
+		if (!obj.is_open() && (obj.flags & RO_FLAG_NONEMPTY)) { // RO_FLAG_NONEMPTY indicates locked			
 			if (player_has_room_key() & (1 << LOCKER_KEY_IX)) { // unlock with a locker key
 				print_text_onscreen("Unlocked", GREEN, 1.0, 1.5*TICKS_PER_SECOND, 0);
 				assert(obj_ix > 0);
@@ -846,7 +845,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 			}
 		}
 	}
-	else if (type == TYPE_FRIDGE) {
+	else if (type == TYPE_FRIDGE) { // Note: not supported by the current model
 		obj.flags       ^= RO_FLAG_OPEN; // toggle open/closed
 		update_draw_data = 1;
 		gen_sound_thread_safe((obj.is_open() ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_DOOR_CLOSE), local_center, 0.4, 0.67);
@@ -932,7 +931,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 	}
 	else if (obj.is_shower()) { // shower
 		// if (interior->room_geom->cube_intersects_moved_obj(c_test)) continue; // not yet needed
-		if (type == TYPE_SHOWER && can_open_bathroom_stall_or_shower(obj, int_pos, int_dir)) { // open/close shower door
+		if (type == TYPE_SHOWER && can_open_bathroom_stall_or_shower(obj, int_pos, int_dir)) { // open/close shower door; doesn't affect lighting since it's transparent
 			obj.flags       ^= RO_FLAG_OPEN; // toggle open/close
 			sound_scale      = 0.35;
 			update_draw_data = 1;
@@ -956,7 +955,9 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 	else if (type == TYPE_SHOWERTUB) { // open/close curtains
 		bool const side(query_ray_end[!obj.dim] > obj.get_center_dim(!obj.dim));
 		if (obj.taken_level & (1 << unsigned(side))) return 0; // already taken
-		obj.flags ^= (side ? RO_FLAG_IS_ACTIVE : RO_FLAG_OPEN); // toggle open/close using two different flags for the left vs. right curtains
+		room_object_t new_obj(obj);
+		new_obj.flags ^= (side ? RO_FLAG_IS_ACTIVE : RO_FLAG_OPEN); // toggle open/close using two different flags for the left vs. right curtains
+		update_room_object_and_update_indir_lighting(obj, new_obj);
 		gen_sound_thread_safe_at_player(SOUND_SLIDING, 0.5, 1.5);
 		sound_scale      = 0.4;
 		update_draw_data = 1;

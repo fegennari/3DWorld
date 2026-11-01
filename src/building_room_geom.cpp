@@ -2415,14 +2415,33 @@ cube_t get_shower_tub_tiled_area(room_object_t const &c, cube_t const &wall) { /
 	tiled_area.d[ c.dim][     !c.dir] += (     c.dir ?  1.0 : -1.0)*tile_thickness;
 	return tiled_area;
 }
+void get_shower_tub_curtains(room_object_t const &c, cube_t &crod, cube_t stc[2]) {
+	bool const shower_dir(c.flags & RO_FLAG_ADJ_HI); // adjacent wall
+	float const width(c.get_width()), depth(c.get_depth()), height(c.dz()), crod_radius(0.025*depth);
+	cube_t const wall(get_shower_tub_wall(c));
+	set_wall_width(crod, (c.z1() + 0.9*height), crod_radius, 2); // Z
+	set_wall_width(crod, (c.d[c.dim][c.dir] + (c.dir ? -1.0 : 1.0)*1.2*crod_radius), crod_radius, c.dim);
+	crod.d[!c.dim][ shower_dir] = c.d[!c.dim][shower_dir]; // room wall
+	crod.d[!c.dim][!shower_dir] = wall.d[!c.dim][shower_dir]; // shower wall
+	cube_t curtains(c);
+	curtains.z1() += 0.1*height;
+	curtains.z2()  = crod.z2() + 0.5*crod_radius;
+	curtains.d[c.dim][ c.dir] += (c.dir ? 1.0 : -1.0)*1.0*crod_radius; // outer
+	curtains.d[c.dim][!c.dir]  = crod.d[c.dim][c.dir]; // inner
+	curtains.d[!c.dim][!shower_dir] = wall.d[!c.dim][shower_dir]; // shower wall
+
+	for (unsigned d = 0; d < 2; ++d) { // each side
+		if (c.taken_level & (1<<d)) continue; // this curtain has been taken
+		float const curtain_width(((d ? !c.is_active() : c.is_open()) ? 0.15 : 0.45)*width); // uses two different flags for low vs. high sides
+		stc[d] = curtains;
+		stc[d].d[!c.dim][!d] = curtains.d[!c.dim][d] + (d ? -1.0 : 1.0)*curtain_width;
+	}
+}
 void building_room_geom_t::add_shower_tub(room_object_t const &c, tid_nm_pair_t const &wall_tex, colorRGBA const &trim_color, float tscale, bool inc_lg, bool inc_sm) {
 	bool const shower_dir(c.flags & RO_FLAG_ADJ_HI); // adjacent wall
-	float const width(c.get_width()), depth(c.get_depth()), height(c.dz());
 	cube_t const wall(get_shower_tub_wall(c));
-	float const inner_wall_pos(wall.d[!c.dim][shower_dir]), crod_radius(0.025*depth);
-	cube_t crod;
-	set_wall_width(crod, (c.z1() + 0.9*height), crod_radius, 2);
-	set_wall_width(crod, (c.d[c.dim][c.dir] + (c.dir ? -1.0 : 1.0)*1.2*crod_radius), crod_radius, c.dim);
+	cube_t crod, stc[2];
+	get_shower_tub_curtains(c, crod, stc);
 
 	if (inc_lg) {
 		// draw end wall
@@ -2434,40 +2453,29 @@ void building_room_geom_t::add_shower_tub(room_object_t const &c, tid_nm_pair_t 
 		cube_t const tiled_area(get_shower_tub_tiled_area(c, wall));
 		tile_mat.add_cube_to_verts(tiled_area, tile_color, zero_vector, (EF_Z12 | ~get_face_mask(c.dim, c.dir)), 0, 0, 0, 1); // inverted; skip top, bottom, and front
 		// draw curtains using blinds texture
-		cube_t curtains(c);
-		curtains.z1() += 0.1*height;
-		curtains.z2()  = crod.z2() + 0.5*crod_radius;
-		curtains.d[c.dim][ c.dir] += (c.dir ? 1.0 : -1.0)*1.0*crod_radius; // outer
-		curtains.d[c.dim][!c.dir]  = crod.d[c.dim][c.dir]; // inner
-		curtains.d[!c.dim][!shower_dir] = inner_wall_pos; // shower wall
 		tid_nm_pair_t const curtains_tex(get_blinds_tid(), get_blinds_nm_tid(), 0.0, 0.0, 0.0, 0.0, 1); // shadowed
 		rgeom_mat_t &curtains_mat(get_material(curtains_tex));
 		colorRGBA const curtains_color(apply_light_color(c, WHITE));
 
 		for (unsigned oi = 0; oi < 2; ++oi) { // {outer, inner}
 			for (unsigned d = 0; d < 2; ++d) { // each side
-				if (c.taken_level & (1<<d)) continue; // this curtain has been taken
-				float const curtain_width(((d ? !c.is_active() : c.is_open()) ? 0.15 : 0.45)*width); // uses two different flags for low vs. high sides
-				(c.dim ? curtains_mat.tex.tscale_x : curtains_mat.tex.tscale_y) = 0.2/curtain_width; // okay to set since tscale isn't used as a key
-				cube_t curtain(curtains);
-				curtain.d[!c.dim][!d] = curtains.d[!c.dim][d] + (d ? -1.0 : 1.0)*curtain_width;
+				cube_t curtain(stc[d]);
+				if (curtain.is_all_zeros()) continue; // this curtain has been taken
+				(c.dim ? curtains_mat.tex.tscale_x : curtains_mat.tex.tscale_y) = 0.2/curtain.get_sz_dim(!c.dim); // okay to set since tscale isn't used as a key
+				if (oi == 0) {curtain.translate_dim(c.dim, (c.dir ? -1.0 : 1.0)*(crod.dz() + curtain.get_sz_dim(c.dim)));} // translate to inside of curtain rod
 				curtains_mat.add_cube_to_verts(curtain, curtains_color, curtain.get_llc(), EF_Z1, c.dim); // skip bottom edge
 			}
-			if (oi == 0) {curtains.translate_dim(c.dim, (c.dir ? -1.0 : 1.0)*(2.0*crod_radius + curtains.get_sz_dim(c.dim)));} // translate to inside of curtain rod
 		} // for oi
 	}
 	if (inc_sm) {
 		// draw shower head
-		float const wall_pos(c.d[!c.dim][shower_dir]), extent_amt((shower_dir ? -1.0 : 1.0)*0.05*depth);
+		float const depth(c.get_depth()), wall_pos(c.d[!c.dim][shower_dir]), extent_amt((shower_dir ? -1.0 : 1.0)*0.05*depth);
 		add_shower_head(c, depth, wall_pos, extent_amt, !c.dim);
 		// draw curtain rod
-		crod.d[!c.dim][ shower_dir] = c.d[!c.dim][shower_dir]; // room wall
-		crod.d[!c.dim][!shower_dir] = inner_wall_pos; // shower wall
 		rgeom_mat_t &metal_mat(get_metal_material(1, 0, 1)); // shadowed, small, specular metal
 		metal_mat.add_ortho_cylin_to_verts(crod, apply_light_color(c, GRAY_BLACK), !c.dim, 0, 0); // sides only, no ends
 		// add wall trim to the side wall
-		float const window_vspacing(height*(1.0 + FLOOR_THICK_VAL_HOUSE));
-		float const trim_height(0.04*window_vspacing), trim_thickness(0.1*WALL_THICK_VAL*window_vspacing);
+		float const window_vspacing(c.dz()*(1.0 + FLOOR_THICK_VAL_HOUSE)), trim_height(0.04*window_vspacing), trim_thickness(0.1*WALL_THICK_VAL*window_vspacing);
 		unsigned const skip_faces(EF_Z1 | ~get_face_mask(c.dim, !c.dir)); // skip bottom and back
 		cube_t trim(wall);
 		trim.z2() = wall.z1() + trim_height;

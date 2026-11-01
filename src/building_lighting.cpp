@@ -64,6 +64,7 @@ void get_bed_leg_cubes_from_bed_cubes(room_object_t const &c, cube_t cubes[6]);
 colorRGBA get_shower_tile_color(room_object_t const &c);
 void get_shower_tile_cubes(room_object_t const &c, cube_t cubes[3]);
 cube_t get_shower_tub_tiled_area(room_object_t const &c, cube_t const &wall);
+void get_shower_tub_curtains(room_object_t const &c, cube_t &crod, cube_t cc[2]);
 
 bool check_indir_enabled(bool in_basement, bool in_attic) {
 	if (in_basement) return INDIR_BASEMENT_EN;
@@ -652,7 +653,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			get_shower_tile_cubes(*c, cubes);
 			add_colored_cubes(cubes, 3, get_shower_tile_color(*c), cc);
 		}
-		else if (type == TYPE_SHOWERTUB) { // includes wall and tile, but not curtains since they're dynamic
+		else if (type == TYPE_SHOWERTUB) { // includes wall and tile and curtains
 			cube_t const wall(get_shower_tub_wall(*c));
 			cc.emplace_back(wall, color);
 			float const thickness(0.1*wall.get_sz_dim(!dim));
@@ -661,6 +662,12 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc, cube_t const &ex
 			for (unsigned d = 0; d < 2; ++d) {sides[d].d[!dim][!d] = tiled_area.d[!dim][d] - (d ? 1.0 : -1.0)*thickness;} // sides
 			sides[2].d[dim][dir] = tiled_area.d[dim][!dir] + (dir ? 1.0 : -1.0)*thickness;
 			add_colored_cubes(sides, 3, get_shower_tile_color(*c), cc);
+			cube_t crod, stc[2];
+			get_shower_tub_curtains(*c, crod, stc);
+
+			for (unsigned d = 0; d < 2; ++d) { // each side
+				if (!stc[d].is_all_zeros()) {cc.emplace_back(stc[d], WHITE);} // add if not taken
+			}
 		}
 		else if (type == TYPE_COM_FRIDGE) {
 			cube_t bot, top, body, cf_int;
