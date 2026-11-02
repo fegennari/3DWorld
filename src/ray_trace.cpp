@@ -461,7 +461,7 @@ void cast_light_ray(lmap_manager_t *lmgr, point p1, point p2, float weight, floa
 	vector3d v_new, v_ref;
 
 	for (unsigned n = 0; n < num_splits; ++n) {
-		vector3d const rand_dir(rgen.signed_rand_vector().get_norm());
+		vector3d const rand_dir(rgen.signed_rand_vector_spherical_norm()); // TODO: use halton_sphere() like building indir lighting
 
 		if (specular > 0.0 && shine > 1.0 && specular >= rgen.rand_float()) { // specular reflection
 			if (v_ref == zero_vector) {
