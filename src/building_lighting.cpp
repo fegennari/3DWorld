@@ -852,6 +852,21 @@ public:
 	bool empty() const {return (size() == 0);}
 };
 
+float halton(int index, int base) { // standard radical inverse calculation for Halton Sequence
+	float f(1.0f), r(0.0f);
+	while (index > 0) {
+		f  = f / static_cast<float>(base);
+		r += f * static_cast<float>(index % base);
+		index = index / base;
+	}
+	return r;
+}
+template<int base1, int base2> vector3d halton_sphere(int index) {
+	float const u(halton(index, base1)), v(halton(index, base2)); // get 2D low-discrepancy points in [0, 1)
+	float const z(1.0f - 2.0f*u), radius(sqrt(max(0.0f, (1.0f - z*z)))), phi(2.0f*PI*v);
+	return point(radius*cos(phi), radius*sin(phi), z); // map the 2D point to a uniform sphere
+}
+
 class building_indir_light_mgr_t {
 	bool is_running=0, kill_thread=0, lighting_updated=0, needs_to_join=0, need_bvh_rebuild=0, update_windows=0, target_in_extb=0;
 	int cur_bix=-1, cur_floor=-1, last_room_id=-1, timer_val=0;
@@ -911,9 +926,8 @@ class building_indir_light_mgr_t {
 		last_room_id  = room_id;
 	}
 	void init_ray_directions() {
-		rand_gen_t rgen;
 		ray_directions.resize(4096);
-		for (vector3d &dir : ray_directions) {dir = rgen.signed_rand_vector_spherical_norm();}
+		for (int i = 0; i < ray_directions.size(); ++i) {ray_directions[i] = halton_sphere<2, 3>(i+1);}
 	}
 	vector3d const &get_ray_dir(unsigned &ix) const {
 		assert(!ray_directions.empty());
@@ -948,6 +962,7 @@ class building_indir_light_mgr_t {
 		cube_t light_cube;
 		colorRGBA lcolor, pri_lcolor;
 		vector3d light_dir; // points toward the light
+		unsigned light_shape(SHAPE_CUBE);
 
 		if (is_window) { // window
 			unsigned const window_ix(cur_job.lix & ~IS_WINDOW_BIT);
@@ -1011,6 +1026,7 @@ class building_indir_light_mgr_t {
 			in_attic        = ro.in_attic();
 			in_ext_basement = (light_in_basement && b.point_in_extended_basement_not_basement(light_center));
 			in_jail_cell    = (in_ext_basement && b.interior->has_jail && is_jail_room(b.get_room(ro.room_id).get_room_type(0)));
+			light_shape     = ro.shape;
 			if (in_attic) {base_num_rays *= ((b.num_attic_lights > 1) ? 4 : 8);} // more rays in attic, since light is large and there are only 1-2 of them
 			if (is_lamp ) {base_num_rays /= 2;} // half the rays for lamps
 			if (is_lamp ) {dir = 2;} // onmidirectional; dim stays at 2/Z
@@ -1020,7 +1036,7 @@ class building_indir_light_mgr_t {
 			weight *= surface_area/0.0003f;
 			if (b.has_pri_hall())     {weight *= 0.70;} // floorplan is open and well lit, indir lighting value seems too high
 			if (ro.type == TYPE_LAMP) {weight *= 0.33;} // lamps are less bright
-			if (ro.is_round())        {light_radius = ro.get_radius();}
+			if (ro.is_round())        {light_radius = ro.get_radius();} // sphere or cylinder
 			if (in_jail_cell)         {weight *= 0.25;} // lower weight for jail cell lights since there are so many
 			if (in_attic)             {weight *= ATTIC_LIGHT_RADIUS_SCALE*ATTIC_LIGHT_RADIUS_SCALE;} // based on surface area rather than radius
 			else if (b.point_in_industrial(light_center)) {base_num_rays /= 4; half_step_sz = 0;} // many lights in industrial areas, fewer rays needed
@@ -1087,15 +1103,28 @@ class building_indir_light_mgr_t {
 			float const lum_thresh(0.1*ray_lcolor.get_luminance());
 			point origin, init_cpos, cpos;
 			vector3d init_cnorm, cnorm;
-
 			// select a random point on the light cube
-			for (unsigned N = 0; N < 10; ++N) { // 10 attempts to find a point within the light shape
-				for (unsigned d = 0; d < 3; ++d) {
-					float const lo(light_cube.d[d][0]), hi(light_cube.d[d][1]);
-					origin[d] = ((lo == hi) ? lo : rgen.rand_uniform(lo, hi));
-				}
-				if (light_radius == 0.0 || dist_xy_less_than(origin, light_center, light_radius)) break; // done/success
-			} // for N
+			int const ix(n+1);
+
+			if (light_shape == SHAPE_CUBE) {
+				unsigned const d1(is_window ? !dim : 0), d2(is_window ? 2 : 1);
+				if (is_window) {origin[dim] = light_cube.d[dim][dir];} // window plane
+				else {origin.z = light_cube.z1();} // bottom edge
+				origin[d1] = light_cube.d[d1][0] + halton(ix, 5)*light_cube.get_sz_dim(d1);
+				origin[d2] = light_cube.d[d2][0] + halton(ix, 7)*light_cube.get_sz_dim(d2);
+			}
+			else if (light_shape == SHAPE_SPHERE) {
+				origin = light_center + light_radius*halton_sphere<5, 7>(n+1);
+			}
+			else if (light_shape == SHAPE_CYLIN) {
+				float const r(light_radius*sqrt(halton(ix, 5))), phi(2.0f*PI*halton(ix, 7)), o1(r*cos(phi)), o2(r*sin(phi));
+				origin = light_center;
+				if      (dim == 0) {origin.y += o1; origin.z += o2;}
+				else if (dim == 1) {origin.x += o1; origin.z += o2;}
+				else if (dim == 2) {origin.x += o1; origin.y += o2;}
+				else {assert(0);}
+			}
+			else {assert(0);}
 			init_cpos = origin; // init value
 			bool const hit(b.ray_cast_interior(origin, pri_dir, args, init_cpos, init_cnorm, ccolor, &rgen));
 
