@@ -781,93 +781,6 @@ public:
 		p1 = ray_scale*p1 + ray_offset;
 		p2 = ray_scale*p2 + ray_offset;
 		colorRGBA const cw(color*weight);
-
-		if (display_mode & 0x20) { // new code: Ray Cast Building Light: 1232 10224.6 48.9179 8.29918
-		// Amanatides and Woo algorithm
-		int x(floor(p1.x)), y(floor(p1.y)), z(floor(p1.z));
-		int const x_end(floor(p2.x)), y_end(floor(p2.y)), z_end(floor(p2.z)); // avoided naming conflict with 'end' keyword
-		if (x == x_end && y == y_end && z == z_end) return; // same voxel, skip
-		float const dx(p2.x - p1.x), dy(p2.y - p1.y), dz(p2.z - p1.z);
-		float ray_length = sqrt(dx*dx + dy*dy + dz*dz);
-		if (ray_length < 1e-6f) return; // prevent division by zero for static rays
-		int const stepX((dx > 0) ? 1 : ((dx < 0) ? -1 : 0)), stepY((dy > 0) ? 1 : ((dy < 0) ? -1 : 0)), stepZ((dz > 0) ? 1 : ((dz < 0) ? -1 : 0));
-		// distance along ray to move exactly 1 voxel unit along each axis
-		float const tDeltaX((stepX != 0) ? abs(ray_length / dx) : std::numeric_limits<float>::infinity());
-		float const tDeltaY((stepY != 0) ? abs(ray_length / dy) : std::numeric_limits<float>::infinity());
-		float const tDeltaZ((stepZ != 0) ? abs(ray_length / dz) : std::numeric_limits<float>::infinity());
-		// calculate initial tMax boundaries
-		float tMaxX, tMaxY, tMaxZ;
-		if (stepX > 0) {tMaxX = (floor(p1.x) + 1.0f - p1.x) * tDeltaX;} else if (stepX < 0) {tMaxX = (p1.x - floor(p1.x)) * tDeltaX;} else {tMaxX = std::numeric_limits<float>::infinity();}
-		if (stepY > 0) {tMaxY = (floor(p1.y) + 1.0f - p1.y) * tDeltaY;} else if (stepY < 0) {tMaxY = (p1.y - floor(p1.y)) * tDeltaY;} else {tMaxY = std::numeric_limits<float>::infinity();}
-		if (stepZ > 0) {tMaxZ = (floor(p1.z) + 1.0f - p1.z) * tDeltaZ;} else if (stepZ < 0) {tMaxZ = (p1.z - floor(p1.z)) * tDeltaZ;} else {tMaxZ = std::numeric_limits<float>::infinity();}
-
-#if 1
-		float tCurrent = 0.0f; 
-		bool isFirstVoxel = true;
-
-		// Loop until we pass the total segment length
-		while (tCurrent < ray_length) {
-			float tNext = 0.0f;
-			int nextStepAxis = 0; // 0=X, 1=Y, 2=Z
-
-			// Find closest boundary cross point
-			if (tMaxX < tMaxY) {
-				if (tMaxX < tMaxZ) {
-					tNext = tMaxX;
-					nextStepAxis = 0;
-				} else {
-					tNext = tMaxZ;
-					nextStepAxis = 2;
-				}
-			} else {
-				if (tMaxY < tMaxZ) {
-					tNext = tMaxY;
-					nextStepAxis = 1;
-				} else {
-					tNext = tMaxZ;
-					nextStepAxis = 2;
-				}
-			}
-			if (!isFirstVoxel && (x >= 0 && x < (int)xsize && y >= 0 && y < (int)ysize && z >= 0 && z < (int)zsize)) {
-				data[(y*xsize + x)*zsize + z] += cw*(min(tNext, ray_length) - tCurrent);
-			}
-			isFirstVoxel = false;
-			// Advance ray parameter tracking
-			tCurrent = tNext;
-			// Actually transition into the next voxel
-			if (nextStepAxis == 0) {
-				x += stepX;
-				tMaxX += tDeltaX;
-			} else if (nextStepAxis == 1) {
-				y += stepY;
-				tMaxY += tDeltaY;
-			} else {
-				z += stepZ;
-				tMaxZ += tDeltaZ;
-			}
-			// Early escape if we cross past our destination coordinate bound
-			if ((stepX > 0 && x > x_end) || (stepX < 0 && x < x_end) ||
-				(stepY > 0 && y > y_end) || (stepY < 0 && y < y_end) ||
-				(stepZ > 0 && z > z_end) || (stepZ < 0 && z < z_end)) {
-				break;
-			}
-		} // end while
-#else
-		// traversal loop; skip the first step to avoid double counting
-		while (true) {
-			if (tMaxX < tMaxY) {
-				if (tMaxX < tMaxZ) {x += stepX; tMaxX += tDeltaX;} else {z += stepZ; tMaxZ += tDeltaZ;}
-			}
-			else {
-				if (tMaxY < tMaxZ) {y += stepY; tMaxY += tDeltaY;} else {z += stepZ; tMaxZ += tDeltaZ;}
-			}
-			if ((x >= 0 && x < (int)xsize && y >= 0 && y < (int)ysize && z >= 0 && z < (int)zsize)) {data[(y*xsize + x)*zsize + z] += cw;}
-			if (x == x_end && y == y_end && z == z_end) break; // done
-			if (tMaxX > ray_length && tMaxY > ray_length && tMaxZ > ray_length) break; // safeguard if floating point errors cause ray to overshoot
-		} // end while
-#endif
-		}
-		else { // old code: Ray Cast Building Light: 1232 9115.92 31.2787 7.39928
 		unsigned const nsteps(1 + unsigned(p2p_dist(p1, p2)*step_sz_inv)); // round up (dist can be 0)
 		vector3d const step((p2 - p1)/nsteps); // at least two points
 
@@ -876,7 +789,6 @@ public:
 			int const x(p1.x), y(p1.y), z(p1.z);
 			// Note: this is run by multiple threads writing to the same values, so is nondeterministic; removing light won't reset values to exactly 0
 			if ((x >= 0 && x < (int)xsize && y >= 0 && y < (int)ysize && z >= 0 && z < (int)zsize)) {data[(y*xsize + x)*zsize + z] += cw;}
-		}
 		}
 	}
 	void update_indir_light_texture(unsigned &tid, bool incremental) {
