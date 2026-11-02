@@ -866,6 +866,18 @@ template<int base1, int base2> vector3d halton_sphere(int index) {
 	float const z(1.0f - 2.0f*u), radius(sqrt(max(0.0f, (1.0f - z*z)))), phi(2.0f*PI*v);
 	return point(radius*cos(phi), radius*sin(phi), z); // map the 2D point to a uniform sphere
 }
+vector3d cosine_weighted_ray_dir(vector3d const &dir, unsigned dim, bool invert) {
+	// convert uniform sphere coordinates to a true cosine-weighted local distribution
+	float const v((dir.z + 1.0f) * 0.5f); // Map to [0, 1]
+	// calculate the scale needed to flatten the distribution into a cosine profile
+	float const current_radius(dir.xy_mag_sq());
+	float const scale((current_radius > 1e-5f) ? (sqrt(v) / current_radius) : 0.0f);
+	// lx and ly form the base disk, lz is the strong outward-facing cosine height
+	float const lx(dir.x*scale), ly(dir.y*scale), lz(sqrt(max(0.0f, 1.0f - v))), sign(invert ? -1.0f : 1.0f);
+	if (dim == 0) return vector3d(lz*sign, lx, ly); // X
+	if (dim == 1) return vector3d(lx, lz*sign, ly); // Y
+	return vector3d(lx, ly, lz*sign); // Z
+}
 
 class building_indir_light_mgr_t {
 	bool is_running=0, kill_thread=0, lighting_updated=0, needs_to_join=0, need_bvh_rebuild=0, update_windows=0, target_in_extb=0;
@@ -941,8 +953,9 @@ class building_indir_light_mgr_t {
 		return v_ref;
 	}
 	void calc_reflect_ray(point &pos, point const &cpos, vector3d &dir, vector3d const &cnorm, vector3d const &v_ref, unsigned &dir_ix, float tolerance) const {
+		unsigned const dim(get_max_dim(cnorm));
 		dir = (v_ref + get_ray_dir(dir_ix)).get_norm();
-		if (dot_product(dir, cnorm) < 0.0) {dir.negate();} // make sure it points away from the surface (is this needed?)
+		dir = cosine_weighted_ray_dir(dir, dim, (cnorm[dim] < 0.0));
 		pos = cpos + tolerance*dir; // move slightly away from the surface
 	}
 	void cast_light_rays(building_t const &b) {
@@ -1026,7 +1039,7 @@ class building_indir_light_mgr_t {
 			in_attic        = ro.in_attic();
 			in_ext_basement = (light_in_basement && b.point_in_extended_basement_not_basement(light_center));
 			in_jail_cell    = (in_ext_basement && b.interior->has_jail && is_jail_room(b.get_room(ro.room_id).get_room_type(0)));
-			light_shape     = ro.shape;
+			light_shape     = (is_lamp ? SHAPE_SPHERE : ro.shape);
 			if (in_attic) {base_num_rays *= ((b.num_attic_lights > 1) ? 4 : 8);} // more rays in attic, since light is large and there are only 1-2 of them
 			if (is_lamp ) {base_num_rays /= 2;} // half the rays for lamps
 			if (is_lamp ) {dir = 2;} // onmidirectional; dim stays at 2/Z
@@ -1095,9 +1108,10 @@ class building_indir_light_mgr_t {
 				ray_lcolor = pri_lcolor;
 			}
 			else { // omidirectional or sky ambient from windows
-				pri_dir = get_ray_dir(dir_ix); // should this be cosine weighted for windows? and clipped to the beamwidth for ceiling lights?
-				if ( is_window && ((pri_dir[dim] > 0.0) ^ dir))               {pri_dir[dim] *= -1.0;} // reflect light if needed about window plane to ensure it enters the room
-				if (!is_window && dir < 2 && (pri_dir[dim] > 0) != bool(dir)) {pri_dir[dim] *= -1.0;} // point in general light dir/hemisphere; doesn't seem to improve quality
+				pri_dir = get_ray_dir(dir_ix); // should this be clipped to the beamwidth for ceiling lights?
+				// reflect light if needed about window plane to ensure it enters the room, or point in general light dir/hemisphere;
+				// skip lamps and sphere lights, which are omnidirectional
+				if (light_shape != SHAPE_SPHERE) {pri_dir = cosine_weighted_ray_dir(pri_dir, dim, !dir);}
 				if (hanging && dot_product(pri_dir, light_dir) < 0.0) {pri_dir.negate();}
 			}
 			float const lum_thresh(0.1*ray_lcolor.get_luminance());
