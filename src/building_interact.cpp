@@ -36,7 +36,7 @@ void record_building_damage(float damage);
 bool use_vending_machine(room_object_t &obj);
 bool trash_held_object(room_object_t &trashcan);
 void pool_ball_in_pocket(unsigned ball_number);
-void refill_thirst();
+void refill_thirst(bool only_if_low=0);
 colorRGBA get_glow_color(float stime, bool fade);
 void play_hum_sound(point const &pos, float gain, float pitch);
 bool ceiling_fan_is_on(room_object_t &obj, vect_room_object_t const &objs);
@@ -677,7 +677,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		bool const is_urinal(type == TYPE_URINAL); // urinal is quieter and higher pitch
 		gen_sound_thread_safe(SOUND_FLUSH, local_center, (is_urinal ? 0.5 : 1.0), (is_urinal ? 1.25 : 1.0));
 		sound_scale = 0.5;
-		//refill_thirst(); // player can drink from toilet?
+		refill_thirst(1); // player can drink from toilet or urinal only if low
 	}
 	else if ((type == TYPE_KSINK && get_dishwasher_for_ksink(obj, dishwasher) && dishwasher.line_intersects(int_pos, query_ray_end)) || type == TYPE_DWASHER) { // dishwasher
 		gen_sound_thread_safe_at_player(SOUND_METAL_DOOR, 0.2, 0.75);
@@ -704,7 +704,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 				++obj.state_flags;
 				interior->room_geom->invalidate_static_geom();
 			}
-			//refill_thirst(); // player can drink from tub?
+			refill_thirst(1); // player can drink from tub only if low
 		}
 		if (obj.is_sink_type()) {
 			obj.flags ^= RO_FLAG_IS_ACTIVE; // toggle active bit, only for sinks for now

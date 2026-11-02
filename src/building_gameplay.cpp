@@ -898,9 +898,11 @@ public:
 	bool  player_holding_loaded_gun    () const {return (!carried.empty() && carried.back().type == TYPE_HANDGUN    && !carried.back().is_broken());}
 	bool  player_using_night_vision    () const {return (!carried.empty() && carried.back().type == TYPE_NV_GOGGLES);}
 	bool  was_room_stolen_from(unsigned room_id) const {return (rooms_stolen_from.find(room_id) != rooms_stolen_from.end());}
-	void  refill_thirst() {thirst = 1.0;}
 	void recharge_flashlight() {flashlight_battery = 1.0; charged_flashlight = 1;} // print onscreen text?
 
+	void  refill_thirst(bool only_if_low) {
+		if (!only_if_low || thirst < 0.2) {thirst = 1.0;}
+	}
 	bool can_open_door(door_t const &door) { // non-const because num_doors_unlocked is modified
 		if (!door.check_key_mask_unlocks(has_key)) {
 			string str("Door is locked");
@@ -1585,7 +1587,7 @@ bool player_holding_lit_flashlight() {return player_inventory.player_holding_lit
 float get_player_flashlight_power () {return player_inventory.get_flashlight_power();}
 void recharge_flashlight() {player_inventory.recharge_flashlight();}
 bool was_room_stolen_from(unsigned room_id) {return player_inventory.was_room_stolen_from(room_id);}
-void refill_thirst() {player_inventory.refill_thirst();}
+void refill_thirst(bool only_if_low) {player_inventory.refill_thirst(only_if_low);}
 void apply_building_fall_damage(float delta_z) {player_inventory.apply_fall_damage(delta_z, 0.5);} // dscale=0.5
 void get_dead_players_in_building(vector<dead_person_t> &dead_players, building_t const &building) {player_inventory.get_dead_players_in_building(dead_players, building);}
 
