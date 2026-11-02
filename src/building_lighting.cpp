@@ -777,18 +777,19 @@ public:
 	void set_step_sz(bool half_step_sz) {
 		step_sz_inv = (half_step_sz ? 2.0 : 1.0); // 1-2 steps per grid on average
 	}
-	void add_path_to_lmcs(point p1, point p2, float weight, colorRGBA const &color) {
+	void add_path_to_lmcs(point p1, point p2, float weight, colorRGBA const &color, bool skip_first_step) {
 		p1 = ray_scale*p1 + ray_offset;
 		p2 = ray_scale*p2 + ray_offset;
 		colorRGBA const cw(color*weight);
 		unsigned const nsteps(1 + unsigned(p2p_dist(p1, p2)*step_sz_inv)); // round up (dist can be 0)
 		vector3d const step((p2 - p1)/nsteps); // at least two points
+		if (skip_first_step) {p1 += step;}
 
 		for (unsigned s = 0; s < nsteps; ++s) {
-			p1 += step; // don't double count the first step
 			int const x(p1.x), y(p1.y), z(p1.z);
 			// Note: this is run by multiple threads writing to the same values, so is nondeterministic; removing light won't reset values to exactly 0
 			if ((x >= 0 && x < (int)xsize && y >= 0 && y < (int)ysize && z >= 0 && z < (int)zsize)) {data[(y*xsize + x)*zsize + z] += cw;}
+			p1 += step;
 		}
 	}
 	void update_indir_light_texture(unsigned &tid, bool incremental) {
@@ -1117,7 +1118,7 @@ class building_indir_light_mgr_t {
 
 			// room lights already contribute direct lighting, so we skip this ray; however, windows don't, so we add their primary ray contribution
 			if (is_window && /*!is_skylight_dir*/!is_skylight && init_cpos != origin) {
-				lmgr.add_path_to_lmcs(origin, init_cpos, weight, ray_lcolor*NUM_PRI_SPLITS); // scale color based on splits
+				lmgr.add_path_to_lmcs(origin, init_cpos, weight, ray_lcolor*NUM_PRI_SPLITS, 0); // scale color based on splits; skip_first_step=0
 			}
 			if (!hit) continue; // done
 			colorRGBA const init_color(ray_lcolor.modulate_with(ccolor));
@@ -1134,7 +1135,7 @@ class building_indir_light_mgr_t {
 					cpos = pos; // init value
 					bool const hit(b.ray_cast_interior(pos, dir, args, cpos, cnorm, ccolor, &rgen));
 					// accumulate light along the ray from pos to cpos (which is always valid) with color cur_color
-					if (cpos != pos) {lmgr.add_path_to_lmcs(pos, cpos, weight, cur_color);}
+					if (cpos != pos) {lmgr.add_path_to_lmcs(pos, cpos, weight, cur_color, 1);} // skip_first_step=1
 					if (!hit || bounce+1 == MAX_RAY_BOUNCES) break; // done on hit or last iteration
 					cur_color = cur_color.modulate_with(ccolor);
 					if (cur_color.get_luminance() < lum_thresh) break; // done
