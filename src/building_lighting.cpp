@@ -926,7 +926,7 @@ class building_indir_light_mgr_t {
 		last_room_id  = room_id;
 	}
 	void init_ray_directions() {
-		ray_directions.resize(4096);
+		ray_directions.resize(1 << 17); // 128K
 		for (int i = 0; i < ray_directions.size(); ++i) {ray_directions[i] = halton_sphere<2, 3>(i+1);}
 	}
 	vector3d const &get_ray_dir(unsigned &ix) const {
@@ -1085,7 +1085,7 @@ class building_indir_light_mgr_t {
 			if (kill_thread) continue;
 			rand_gen_t rgen;
 			rgen.set_state(n+1, cur_job.lix); // should be deterministic, though add_path_to_lmcs() is not (due to thread races)
-			unsigned dir_ix(rgen.rand() % ray_directions.size());
+			unsigned dir_ix(n % ray_directions.size());
 			vector3d pri_dir;
 			colorRGBA ray_lcolor(lcolor), ccolor(WHITE);
 			bool const is_skylight_dir(is_skylight && (n&1)); // alternate between sky ambient and sun/moon directional
