@@ -469,6 +469,28 @@ template<typename base> point rand_gen_template_t<base>::gen_rand_cube_point_xy(
 	return pt;
 }
 
+float halton(int index, int base) { // standard radical inverse calculation for Halton Sequence
+	float f(1.0f), r(0.0f);
+	while (index > 0) {
+		f  = f / static_cast<float>(base);
+		r += f * static_cast<float>(index % base);
+		index = index / base;
+	}
+	return r;
+}
+vector3d cosine_weighted_ray_dir(vector3d const &dir, unsigned dim, bool invert) {
+	// convert uniform sphere coordinates to a true cosine-weighted local distribution
+	float const v((dir.z + 1.0f) * 0.5f); // Map to [0, 1]
+	// calculate the scale needed to flatten the distribution into a cosine profile
+	float const current_radius(dir.xy_mag_sq());
+	float const scale((current_radius > 1e-5f) ? (sqrt(v) / current_radius) : 0.0f);
+	// lx and ly form the base disk, lz is the strong outward-facing cosine height
+	float const lx(dir.x*scale), ly(dir.y*scale), lz(sqrt(max(0.0f, 1.0f - v))), sign(invert ? -1.0f : 1.0f);
+	if (dim == 0) return vector3d(lz*sign, lx, ly); // X
+	if (dim == 1) return vector3d(lx, lz*sign, ly); // Y
+	return vector3d(lx, ly, lz*sign); // Z
+}
+
 
 // explicit template instantiations
 template struct rand_gen_template_t<rgen_core_t>;

@@ -852,33 +852,6 @@ public:
 	bool empty() const {return (size() == 0);}
 };
 
-float halton(int index, int base) { // standard radical inverse calculation for Halton Sequence
-	float f(1.0f), r(0.0f);
-	while (index > 0) {
-		f  = f / static_cast<float>(base);
-		r += f * static_cast<float>(index % base);
-		index = index / base;
-	}
-	return r;
-}
-template<int base1, int base2> vector3d halton_sphere(int index) {
-	float const u(halton(index, base1)), v(halton(index, base2)); // get 2D low-discrepancy points in [0, 1)
-	float const z(1.0f - 2.0f*u), radius(sqrt(max(0.0f, (1.0f - z*z)))), phi(2.0f*PI*v);
-	return point(radius*cos(phi), radius*sin(phi), z); // map the 2D point to a uniform sphere
-}
-vector3d cosine_weighted_ray_dir(vector3d const &dir, unsigned dim, bool invert) {
-	// convert uniform sphere coordinates to a true cosine-weighted local distribution
-	float const v((dir.z + 1.0f) * 0.5f); // Map to [0, 1]
-	// calculate the scale needed to flatten the distribution into a cosine profile
-	float const current_radius(dir.xy_mag_sq());
-	float const scale((current_radius > 1e-5f) ? (sqrt(v) / current_radius) : 0.0f);
-	// lx and ly form the base disk, lz is the strong outward-facing cosine height
-	float const lx(dir.x*scale), ly(dir.y*scale), lz(sqrt(max(0.0f, 1.0f - v))), sign(invert ? -1.0f : 1.0f);
-	if (dim == 0) return vector3d(lz*sign, lx, ly); // X
-	if (dim == 1) return vector3d(lx, lz*sign, ly); // Y
-	return vector3d(lx, ly, lz*sign); // Z
-}
-
 class building_indir_light_mgr_t {
 	bool is_running=0, kill_thread=0, lighting_updated=0, needs_to_join=0, need_bvh_rebuild=0, update_windows=0, target_in_extb=0;
 	int cur_bix=-1, cur_floor=-1, last_room_id=-1, timer_val=0;
