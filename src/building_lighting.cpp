@@ -750,7 +750,6 @@ class lmap_manager_local_t {
 	vector<unsigned char> tex_data;
 	unsigned xsize=0, ysize=0, zsize=0, update_block_ix=0;
 	vector3d ray_scale, ray_offset;
-	float step_sz_inv=0.0;
 	bool realloc_tid=0;
 
 	void update_elem(unsigned i) {
@@ -777,14 +776,11 @@ public:
 	void reset_all() {
 		for (colorRGB &c : data) {c = BLACK;}
 	}
-	void set_step_sz(bool half_step_sz) {
-		step_sz_inv = (half_step_sz ? 2.0 : 1.0); // 1-2 steps per grid on average
-	}
 	void add_path_to_lmcs(point p1, point p2, float weight, colorRGBA const &color, bool skip_first_step) {
 		p1 = ray_scale*p1 + ray_offset;
 		p2 = ray_scale*p2 + ray_offset;
 		colorRGBA const cw(color*weight);
-		unsigned const nsteps(1 + unsigned(p2p_dist(p1, p2)*step_sz_inv)); // round up (dist can be 0)
+		unsigned const nsteps(1 + unsigned(p2p_dist(p1, p2))); // round up (dist can be 0)
 		vector3d const step((p2 - p1)/nsteps); // at least two points
 		if (skip_first_step) {p1 += step;}
 
@@ -945,7 +941,7 @@ class building_indir_light_mgr_t {
 		unsigned base_num_rays(LOCAL_RAYS), dim(2), dir(0); // default dim is z; dir=2 is omnidirectional
 		float const tolerance(1.0E-5*valid_area.get_max_dim_sz());
 		bool const is_window(cur_job.lix & IS_WINDOW_BIT);
-		bool in_attic(0), in_ext_basement(0), is_skylight(0), in_jail_cell(0), half_step_sz(1), hanging(0);
+		bool in_attic(0), in_ext_basement(0), is_skylight(0), in_jail_cell(0), hanging(0);
 		int light_room_id(-1);
 		float weight(100.0), light_radius(0.0);
 		point light_center;
@@ -1029,12 +1025,12 @@ class building_indir_light_mgr_t {
 			if (ro.is_round())        {light_radius = ro.get_radius();} // sphere or cylinder
 			if (in_jail_cell)         {weight *= 0.25;} // lower weight for jail cell lights since there are so many
 			if (in_attic)             {weight *= ATTIC_LIGHT_RADIUS_SCALE*ATTIC_LIGHT_RADIUS_SCALE;} // based on surface area rather than radius
-			else if (b.point_in_industrial(light_center)) {base_num_rays /= 4; half_step_sz = 0;} // many lights in industrial areas, fewer rays needed
+			else if (b.point_in_industrial(light_center)) {base_num_rays /= 4;} // many lights in industrial areas, fewer rays needed
 			else if (b.is_restaurant() && b.interior->rooms.front().contains_pt(cube_bot_center(ro))) {base_num_rays /= 4;} // fewer rays in restaurant dining area
 			else if (light_in_basement) {
 				if (in_ext_basement) {
 					if      (b.interior->has_backrooms) {weight *= 0.20; base_num_rays /= 6;} // darker and fewer rays
-					else if (b.has_mall()             ) {weight *= 0.12; base_num_rays /= 8; half_step_sz = 0;} // darker and fewer rays, since there are so many lights
+					else if (b.has_mall()             ) {weight *= 0.12; base_num_rays /= 8;} // darker and fewer rays, since there are so many lights
 					else if (light_room_id == b.interior->pool.room_ix) {weight *= 0.5;} // extended basement pool room
 					else                                {weight *= 0.40; base_num_rays *= 2;} // regular extended basement; more rays to reduce noise
 				}
@@ -1047,11 +1043,10 @@ class building_indir_light_mgr_t {
 			}
 		} // end room light case
 		if (b.is_restroom()) {base_num_rays *= 4;} // more rays, since there are only 2 lights and 2-5 windows
-		if (b.check_pt_in_retail_room(light_center)) {weight *= 0.5; base_num_rays /= 5; half_step_sz = 0;} // many lights, fewer rays; windows or ceiling lights
+		if (b.check_pt_in_retail_room(light_center)) {weight *= 0.5; base_num_rays /= 5;} // many lights, fewer rays; windows or ceiling lights
 		if (light_room_id >= 0 && b.is_datacenter() && b.get_room(light_room_id).get_room_type(0) == RTYPE_SERVER) {base_num_rays /= 5;}
 		if (b.is_house  ) {weight *=  2.0;} // houses have dimmer lights and seem to work better with more indir
 		if (cur_job.neg ) {weight *= -1.0;}
-		if (half_step_sz) {weight *=  0.5;}
 		weight /= base_num_rays; // normalize to the number of rays
 		// we're counting primary rays for windows, use fewer primary splits to reduce noise at the cost of increased time
 		unsigned const NUM_PRI_SPLITS(is_window ? ((b.is_restaurant() || b.is_industrial()) ? 2 : 4) : 16);
@@ -1068,7 +1063,6 @@ class building_indir_light_mgr_t {
 			light_clip_area.z1() -= b.get_window_vspace();
 		}
 		ray_cast_args_t const args(light_clip_area, room_area, bvh, room_bvh, in_attic, in_ext_basement, b.is_restroom_with_high_ceil(), bcolors);
-		lmgr.set_step_sz(half_step_sz);
 		
 		// Note: dynamic scheduling is faster, and using blocks doesn't help
 #pragma omp parallel for schedule(dynamic) num_threads(num_rt_threads)
