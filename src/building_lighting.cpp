@@ -756,10 +756,13 @@ class lmap_manager_local_t {
 	void update_elem(unsigned i) {
 		float const light_scale(light_int_scale[LIGHTING_LOCAL]);
 		unsigned const off2(4*i);
-		colorRGB const &c(data[i]);
+		colorRGB &c(data[i]);
 		if (c == BLACK) {UNROLL_3X(tex_data[off2+i_] = 0;)}
 		else {
-			for (unsigned j = 0; j < 3; ++j) {tex_data[off2+j] = (unsigned char)(255*sqrt(CLIP_TO_01(c[j]*light_scale)));} // similar to gamma correction
+			for (unsigned j = 0; j < 3; ++j) { // similar to gamma correction
+				max_eq(c[j], 0.0f);
+				tex_data[off2+j] = (unsigned char)(255*sqrt(min(c[j]*light_scale, 1.0f)));
+			}
 		}
 	}
 public:
@@ -1046,11 +1049,11 @@ class building_indir_light_mgr_t {
 		if (b.is_restroom()) {base_num_rays *= 4;} // more rays, since there are only 2 lights and 2-5 windows
 		if (b.check_pt_in_retail_room(light_center)) {weight *= 0.5; base_num_rays /= 5; half_step_sz = 0;} // many lights, fewer rays; windows or ceiling lights
 		if (light_room_id >= 0 && b.is_datacenter() && b.get_room(light_room_id).get_room_type(0) == RTYPE_SERVER) {base_num_rays /= 5;}
-		if (b.is_house ) {weight *=  2.0;} // houses have dimmer lights and seem to work better with more indir
-		if (cur_job.neg) {weight *= -1.0;}
+		if (b.is_house  ) {weight *=  2.0;} // houses have dimmer lights and seem to work better with more indir
+		if (cur_job.neg ) {weight *= -1.0;}
+		if (half_step_sz) {weight *=  0.5;}
 		weight /= base_num_rays; // normalize to the number of rays
-		if (half_step_sz) {weight *= 0.5;}
-		unsigned NUM_PRI_SPLITS(is_window ? 4 : 16); // we're counting primary rays for windows, use fewer primary splits to reduce noise at the cost of increased time
+		unsigned const NUM_PRI_SPLITS(is_window ? 4 : 16); // we're counting primary rays for windows, use fewer primary splits to reduce noise at the cost of increased time
 		max_eq(base_num_rays, NUM_PRI_SPLITS);
 		int const num_rays(base_num_rays/NUM_PRI_SPLITS);
 		building_colors_t bcolors;
