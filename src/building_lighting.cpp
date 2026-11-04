@@ -1033,10 +1033,10 @@ class building_indir_light_mgr_t {
 			else if (b.is_restaurant() && b.interior->rooms.front().contains_pt(cube_bot_center(ro))) {base_num_rays /= 4;} // fewer rays in restaurant dining area
 			else if (light_in_basement) {
 				if (in_ext_basement) {
-					if      (b.interior->has_backrooms) {weight *= 0.2; base_num_rays /= 4;} // darker and fewer rays
-					else if (b.has_mall()             ) {weight *= 0.1; base_num_rays /= 8; half_step_sz = 0;} // darker and fewer rays, since there are so many lights
+					if      (b.interior->has_backrooms) {weight *= 0.20; base_num_rays /= 6;} // darker and fewer rays
+					else if (b.has_mall()             ) {weight *= 0.12; base_num_rays /= 8; half_step_sz = 0;} // darker and fewer rays, since there are so many lights
 					else if (light_room_id == b.interior->pool.room_ix) {weight *= 0.5;} // extended basement pool room
-					else                                {weight *= 0.4; base_num_rays *= 2;} // regular extended basement; more rays to reduce noise
+					else                                {weight *= 0.40; base_num_rays *= 2;} // regular extended basement; more rays to reduce noise
 				}
 				else if (b.has_parking_garage) {weight *= 0.25; base_num_rays /= 4;} // parking garages are even darker
 				else {weight *= 0.5; base_num_rays *= (b.is_house ? 4 : 2);} // basement is darker
@@ -1053,7 +1053,8 @@ class building_indir_light_mgr_t {
 		if (cur_job.neg ) {weight *= -1.0;}
 		if (half_step_sz) {weight *=  0.5;}
 		weight /= base_num_rays; // normalize to the number of rays
-		unsigned const NUM_PRI_SPLITS(is_window ? 4 : 16); // we're counting primary rays for windows, use fewer primary splits to reduce noise at the cost of increased time
+		// we're counting primary rays for windows, use fewer primary splits to reduce noise at the cost of increased time
+		unsigned const NUM_PRI_SPLITS(is_window ? ((b.is_restaurant() || b.is_industrial()) ? 2 : 4) : 16);
 		max_eq(base_num_rays, NUM_PRI_SPLITS);
 		int const num_rays(base_num_rays/NUM_PRI_SPLITS);
 		building_colors_t bcolors;
