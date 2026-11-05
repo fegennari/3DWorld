@@ -7,6 +7,7 @@
 #include "lightmap.h" // for light_source
 #include "cobj_bsp_tree.h"
 #include "profiler.h"
+#include <unordered_map>
 #include <thread>
 #include <queue>
 #include <mutex>
@@ -124,6 +125,10 @@ public:
 	void clear() {
 		cobj_tree_simple_type_t<colored_cube_t>::clear();
 		roof_tquads.clear();
+	}
+	void build_tree() {
+		nodes.clear(); // in case objs/roof_tquads wasn't cleared
+		build_tree_top(0); // verbose=0
 	}
 	bool ray_cast(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &ccolor) const {
 		if (nodes.empty()) return 0;
@@ -863,8 +868,9 @@ class building_indir_light_mgr_t {
 	deque<unsigned> remove_queue;
 	set<unsigned> lights_complete, lights_seen, lights_pend;
 	vector<vector3d> ray_directions;
-	vect_cube_with_ix_t windows;
+	vect_cube_with_ix_t windows; // ix bits are {dim, dir, blocked}
 	cube_bvh_t bvh, room_bvh;
+	std::unordered_map<unsigned, vect_colored_cube_t> objs_for_light; // TODO: shared_ptr or something to avoid caching many duplicates
 	lmap_manager_local_t lmgr;
 	std::thread rt_thread;
 
@@ -906,7 +912,7 @@ class building_indir_light_mgr_t {
 			room_objs.back().intersect_with_cube(room_area);
 		}
 		if (room_objs.size() > all_objs.size()/2) return; // most of the objects are in this room
-		room_bvh.build_tree_top(0); // verbose=0
+		room_bvh.build_tree();
 		room_area_out = room_area;
 		last_room_id  = room_id;
 	}
@@ -1052,11 +1058,24 @@ class building_indir_light_mgr_t {
 		unsigned const NUM_PRI_SPLITS(is_window ? ((b.is_restaurant() || b.is_industrial()) ? 2 : 4) : 16);
 		max_eq(base_num_rays, NUM_PRI_SPLITS);
 		int const num_rays(base_num_rays/NUM_PRI_SPLITS);
+
+		if (cur_job.neg) { // restore bvh to the state it was in when this light was added, in case objects, doors, blinds, etc. changed, so that removal exactly cancels
+			auto it(objs_for_light.find(cur_job.lix));
+
+			if (it != objs_for_light.end()) {
+				bvh.get_objs() = it->second; // bvh.roof_tquads remains valid since they can't change
+				bvh.build_tree();
+				last_room_id = -1;
+				objs_for_light.erase(it); // no longer valid after update; will re-cache with new objs when adding light back in
+			}
+		}
 		building_colors_t bcolors;
 		b.set_building_colors(bcolors);
 		cube_t room_area, light_clip_area(valid_area);
 		get_room_bvh(b, light_room_id, room_area); // build per-room BVH if needed
-		
+		// cache so that we can remove this light later; can skip non-house windows that don't have blinds
+		// TODO: window has_covering bit
+		if (!cur_job.neg && !is_skylight && !(is_window && !b.is_residential())) {objs_for_light[cur_job.lix] = bvh.get_objs();}
 		// include basement area of house if on ground floor because the basement stairs are open at the top and get their light from above, and are too dark without this;
 		// we don't need the lights in the basement or the coll cubes, we only need to not clip light rays to the ground floor zval
 		if (b.is_house && b.has_basement() && camera_pos.z > b.ground_floor_z1 && camera_pos.z < (b.ground_floor_z1 + b.get_window_vspace())) {
@@ -1217,6 +1236,7 @@ public:
 		light_ids.clear();
 		lights_to_sort.clear();
 		windows.clear();
+		objs_for_light.clear();
 		bvh.clear();
 	}
 	void end_rt_job() {
@@ -1313,6 +1333,10 @@ public:
 		init_lmgr(b);
 		cast_light_rays(b);
 	}
+	void proc_light_ix(unsigned light_ix, bool is_neg, building_t const &b) {
+		cur_job = light_job_t(light_ix, is_neg);
+		proc_cur_job_serial(b);
+	}
 	unsigned add_light_jobs(building_t const &b, point const &target) {
 		unsigned const num_pend(light_queue.size());
 		assert(num_pend <= INDIR_LIGHT_BATCH_SIZE);
@@ -1383,8 +1407,7 @@ public:
 
 			if (remove_only) { // remove lighting with the old geom
 				lights_complete.erase(light_ix); // light is no longer completed; erase its state
-				cur_job = light_job_t(light_ix, 1); // is_neg=1
-				proc_cur_job_serial(b); // must be serial so that it completes before the door or object is moved
+				proc_light_ix(light_ix, 1, b); // must be serial so that it completes before the door or object is moved; is_neg=1
 			}
 			// we can do nothing here and the lighting will get updated, but there may be a frame where indir lighting flickers or lags behind; updating looks better but adds more frame time
 			else if (0/*is_obj_move*/) { // re-add lighting with the new geom
@@ -1409,8 +1432,7 @@ public:
 		if (do_update) { // there should be only one window that gets here
 			for (unsigned w = 0; w < windows.size(); ++w) {
 				if (windows[w] == new_windows[w] || (windows[w].ix & 4)) continue; // no change or blocked bit is set, skip
-				cur_job = light_job_t((w | IS_WINDOW_BIT), 1); // is_neg=1
-				proc_cur_job_serial(b); // using old windows; must be serial
+				proc_light_ix((w | IS_WINDOW_BIT), 1, b); // using old windows; must be serial; is_neg=1
 			}
 		}
 		windows.swap(new_windows);
@@ -1420,8 +1442,7 @@ public:
 		if (do_update) {
 			for (unsigned w = 0; w < windows.size(); ++w) {
 				if (windows[w] == new_windows[w] || (windows[w].ix & 4)) continue; // no change or blocked bit is set, skip
-				cur_job = light_job_t((w | IS_WINDOW_BIT), 0); // is_neg=0
-				proc_cur_job_serial(b); // using new windows
+				proc_light_ix((w | IS_WINDOW_BIT), 0, b); // using new windows; is_neg=0
 				mark_light_done(cur_job); // not needed?
 			}
 			lighting_updated = 1;
@@ -1509,8 +1530,7 @@ public:
 		bvh.clear();
 		b.gather_interior_cubes(bvh.get_objs(), valid_area);
 		if (b.point_in_attic(target)) {b.get_attic_roof_tquads(bvh.roof_tquads);}
-		//highres_timer_t timer("Build BVH");
-		bvh.build_tree_top(0); // verbose=0
+		bvh.build_tree();
 		need_bvh_rebuild = 0;
 		last_room_id     = -1;
 	}
