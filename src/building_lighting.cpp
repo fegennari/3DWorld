@@ -870,7 +870,9 @@ class building_indir_light_mgr_t {
 	vector<vector3d> ray_directions;
 	vect_cube_with_ix_t windows; // ix bits are {dim, dir, blocked}
 	cube_bvh_t bvh, room_bvh;
-	std::unordered_map<unsigned, vect_colored_cube_t> objs_for_light; // TODO: shared_ptr or something to avoid caching many duplicates
+	typedef std::shared_ptr<vect_colored_cube_t> sp_vect_colored_cube_t;
+	sp_vect_colored_cube_t last_objs;
+	std::unordered_map<unsigned, sp_vect_colored_cube_t> objs_for_light; // shared_ptr to avoid caching many duplicates
 	lmap_manager_local_t lmgr;
 	std::thread rt_thread;
 
@@ -1063,7 +1065,7 @@ class building_indir_light_mgr_t {
 			auto it(objs_for_light.find(cur_job.lix));
 
 			if (it != objs_for_light.end()) {
-				bvh.get_objs() = it->second; // bvh.roof_tquads remains valid since they can't change
+				bvh.get_objs() = *it->second; // bvh.roof_tquads remains valid since they can't change
 				bvh.build_tree();
 				last_room_id = -1;
 				objs_for_light.erase(it); // no longer valid after update; will re-cache with new objs when adding light back in
@@ -1073,9 +1075,13 @@ class building_indir_light_mgr_t {
 		b.set_building_colors(bcolors);
 		cube_t room_area, light_clip_area(valid_area);
 		get_room_bvh(b, light_room_id, room_area); // build per-room BVH if needed
+
 		// cache so that we can remove this light later; can skip non-house windows that don't have blinds
 		// TODO: window has_covering bit
-		if (!cur_job.neg && !is_skylight && !(is_window && !b.is_residential())) {objs_for_light[cur_job.lix] = bvh.get_objs();}
+		if (!cur_job.neg && !is_skylight && !(is_window && !b.is_residential())) {
+			if (!last_objs || *last_objs != bvh.get_objs()) {last_objs = std::make_shared<vect_colored_cube_t>(bvh.get_objs());} // create + cache if new/different
+			objs_for_light[cur_job.lix] = last_objs;
+		}
 		// include basement area of house if on ground floor because the basement stairs are open at the top and get their light from above, and are too dark without this;
 		// we don't need the lights in the basement or the coll cubes, we only need to not clip light rays to the ground floor zval
 		if (b.is_house && b.has_basement() && camera_pos.z > b.ground_floor_z1 && camera_pos.z < (b.ground_floor_z1 + b.get_window_vspace())) {
@@ -1236,6 +1242,7 @@ public:
 		light_ids.clear();
 		lights_to_sort.clear();
 		windows.clear();
+		last_objs.reset();
 		objs_for_light.clear();
 		bvh.clear();
 	}
