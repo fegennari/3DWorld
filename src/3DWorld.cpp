@@ -1248,7 +1248,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 	case '4': // toggle occlusion culling / tiled terrain/voxel/mesh detail normal maps
 		display_mode ^= 0x08;   show_bool_option_change("Occlusion Culling", (display_mode & 0x08)); break;
 	case '5': // walk on snow/ship shadows/reflections/debugging
-		display_mode ^= 0x10;   show_bool_option_change((camera_in_building ? "Indirect Lighting" : "Debug Mode"), (display_mode & 0x10)); break;
+		display_mode ^= 0x10;   show_bool_option_change((camera_in_building ? "Indirect Lighting" : "Debug Mode"), (bool(display_mode & 0x10) ^ en_building_indir_light)); break;
 	case '6': // toggle water reflections, bump maps, bloom, and map view lighting/shadows
 		display_mode ^= 0x20;   break;
 	case '7': // toggle snow accumulation, clouds, and universe mode multithreading
