@@ -861,6 +861,7 @@ unsigned const WIND_BIT_DIR     = 0x01;
 unsigned const WIND_BIT_DIM     = 0x02;
 unsigned const WIND_BIT_BLINDS  = 0x04;
 unsigned const WIND_BIT_BLOCKED = 0x08;
+unsigned const WIND_BIT_SKY     = 0x10;
 
 class building_indir_light_mgr_t {
 	bool is_running=0, kill_thread=0, lighting_updated=0, needs_to_join=0, need_bvh_rebuild=0, update_windows=0, target_in_extb=0;
@@ -873,7 +874,7 @@ class building_indir_light_mgr_t {
 	deque<unsigned> remove_queue;
 	set<unsigned> lights_complete, lights_seen, lights_pend;
 	vector<vector3d> ray_directions;
-	vect_cube_with_ix_t windows; // ix bits are {dir, dim, has_blinds, blocked}
+	vect_cube_with_ix_t windows; // ix bits are {dir, dim, has_blinds, blocked, skylight}
 	cube_bvh_t bvh, room_bvh;
 	typedef std::shared_ptr<vect_colored_cube_t> sp_vect_colored_cube_t;
 	sp_vect_colored_cube_t last_objs;
@@ -968,13 +969,13 @@ class building_indir_light_mgr_t {
 			assert(window_ix < windows.size());
 			cube_with_ix_t const &window(windows[window_ix]);
 			assert(window.z1() < window.z2());
+			is_skylight = bool(window.ix & WIND_BIT_SKY);
+			light_cube  = window;
 			float surface_area(0.0);
-			light_cube = window;
 
-			if (window.dz() < min(window.dx(), window.dy())) { // skylight; we could encode skylights as a different ix, but testing aspect ratio is easier
+			if (is_skylight) { // skylight; we could encode skylights as a different ix, but testing aspect ratio is easier
 				bool const in_mall(window.z1() <= b.ground_floor_z1), is_rr(b.is_restroom_with_high_ceil());
 				float const light_xlate(is_rr ? (b.ground_floor_z1 + b.get_fc_thickness() - window.z1()) : -b.get_fc_thickness());
-				is_skylight    = 1;
 				surface_area   = window.dx()*window.dy();
 				base_num_rays *= (in_mall ? 16 : (is_rr ? 4 : 8)); // more rays, since skylights are larger and can cover multiple rooms
 				weight        *= (is_rr ? 40.0 : 10.0); // stronger due to direct sun/moon/cloud lighting and reduced occlusion from buildings and terrain
@@ -988,7 +989,7 @@ class building_indir_light_mgr_t {
 				no_cache_objs = 1;
 			}
 			else { // normal window
-				assert(window.ix < 8); // {dir, dim, has_blinds, blocked} but blocked should not get here
+				assert(window.ix < 8); // {dir, dim, has_blinds, blocked, skylight} but blocked and skyhlight should not get here
 				dim =  bool(window.ix & WIND_BIT_DIM);
 				dir = !bool(window.ix & WIND_BIT_DIR); // cast toward the interior
 				no_cache_objs = !bool(window.ix & WIND_BIT_BLINDS); // only cache if this window has blinds (meaning it can be updated with neg light)
@@ -1124,8 +1125,9 @@ class building_indir_light_mgr_t {
 			int const ix(n+1);
 
 			if (light_shape == SHAPE_CUBE) {
-				unsigned const d1(is_window ? !dim : 0), d2(is_window ? 2 : 1);
-				if (is_window) {origin[dim] = light_cube.d[dim][dir];} // window plane
+				bool const is_vert(is_window && !is_skylight);
+				unsigned const d1(is_vert ? !dim : 0), d2(is_vert ? 2 : 1);
+				if (is_vert) {origin[dim] = light_cube.d[dim][dir];} // window plane
 				else {origin.z = light_cube.z1();} // bottom edge
 				origin[d1] = light_cube.d[d1][0] + halton(ix, 5)*light_cube.get_sz_dim(d1);
 				origin[d2] = light_cube.d[d2][0] + halton(ix, 7)*light_cube.get_sz_dim(d2);
@@ -1703,10 +1705,10 @@ void building_t::get_all_windows(vect_cube_with_ix_t &windows) const { // Note: 
 		} // for z
 	} // for i
 	if (get_light_pos().z > 0.0) { // if primary light (sun/moon) is above the horizon, add skylight indir lighting
-		for (cube_t const &skylight : skylights) {windows.emplace_back(skylight, 0);} // add skylights as vertical windows with ix=0
+		for (cube_t const &skylight : skylights) {windows.emplace_back(skylight, WIND_BIT_SKY);} // add skylights as vertical windows
 
 		if (has_mall()) { // mall skylights; maybe too bright and noisy?
-			for (cube_t const &skylight : interior->mall_info->skylights) {windows.emplace_back(skylight, 0);} // add skylights as vertical windows with ix=0
+			for (cube_t const &skylight : interior->mall_info->skylights) {windows.emplace_back(skylight, WIND_BIT_SKY);} // add skylights as vertical windows
 		}
 	}
 }
