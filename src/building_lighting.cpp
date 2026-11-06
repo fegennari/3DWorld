@@ -857,6 +857,11 @@ public:
 	bool empty() const {return (size() == 0);}
 };
 
+unsigned const WIND_BIT_DIR     = 0x01;
+unsigned const WIND_BIT_DIM     = 0x02;
+unsigned const WIND_BIT_BLINDS  = 0x04;
+unsigned const WIND_BIT_BLOCKED = 0x08;
+
 class building_indir_light_mgr_t {
 	bool is_running=0, kill_thread=0, lighting_updated=0, needs_to_join=0, need_bvh_rebuild=0, update_windows=0, target_in_extb=0;
 	int cur_bix=-1, cur_floor=-1, last_room_id=-1, timer_val=0;
@@ -868,7 +873,7 @@ class building_indir_light_mgr_t {
 	deque<unsigned> remove_queue;
 	set<unsigned> lights_complete, lights_seen, lights_pend;
 	vector<vector3d> ray_directions;
-	vect_cube_with_ix_t windows; // ix bits are {dim, dir, blocked}
+	vect_cube_with_ix_t windows; // ix bits are {dir, dim, has_blinds, blocked}
 	cube_bvh_t bvh, room_bvh;
 	typedef std::shared_ptr<vect_colored_cube_t> sp_vect_colored_cube_t;
 	sp_vect_colored_cube_t last_objs;
@@ -949,7 +954,7 @@ class building_indir_light_mgr_t {
 		unsigned base_num_rays(LOCAL_RAYS), dim(2), dir(0); // default dim is z; dir=2 is omnidirectional
 		float const tolerance(1.0E-5*valid_area.get_max_dim_sz());
 		bool const is_window(cur_job.lix & IS_WINDOW_BIT);
-		bool in_attic(0), in_ext_basement(0), is_skylight(0), in_jail_cell(0), hanging(0);
+		bool in_attic(0), in_ext_basement(0), is_skylight(0), in_jail_cell(0), hanging(0), no_cache_objs(0);
 		int light_room_id(-1);
 		float weight(100.0), light_radius(0.0);
 		point light_center;
@@ -980,12 +985,14 @@ class building_indir_light_mgr_t {
 				lcolor        = cur_ambient*2.0; // split rays into two groups for ambient and diffuse
 				pri_lcolor    = cur_diffuse;
 				dir           = 1; // pointed up
+				no_cache_objs = 1;
 			}
 			else { // normal window
-				assert(window.ix < 4); // encodes 2*dim + dir
-				dim =  bool(window.ix & 2);
-				dir = !bool(window.ix & 1); // cast toward the interior
-				surface_area = window.dz()*window.get_sz_dim(!bool(dim));
+				assert(window.ix < 8); // {dir, dim, has_blinds, blocked} but blocked should not get here
+				dim =  bool(window.ix & WIND_BIT_DIM);
+				dir = !bool(window.ix & WIND_BIT_DIR); // cast toward the interior
+				no_cache_objs = !bool(window.ix & WIND_BIT_BLINDS); // only cache if this window has blinds (meaning it can be updated with neg light)
+				surface_area  = window.dz()*window.get_sz_dim(!bool(dim));
 				light_cube.translate_dim(dim, (dir ? 1.0 : -1.0)*0.5*b.get_wall_thickness()); // shift slightly inside the building to avoid collision with the exterior wall
 				lcolor = outdoor_color;
 				
@@ -1077,8 +1084,7 @@ class building_indir_light_mgr_t {
 		get_room_bvh(b, light_room_id, room_area); // build per-room BVH if needed
 
 		// cache so that we can remove this light later; can skip non-house windows that don't have blinds
-		// TODO: window has_covering bit
-		if (!cur_job.neg && !is_skylight && !(is_window && !b.is_residential())) {
+		if (!cur_job.neg && !no_cache_objs) {
 			if (!last_objs || *last_objs != bvh.get_objs()) {last_objs = std::make_shared<vect_colored_cube_t>(bvh.get_objs());} // create + cache if new/different
 			objs_for_light[cur_job.lix] = last_objs;
 		}
@@ -1195,7 +1201,7 @@ class building_indir_light_mgr_t {
 		int const target_room(b.get_room_containing_pt(target)); // generally always should be >= 0
 
 		for (auto i = windows.begin(); i != windows.end(); ++i) {
-			if (i->ix & 4) continue; // blocked bit is set, skip
+			if (i->ix & WIND_BIT_BLOCKED) continue; // blocked bit is set, skip
 			point const center(i->get_cube_center());
 			if (center.z < valid_area.z1() || center.z > valid_area.z2()) continue; // wrong floor
 			float dist_sq(p2p_dist_sq(center, target));
@@ -1438,7 +1444,7 @@ public:
 		
 		if (do_update) { // there should be only one window that gets here
 			for (unsigned w = 0; w < windows.size(); ++w) {
-				if (windows[w] == new_windows[w] || (windows[w].ix & 4)) continue; // no change or blocked bit is set, skip
+				if (windows[w] == new_windows[w] || (windows[w].ix & WIND_BIT_BLOCKED)) continue; // no change or blocked bit is set, skip
 				proc_light_ix((w | IS_WINDOW_BIT), 1, b); // using old windows; must be serial; is_neg=1
 			}
 		}
@@ -1448,7 +1454,7 @@ public:
 
 		if (do_update) {
 			for (unsigned w = 0; w < windows.size(); ++w) {
-				if (windows[w] == new_windows[w] || (windows[w].ix & 4)) continue; // no change or blocked bit is set, skip
+				if (windows[w] == new_windows[w] || (windows[w].ix & WIND_BIT_BLOCKED)) continue; // no change or blocked bit is set, skip
 				proc_light_ix((w | IS_WINDOW_BIT), 0, b); // using new windows; is_neg=0
 				mark_light_done(cur_job); // not needed?
 			}
@@ -1653,9 +1659,11 @@ void building_t::get_all_windows(vect_cube_with_ix_t &windows) const { // Note: 
 				float const low_edge(c.d[!dim][0] + (xy - tx1)*window_width);
 				window.d[!dim][0] = low_edge + border_xy; // subtract off border to get interior/open part of window
 				window.d[!dim][1] = low_edge + window_width - border_xy;
+				bool has_blinds(0);
 
 				for (room_object_t const &b : blinds) {
 					if (!b.intersects(window)) continue;
+					has_blinds = 1;
 					
 					if (b.is_hanging()) { // horizontal (comes from the top)
 						min_eq(window.z2(), b.z1());
@@ -1689,7 +1697,8 @@ void building_t::get_all_windows(vect_cube_with_ix_t &windows) const { // Note: 
 						assert(wlo < whi);
 					} // for w
 				}
-				windows.emplace_back(window_clipped, (4*is_blocked + 2*dim + dir)); // Note: must include blocked window for seen cache to work
+				unsigned const ix(is_blocked*WIND_BIT_BLOCKED + dim*WIND_BIT_DIM + dir*WIND_BIT_DIR + has_blinds*WIND_BIT_BLINDS);
+				windows.emplace_back(window_clipped, ix); // Note: must include blocked window for seen cache to work
 			} // for xy
 		} // for z
 	} // for i
