@@ -1005,7 +1005,10 @@ class building_indir_light_mgr_t {
 					base_num_rays *= 2; // more rays to reduce noise, since windows are large and few
 					surface_area  *= 0.5; // less indir light
 				}
-				else if (b.is_restaurant() && b.interior->rooms.front().intersects(light_cube)) {base_num_rays = 2*base_num_rays/3;} // fewer rays in restaurant dining area
+				else if (b.is_restaurant()) {
+					if (b.interior->rooms.front().intersects(light_cube)) {base_num_rays = 2*base_num_rays/3;} // fewer rays in restaurant dining area
+					surface_area *= 2.0; // more rays area since there are two rows of windows and extra space to light
+				}
 				else if (b.is_attic_window(window)) {in_attic = 1; base_num_rays *= 8;} // attic window
 				else if (b.is_house) {base_num_rays *= 2;}
 			}
