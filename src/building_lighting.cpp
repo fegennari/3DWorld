@@ -1080,18 +1080,17 @@ class building_indir_light_mgr_t {
 				bvh.build_tree();
 				last_room_id = -1;
 				objs_for_light.erase(it); // no longer valid after update; will re-cache with new objs when adding light back in
+				invalidate_bvh(); // will need to rebuild bvh again with the current state after removing this light
 			}
+		}
+		else if (!no_cache_objs) { // cache so that we can remove this light later; can skip non-house windows that don't have blinds
+			if (!last_objs || *last_objs != bvh.get_objs()) {last_objs = std::make_shared<vect_colored_cube_t>(bvh.get_objs());} // create + cache if new/different
+			objs_for_light[cur_job.lix] = last_objs;
 		}
 		building_colors_t bcolors;
 		b.set_building_colors(bcolors);
 		cube_t room_area, light_clip_area(valid_area);
 		get_room_bvh(b, light_room_id, room_area); // build per-room BVH if needed
-
-		// cache so that we can remove this light later; can skip non-house windows that don't have blinds
-		if (!cur_job.neg && !no_cache_objs) {
-			if (!last_objs || *last_objs != bvh.get_objs()) {last_objs = std::make_shared<vect_colored_cube_t>(bvh.get_objs());} // create + cache if new/different
-			objs_for_light[cur_job.lix] = last_objs;
-		}
 		// include basement area of house if on ground floor because the basement stairs are open at the top and get their light from above, and are too dark without this;
 		// we don't need the lights in the basement or the coll cubes, we only need to not clip light rays to the ground floor zval
 		if (b.is_house && b.has_basement() && camera_pos.z > b.ground_floor_z1 && camera_pos.z < (b.ground_floor_z1 + b.get_window_vspace())) {
@@ -1420,7 +1419,6 @@ public:
 		bool const geom_changed(is_door_change || is_obj_move);
 
 		if (geom_changed) {
-			//cout << TXT(light_ix) << TXT(light_is_on) << TXT(is_door_change) << TXT(is_obj_move) << TXT(remove_only) << TXT(is_running) << endl; // TESTING
 			if (is_running) return; // too difficult to handle this case
 
 			if (remove_only) { // remove lighting with the old geom
