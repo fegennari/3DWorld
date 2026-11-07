@@ -1347,6 +1347,7 @@ public:
 		}
 	}
 	void proc_cur_job_serial(building_t const &b) {
+		assert(!is_running);
 		init_lmgr(b);
 		cast_light_rays(b);
 	}
@@ -1440,6 +1441,7 @@ public:
 		if ((geom_changed || !light_is_on || (in_elevator && num_erased)) && (num_erased || is_cur_light)) {add_to_remove_queue(light_ix);} // must remove the light instead
 	}
 	void update_windows_blinds_change(building_t const &b) {
+		if (is_running) return; // can't update while running
 		vect_cube_with_ix_t new_windows;
 		b.get_all_windows(new_windows);
 		assert(new_windows.size() == windows.size());
@@ -1520,6 +1522,7 @@ public:
 	}
 	void build_bvh(building_t const &b, point const &target) {
 		//highres_timer_t timer("Build BVH");
+		assert(!is_running);
 		cur_floor  = get_target_floor(b, target);
 		valid_area = get_valid_area(b, target, cur_floor);
 		target_in_extb = b.point_in_extended_basement_not_basement(target);
@@ -1726,7 +1729,7 @@ bool building_t::register_indir_lighting_state_change(unsigned light_ix, bool is
 	return 1;
 }
 void building_t::register_indir_lighting_geom_change(bool rebuild_bvh) const {
-	if (rebuild_bvh) {building_indir_light_mgr.build_bvh(*this, get_camera_building_space());}
+	if (rebuild_bvh && !building_indir_light_mgr.get_is_running()) {building_indir_light_mgr.build_bvh(*this, get_camera_building_space());} // can't rebuild while running
 	else {building_indir_light_mgr.invalidate_bvh();} // lazy rebuild
 }
 void building_t::register_blinds_state_change() const {
@@ -1740,7 +1743,8 @@ void building_t::update_room_object_and_update_indir_lighting(room_object_t &obj
 	static vector<unsigned> light_ids;
 	light_ids.clear();
 
-	if (point_in_attic(obj.get_cube_center())) { // attic
+	if (building_indir_light_mgr.get_is_running()) {} // no update; not legal to modify state while previous lighting update is running
+	else if (point_in_attic(obj.get_cube_center())) { // attic
 		for (auto i = interior->room_geom->objs.begin(); i != interior->room_geom->objs.end(); ++i) {
 			if (i->is_light_type() && i->in_attic()) {light_ids.push_back(i - interior->room_geom->objs.begin());}
 		}
