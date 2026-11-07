@@ -1423,6 +1423,7 @@ public:
 			if (is_running) return; // too difficult to handle this case
 
 			if (remove_only) { // remove lighting with the old geom
+				if (lights_complete.find(light_ix) == lights_complete.end()) return; // don't remove if light hasn't yet been added since the last update
 				lights_complete.erase(light_ix); // light is no longer completed; erase its state
 				proc_light_ix(light_ix, 1, b); // must be serial so that it completes before the door or object is moved; is_neg=1
 			}
