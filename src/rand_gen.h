@@ -135,8 +135,3 @@ inline unsigned xxHash_uint(unsigned buf, unsigned seed=0) {
 float halton(int index, int base);
 vector3d cosine_weighted_ray_dir(vector3d const &dir, unsigned dim, bool invert);
 
-template<int base1, int base2> vector3d halton_sphere(int index) {
-	float const u(halton(index, base1)), v(halton(index, base2)); // get 2D low-discrepancy points in [0, 1)
-	float const z(1.0f - 2.0f*u), radius(sqrt(max(0.0f, (1.0f - z*z)))), phi(2.0f*3.141592654f*v);
-	return point(radius*cos(phi), radius*sin(phi), z); // map the 2D point to a uniform sphere
-}

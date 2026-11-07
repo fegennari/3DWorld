@@ -734,8 +734,7 @@ void building_t::add_industrial_objs(rand_gen_t rgen, room_t const &room, float 
 	vect_room_object_t &objs(interior->room_geom->objs);
 	// add support pillars around the exterior, between windows; add ceiling beams
 	float const support_width(CEILING_BEAM_THICK*wall_thick), support_hwidth(0.5*support_width);
-	float const ceil_zval(room.z2() - fc_thick), beams_z1(ceil_zval - support_width);
-	float const doorway_width(get_doorway_width()), trim_thickness(get_trim_thickness());
+	float const ceil_zval(room.z2() - fc_thick), beams_z1(ceil_zval - support_width), doorway_width(get_doorway_width());
 	vector2d const room_sz(room.get_size_xy());
 	cube_t support_bounds(room), support, beam;
 	support_bounds.expand_by_xy(-support_hwidth);

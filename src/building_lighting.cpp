@@ -67,6 +67,12 @@ void get_shower_tile_cubes(room_object_t const &c, cube_t cubes[3]);
 cube_t get_shower_tub_tiled_area(room_object_t const &c, cube_t const &wall);
 void get_shower_tub_curtains(room_object_t const &c, cube_t &crod, cube_t cc[2]);
 
+template<int base1, int base2> vector3d halton_sphere(int index) {
+	float const u(halton(index, base1)), v(halton(index, base2)); // get 2D low-discrepancy points in [0, 1)
+	float const z(1.0f - 2.0f*u), radius(sqrt(max(0.0f, (1.0f - z*z)))), phi(2.0f*3.141592654f*v);
+	return point(radius*cos(phi), radius*sin(phi), z); // map the 2D point to a uniform sphere
+}
+
 bool check_indir_enabled(bool in_basement, bool in_attic) {
 	if (in_basement) return INDIR_BASEMENT_EN;
 	if (in_attic   ) return INDIR_ATTIC_ENABLE;
@@ -926,7 +932,7 @@ class building_indir_light_mgr_t {
 	}
 	void init_ray_directions() {
 		ray_directions.resize(1 << 17); // 128K
-		for (int i = 0; i < ray_directions.size(); ++i) {ray_directions[i] = halton_sphere<2, 3>(i+1);}
+		for (size_t i = 0; i < ray_directions.size(); ++i) {ray_directions[i] = halton_sphere<2, 3>(i+1);}
 	}
 	vector3d const &get_ray_dir(unsigned &ix) const {
 		assert(!ray_directions.empty());
@@ -1031,7 +1037,7 @@ class building_indir_light_mgr_t {
 			in_attic        = ro.in_attic();
 			in_ext_basement = (light_in_basement && b.point_in_extended_basement_not_basement(light_center));
 			in_jail_cell    = (in_ext_basement && b.interior->has_jail && is_jail_room(b.get_room(ro.room_id).get_room_type(0)));
-			light_shape     = (is_lamp ? SHAPE_SPHERE : ro.shape);
+			light_shape     = (is_lamp ? (unsigned)SHAPE_SPHERE : ro.shape);
 			if (in_attic) {base_num_rays *= ((b.num_attic_lights > 1) ? 4 : 8);} // more rays in attic, since light is large and there are only 1-2 of them
 			if (is_lamp ) {base_num_rays /= 2;} // half the rays for lamps
 			if (is_lamp ) {dir = 2;} // onmidirectional; dim stays at 2/Z
@@ -1740,7 +1746,6 @@ void building_t::register_blinds_state_change() const {
 void building_t::update_room_object_and_update_indir_lighting(room_object_t &obj, room_object_t const &new_obj) const {
 	if (!enable_building_indir_lighting() || !(is_light_occluder(obj) || is_light_occluder(new_obj))) {obj = new_obj; return;}
 	assert(has_room_geom());
-	float const floor_spacing(get_window_vspace());
 	static vector<unsigned> light_ids;
 	light_ids.clear();
 
