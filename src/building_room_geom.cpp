@@ -4078,11 +4078,11 @@ void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const
 		front.d[!dim][ d] = side.d[!dim][!d];
 		front.d[!dim][!d] = c   .d[!dim][ d] + (d ? -1.0 : 1.0)*frame_width;
 		paneling_mat.add_cube_to_verts(front, WHITE, tex_origin, (back_face_mask & side_skip_faces), !dim); // draw front and inside side
-	}
+	} // for d
 	// add button panel
 	cube_t const panel(get_elevator_car_panel(c, fc_thick_scale));
-	rgeom_mat_t &panel_mat(get_untextured_material(0, 1));
-	panel_mat.add_cube_to_verts_untextured(panel, DK_GRAY, ~front_face_mask); // metal? if metal, this breaks the text alpha blending
+	rgeom_mat_t &panel_mat(get_untextured_material(0, 1)); // metal? if metal, this breaks the text alpha blending
+	panel_mat.add_cube_to_verts_untextured(panel, DK_GRAY, ~front_face_mask);
 	// add floor numbers to the panel; buttons are added in building_t::add_stairs_and_elevators()
 	unsigned const num_floors(c.drawer_flags), cur_floor(c.item_flags);
 	assert(num_floors > 1);
@@ -4122,6 +4122,12 @@ void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const
 	if (!ldir) {up_down_pos[!dim] -= 0.15*up_down_text_height;} // mirror pos to the other side if needed
 	else       {up_down_pos[!dim] += 0.80*up_down_text_height;}
 	float cur_z(panel.z1() + button_spacing - 0.5*text_height);
+	// create digits text
+	bool const two_digits(((int)num_floors + max(-floor_offset, 0)) > 9 || (floor_offset > 0 && !e.in_mall)); // double digits or basement/parking garage
+	add_floor_number((cur_floor+1), floor_offset, has_parking_garage, e.in_mall, e.in_backrooms, oss);
+	string str(oss.str());
+	if (two_digits && str.size() == 1) {str = " " + str;} // add a leading space to make it two digits
+	rgeom_mat_t &digits_mat(get_material(digits_tp, 1));
 
 	for (unsigned f = 0; f < num_floors; ++f) { // Note: floor number starts at 1 even if the elevator doesn't extend to the ground floor
 		if (e.skip_floor_ix(f)) continue; // also skips cur_z update to avoid a gap in the buttons, but there's still a gap in the floor numbers
@@ -4141,15 +4147,11 @@ void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const
 		set_cube_zvals(display, (zval - up_down_height), (zval + up_down_height + center_panel_height));
 		panel_mat.add_cube_to_verts_untextured(display, DK_GRAY, ~back_face_mask); // exterior display panel; metal doesn't blend correctly with text
 		// add floor text
-		add_floor_number((cur_floor+1), floor_offset, has_parking_garage, e.in_mall, e.in_backrooms, oss);
-		bool const two_digits(((int)num_floors + max(-floor_offset, 0)) > 9 || (floor_offset > 0 && !e.in_mall)); // double digits or basement/parking garage
-		string str(oss.str());
-		if (two_digits && str.size() == 1) {str = " " + str;} // add a leading space to make it two digits
 		cube_t text_area(display);
 		set_cube_zvals(text_area, (zval + 0.15*center_panel_height), (zval + 0.75*center_panel_height));
 		text_area.expand_in_dim(!dim, -(two_digits ? 0.08 : 0.16)*panel_width); // shrink width
 		text_area.d[dim][dir] += 0.01*signed_thickness; // translate slightly in front of panel
-		elevator_floor_to_7seg_digit_pair(str, get_material(digits_tp, 1), text_area, (is_powered ? lit_color : BLACK), dim, dir, !ldir);
+		elevator_floor_to_7seg_digit_pair(str, digits_mat, text_area, (is_powered ? lit_color : BLACK), dim, dir, !ldir);
 		
 		// add up/down indicators
 		for (unsigned d = 0; d < 2; ++d) { // {down, up}
@@ -4162,6 +4164,14 @@ void building_room_geom_t::add_elevator(room_object_t const &c, elevator_t const
 			for (auto &v : verts) {cur_ud_mat.quad_verts.emplace_back(v.v, nc, v.t[0], v.t[1], (is_lit ? lit_cw : cw));}
 		} // for d
 	} // for f
+	// floor number display on inside elevator panel
+	cube_t text_area(panel);
+	set_cube_zvals(text_area, panel.z2(), (panel.z2() + 0.5*panel_width));
+	panel_mat.add_cube_to_verts_untextured(text_area, DK_GRAY, ~front_face_mask); // top part of panel for digits backing
+	text_area.z2() -= 0.2*panel_width;
+	text_area.expand_in_dim(!dim, -(two_digits ? 0.28 : 0.35)*panel_width); // shrink width
+	text_area.d[dim][!dir] -= 0.01*signed_thickness; // translate slightly in front of panel
+	elevator_floor_to_7seg_digit_pair(str, digits_mat, text_area, (is_powered ? lit_color : BLACK), dim, !dir, ldir);
 }
 
 void building_room_geom_t::add_elevator_doors(elevator_t const &e, float fc_thick_scale) {
