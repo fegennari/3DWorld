@@ -624,6 +624,9 @@ bool building_t::add_gym_objs(rand_gen_t rgen, room_t &room, float &zval, unsign
 			if (c->type == TYPE_BENCH) {c->item_flags = 1;}
 		}
 	}
+	// add punching bag
+	// TODO
+
 	// add exercise machine 3D models
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_EX_MACHINE)) {
 		unsigned const num_machines((rgen.rand() % 6) + 5); // 5-10

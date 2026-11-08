@@ -1340,6 +1340,12 @@ void building_room_geom_t::add_barrel(room_object_t const &c) { // is_small=1
 	wood_mat.add_ortho_cylin_to_verts(plug, wood_color*0.6, c.dim, !c.dir, c.dir);
 }
 
+void building_room_geom_t::add_punching_bag(room_object_t const &c) { // is_small=1
+	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
+	// TODO: hanging support and rounded ends
+	mat.add_vcylin_to_verts(c, apply_light_color(c), 1, 1); // draw top and bottom
+}
+
 void building_room_geom_t::add_food_tub(room_object_t const &c) {
 	colorRGBA const color(apply_light_color(c));
 	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
@@ -1348,7 +1354,7 @@ void building_room_geom_t::add_food_tub(room_object_t const &c) {
 
 	if (c.shape == SHAPE_CYLIN) {
 		mat.add_vcylin_to_verts(body, color, 1, 0, 0, 0, 0.7, 0.95); // untextured, truncated cone
-		mat.add_vcylin_to_verts(lid , color, 1, 1);
+		mat.add_vcylin_to_verts(lid , color, 1, 1); // draw top and bottom
 	}
 	else if (c.shape == SHAPE_ROUNDED_CUBE) { // rounded sloped cube; likely square
 		float const corner_radius(0.33*c.get_width());
