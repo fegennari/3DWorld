@@ -1233,6 +1233,18 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 
 		// check for other objects to collide with (including stairs)
 		for (auto c = objs.begin(); c != objs.end(); ++c) {
+			if (c->type == TYPE_PUNCH_BAG) { // player moves punching bag
+				if (!sphere_cube_intersect(pos, xy_radius, *c)) continue;
+				cylinder_3dw cylin(c->get_cylinder());
+				cylin.p2.z += radius; // extend upward   by radius
+				cylin.p1.z -= radius; // extend downward by radius
+				point coll_pos(pos);
+				vector3d coll_norm;
+				if (!sphere_vert_cylin_intersect(coll_pos, xy_radius, cylin, &coll_norm)) continue;
+				interior->room_geom->punch_bag_hang_dir = (plus_z - 0.5*coll_norm).get_norm();
+				interior->update_dynamic_draw_data();
+				continue;
+			}
 			if (!c->is_player_collidable()) continue;
 			if (obj_z - radius > c->z2())   continue; // above the object
 			room_object const type(c->type);

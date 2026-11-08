@@ -763,8 +763,9 @@ struct building_room_geom_t {
 	unsigned wall_ps_end=0;
 	unsigned init_num_doors=0, init_num_dstacks=0; // required for removing doors added by closets or backrooms generation when room_geom is deleted
 	unsigned init_num_details=0; // required for removing exterior details such as fire escapes
-	unsigned pool_ramp_obj_ix=0, pool_stairs_start_ix=0, last_animal_update_frame=0, first_mall_obj_ix=0, last_mall_obj_ix=0;
+	unsigned pool_ramp_obj_ix=0, pool_stairs_start_ix=0, last_animal_update_frame=0, first_mall_obj_ix=0, last_mall_obj_ix=0, punch_bag_obj_ix=0;
 	point tex_origin;
+	vector3d punch_bag_hang_dir=plus_z; // there should be only one punching bag per building
 	colorRGBA wood_color;
 	courtyard_t courtyard;
 	// objects in rooms; expanded_objs is for things that have been expanded for player interaction; model_objs is for models in drawers; trim_objs is for wall/door/window trim

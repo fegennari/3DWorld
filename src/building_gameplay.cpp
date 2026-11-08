@@ -240,7 +240,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_NV_GOGGLES] = bldg_obj_type_t(0, 0, 0, 1, 0, 0, 2, 500.0, 1.0,   "night vision goggles");
 	bldg_obj_types[TYPE_STAIRCASE ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 2,  0.0,  0.0,   "staircase"); // spiral
 	bldg_obj_types[TYPE_BARREL    ] = bldg_obj_type_t(1, 1, 1, 1, 0, 0, 2, 80.0,  240.0, "barrel");
-	bldg_obj_types[TYPE_PUNCH_BAG ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 2, 100.0, 100.0, "punching bag"); // hanging, player and person will push out of the way when colliding
+	bldg_obj_types[TYPE_PUNCH_BAG ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 0, 100.0, 100.0, "punching bag"); // dynamic, hanging, player and person will push out of the way when colliding
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");

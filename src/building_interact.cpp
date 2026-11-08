@@ -1960,6 +1960,16 @@ void building_t::update_player_interact_objects(point const &player_pos) { // No
 			//else if (room_type == RTYPE_LAUNDRY ) {}
 		}
 	} // end player_in_this_building
+	if (has_room_geom() && interior->room_geom->punch_bag_obj_ix > 0) {
+		vector3d &pb_hang_dir(interior->room_geom->punch_bag_hang_dir);
+
+		if (pb_hang_dir != plus_z) {
+			float const delta_dir(1.5*(1.0 - pow(0.7f, fticks)));
+			pb_hang_dir = delta_dir*plus_z + (1.0 - delta_dir)*pb_hang_dir; // TODO: swing back and forth
+			if (max(fabs(pb_hang_dir.x), fabs(pb_hang_dir.y)) < 0.001) {pb_hang_dir = plus_z;} // back to rest pos
+			interior->update_dynamic_draw_data();
+		}
+	}
 	if (hum_amt > 0.0) {
 		point hum_pos(player_pos);
 		hum_pos.z += CAMERA_RADIUS; // above the player's head

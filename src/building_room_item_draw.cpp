@@ -778,7 +778,6 @@ void building_room_geom_t::add_small_static_objs_to_verts(vect_room_object_t con
 		case TYPE_CRATE:     add_crate    (c); break; // not small but only added to windowless rooms
 		case TYPE_BOX:       add_box      (c); break; // not small but only added to windowless rooms
 		case TYPE_BARREL:    add_barrel   (c); break;
-		case TYPE_PUNCH_BAG: add_punching_bag(c); break;
 		case TYPE_FOOD_TUB:  add_food_tub (c); break;
 		case TYPE_SHELVES:   add_shelves  (c, tscale); break; // not small but only added to windowless rooms
 		case TYPE_SHELFRACK: add_rack(c, 0, 1, 0); break; // add_rack=0, add_objs=1, obj_text_pass=0
@@ -1080,6 +1079,7 @@ void building_room_geom_t::create_dynamic_vbos(building_t const &building, point
 	} // for e
 	for (escalator_t  const &e : building.interior->escalators) {add_escalator(e, floor_spacing, 1);} // draw_dynamic=1
 	for (tunnel_seg_t const &t : building.interior->tunnels   ) {add_tunnel_water(t);}
+	if (punch_bag_obj_ix > 0) {add_punching_bag(get_room_object_by_index(punch_bag_obj_ix));}
 	mats_dynamic.create_vbos(building);
 }
 

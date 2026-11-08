@@ -1340,7 +1340,7 @@ void building_room_geom_t::add_barrel(room_object_t const &c) { // is_small=1
 	wood_mat.add_ortho_cylin_to_verts(plug, wood_color*0.6, c.dim, !c.dir, c.dir);
 }
 
-void building_room_geom_t::add_punching_bag(room_object_t const &c) { // is_small=1
+void building_room_geom_t::add_punching_bag(room_object_t const &c) { // dynamic=1
 	tid_nm_pair_t tex(-1, 1.0f, 1);
 	tex.set_specular(0.5, 80.0);
 	float const height(c.dz()), radius(c.get_radius()), tb_dz(0.5*radius);
@@ -1352,7 +1352,8 @@ void building_room_geom_t::add_punching_bag(room_object_t const &c) { // is_smal
 	bot.z2() = pb_mid.z1() + tb_dz;
 	top.z1() = pb_mid.z2() - tb_dz;
 	colorRGBA const color(apply_light_color(c));
-	rgeom_mat_t &bag_mat(get_material(tex, 0, 1)); // inc_shadows=1, dynamic=0, small=1
+	rgeom_mat_t &bag_mat(get_material(tex, 1, 0)); // inc_shadows=1, dynamic=1, small=0
+	unsigned const bag_verts_start(bag_mat.itri_verts.size());
 	bag_mat.add_vcylin_to_verts(pb_mid, color, 0, 0); // skip top and bottom
 	bag_mat.add_sphere_to_verts(bot,    color, 0,  plus_z); // bot hemisphere
 	bag_mat.add_sphere_to_verts(top,    color, 0, -plus_z); // top hemisphere
@@ -1360,7 +1361,8 @@ void building_room_geom_t::add_punching_bag(room_object_t const &c) { // is_smal
 	float const sup_hwidth(0.12*radius), sup_hthick(0.2*sup_hwidth);
 	cube_t support(c);
 	support.z1() = pb_mid.z2();
-	rgeom_mat_t &matte_mat(get_untextured_material(1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
+	rgeom_mat_t &matte_mat(get_untextured_material(1, 1, 0)); // inc_shadows=1, dynamic=1, small=0
+	unsigned const strap_verts_start(matte_mat.quad_verts.size());
 
 	for (unsigned dim = 0; dim < 2; ++dim) {
 		for (unsigned dir = 0; dir < 2; ++dir) {
@@ -1371,6 +1373,13 @@ void building_room_geom_t::add_punching_bag(room_object_t const &c) { // is_smal
 			rotate_verts(matte_mat.quad_verts, vector_from_dim_dir(!dim, (dim ^ dir)), 0.15*PI, cube_bot_center(support), verts_start); // rotate top to center
 		} // for dir
 	} // for dim
+	if (punch_bag_hang_dir.x != 0.0 || punch_bag_hang_dir.y != 0.0) { // not fully vertical, rotate the verts
+		float const angle(safe_acosf(punch_bag_hang_dir.z));
+		vector3d const axis(-punch_bag_hang_dir.y, punch_bag_hang_dir.x, 0.0); // cross(punch_bag_hang_dir, plus_z)
+		point const about(cube_top_center(c));
+		rotate_verts(bag_mat  .itri_verts, axis, angle, about, bag_verts_start  );
+		rotate_verts(matte_mat.quad_verts, axis, angle, about, strap_verts_start);
+	}
 }
 
 void building_room_geom_t::add_food_tub(room_object_t const &c) {
