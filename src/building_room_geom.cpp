@@ -1341,9 +1341,36 @@ void building_room_geom_t::add_barrel(room_object_t const &c) { // is_small=1
 }
 
 void building_room_geom_t::add_punching_bag(room_object_t const &c) { // is_small=1
-	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
-	// TODO: hanging support and rounded ends
-	mat.add_vcylin_to_verts(c, apply_light_color(c), 1, 1); // draw top and bottom
+	tid_nm_pair_t tex(-1, 1.0f, 1);
+	tex.set_specular(0.5, 80.0);
+	float const height(c.dz()), radius(c.get_radius()), tb_dz(0.5*radius);
+	// draw the bag
+	cube_t pb(c);
+	pb.z2() -= 0.2*height;
+	cube_t pb_mid(pb), bot(pb), top(pb);
+	pb_mid.expand_in_z(-tb_dz);
+	bot.z2() = pb_mid.z1() + tb_dz;
+	top.z1() = pb_mid.z2() - tb_dz;
+	colorRGBA const color(apply_light_color(c));
+	rgeom_mat_t &bag_mat(get_material(tex, 0, 1)); // inc_shadows=1, dynamic=0, small=1
+	bag_mat.add_vcylin_to_verts(pb_mid, color, 0, 0); // skip top and bottom
+	bag_mat.add_sphere_to_verts(bot,    color, 0,  plus_z); // bot hemisphere
+	bag_mat.add_sphere_to_verts(top,    color, 0, -plus_z); // top hemisphere
+	// draw the 4 hanging supports
+	float const sup_hwidth(0.12*radius), sup_hthick(0.2*sup_hwidth);
+	cube_t support(c);
+	support.z1() = pb_mid.z2();
+	rgeom_mat_t &matte_mat(get_untextured_material(1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
+
+	for (unsigned dim = 0; dim < 2; ++dim) {
+		for (unsigned dir = 0; dir < 2; ++dir) {
+			set_wall_width(support, c.get_center_dim(!dim), sup_hwidth, !dim);
+			set_wall_width(support, c.d[dim][dir], sup_hthick, dim);
+			unsigned const verts_start(matte_mat.quad_verts.size());
+			matte_mat.add_cube_to_verts_untextured(support, BLACK, EF_Z2); // skip top face
+			rotate_verts(matte_mat.quad_verts, vector_from_dim_dir(!dim, (dim ^ dir)), 0.15*PI, cube_bot_center(support), verts_start); // rotate top to center
+		} // for dir
+	} // for dim
 }
 
 void building_room_geom_t::add_food_tub(room_object_t const &c) {

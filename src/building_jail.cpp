@@ -625,8 +625,24 @@ bool building_t::add_gym_objs(rand_gen_t rgen, room_t &room, float &zval, unsign
 		}
 	}
 	// add punching bag
-	// TODO
+	float const fc_gap(get_floor_ceil_gap()), ceil_zval(zval + fc_gap), pb_height(0.7*fc_gap), pb_spacing(0.5*pb_height), pb_radius(0.125*pb_height);
 
+	if (min(place_area.dx(), place_area.dy()) > 2.1*(pb_spacing + pb_radius)) { // add if there's space
+		for (unsigned n = 0; n < 10; ++n) { // 10 placement tries
+			cube_t pb;
+			pb.set_from_sphere(gen_xy_pos_in_area(place_area, pb_spacing, rgen), pb_radius);
+			set_cube_zvals(pb, (ceil_zval - pb_height), ceil_zval);
+			if (is_obj_placement_blocked(pb, room, 1) || overlaps_other_room_obj(pb, objs_start, 1)) continue; // check_all=1
+			cube_t blocker(pb);
+			blocker.z1() -= 0.1*floor_spacing; // clip off top to avoid celing lights
+			blocker.z1() = zval; // extend to the floor
+			blocker.expand_by_xy(pb_spacing); // add clearance
+			if (is_obj_placement_blocked(blocker, room, 1) || overlaps_other_room_obj(blocker, objs_start, 1)) continue; // check_all=1
+			objs.emplace_back(pb,      TYPE_PUNCH_BAG, room_id, 0, 0, 0, tot_light_amt, SHAPE_CYLIN, GRAY_BLACK);
+			objs.emplace_back(blocker, TYPE_BLOCKER,   room_id, 0, 0, 0, tot_light_amt, SHAPE_CYLIN);
+			break; // done
+		} // for n
+	}
 	// add exercise machine 3D models
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_EX_MACHINE)) {
 		unsigned const num_machines((rgen.rand() % 6) + 5); // 5-10
@@ -664,7 +680,7 @@ bool building_t::add_gym_objs(rand_gen_t rgen, room_t &room, float &zval, unsign
 				float const sz((bool(d) == wdim) ? 0.5*length : radius), pad(1.5*sz);
 				set_wall_width(weights, rgen.rand_uniform((place_area.d[d][0] + pad), (place_area.d[d][1] - pad)), sz, d);
 			}
-			if (!is_valid_placement_for_room(weights, room, vect_cube_t(), 1) || overlaps_other_room_obj(weights, objs_start, 1)) continue; // check_all=1
+			if (is_obj_placement_blocked(weights, room, 1) || overlaps_other_room_obj(weights, objs_start, 1)) continue; // check_all=1
 			colorRGBA const color(WHITE*rgen.rand_uniform((hand_weight ? 0.0 : 0.25), 0.5)); // gray-black
 			unsigned const flags((hand_weight || single_cylin) ? RO_FLAG_NOCOLL : 0); // only large weights have collisions for AI (but currently not enabled)
 			objs.emplace_back(weights, TYPE_GYM_WEIGHT, room_id, wdim, 0, flags, tot_light_amt, SHAPE_CYLIN, color, int(hand_weight));
