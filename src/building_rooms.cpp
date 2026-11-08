@@ -797,7 +797,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				(num_bathrooms == 0 || (num_bathroom_rooms == 0 && num_bedrooms > 0)))); // if no bedroom was placed, allow a bathroom on only one floor
 			bool const is_tall_room(r->has_tall_ceil(window_vspacing));
 			bool added_tc(0), added_desk(0), added_obj(0), can_place_onto(0), no_whiteboard(0), no_plants(0), no_trashcan(0), is_laundry(0), is_bathroom(0), is_bedroom(0);
-			bool is_kitchen(0), is_living(0), is_dining(0), is_storage(0), is_utility(0), is_machine(0), is_play_art(0), is_library(0), is_inter(0), is_jail(0);
+			bool is_kitchen(0), is_living(0), is_dining(0), is_storage(0), is_utility(0), is_machine(0), is_play_art(0), is_library(0), is_inter(0), is_jail(0), is_gym(0);
 			unsigned num_chairs(0), pref_hang_orient(4); // no pref orient=4
 
 			// place room objects
@@ -1024,6 +1024,12 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			if (!added_obj && is_office && (is_office_bldg() || data_center || is_police_stat())) { // add cubicles if this is a large office building office (or similar)
 				added_obj = no_whiteboard = create_office_cubicles(rgen, *r, room_center.z, room_id, tot_light_amt);
 			}
+			if (!added_obj && !added_gym && is_ext_basement && rgen.rand_float() < 0.25) { // add extended basement gym, at most one per building
+				if (add_gym_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start)) {
+					r->assign_to(RTYPE_GYM, f);
+					added_obj = no_plants = no_whiteboard = added_gym = is_gym = 1;
+				}
+			}
 			if (!added_obj && is_ext_basement && rgen.rand_float() < 0.5) { // machine room
 				if (add_machines_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start)) {
 					r->assign_to(RTYPE_MACHINE, f);
@@ -1139,8 +1145,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					}
 				}
 				if (!added_obj && !added_gym && rgen.rand_bool()) {
-					added_obj = no_plants = no_whiteboard = added_gym = add_gym_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
-					if (added_obj) {r->assign_to(RTYPE_GYM, f);}
+					if (add_gym_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start)) {
+						r->assign_to(RTYPE_GYM, f);
+						added_obj = no_plants = no_whiteboard = added_gym = is_gym = 1;
+					}
 				}
 				//if (!added_obj && rgen.rand_float() < 0.25) {r->assign_to(RTYPE_ART, f);} // maybe make art room
 				//if (!added_obj) {} // teacher's office, principal's office, supply rooms, art/shop, etc.
@@ -1264,7 +1272,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					add_bookcase_to_room(rgen2, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement);
 				}
 				// maybe add a rug, 25% of the time if there's a table and 75% of the time otherwise
-				if (!has_stairs && !not_private_room && (rgen.rand()&3) <= (added_tc ? 0 : 2) && !is_kitchen) {
+				if (!has_stairs && !not_private_room && (rgen.rand()&3) <= (added_tc ? 0 : 2) && !is_kitchen && !is_gym) {
 					add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				}
 			}
