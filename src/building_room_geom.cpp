@@ -1373,9 +1373,12 @@ void building_room_geom_t::add_punching_bag(room_object_t const &c) { // dynamic
 			rotate_verts(matte_mat.quad_verts, vector_from_dim_dir(!dim, (dim ^ dir)), 0.15*PI, cube_bot_center(support), verts_start); // rotate top to center
 		} // for dir
 	} // for dim
-	if (punch_bag_hang_dir.x != 0.0 || punch_bag_hang_dir.y != 0.0) { // not fully vertical, rotate the verts
-		float const angle(safe_acosf(punch_bag_hang_dir.z));
-		vector3d const axis(-punch_bag_hang_dir.y, punch_bag_hang_dir.x, 0.0); // cross(punch_bag_hang_dir, plus_z)
+	assert(c.item_flags < punching_bags.size());
+	vector3d const hang_dir(punching_bags[c.item_flags].dir);
+
+	if (hang_dir.x != 0.0 || hang_dir.y != 0.0) { // not fully vertical, rotate the verts
+		float const angle(safe_acosf(hang_dir.z));
+		vector3d const axis(-hang_dir.y, hang_dir.x, 0.0); // cross(punch_bag_hang_dir, plus_z)
 		point const about(cube_top_center(c));
 		rotate_verts(bag_mat  .itri_verts, axis, angle, about, bag_verts_start  );
 		rotate_verts(matte_mat.quad_verts, axis, angle, about, strap_verts_start);

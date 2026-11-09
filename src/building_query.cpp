@@ -1251,16 +1251,16 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 		point pos_high(pos); // capture before apply object collisions; used for diving board
 		max_eq(pos_high.z, p_last.z);
 
+		// check for punching bag collisions
+		for (auto &pb : interior->room_geom->punching_bags) {
+			room_object_t const &pb_obj(interior->room_geom->get_room_object_by_index(pb.obj_ix));
+			int const ret(get_punching_bag_dir(pb_obj, p_last, pos, xy_radius, camera_height, pb.dir, cnorm));
+			if (ret == 0) continue; // no coll
+			had_coll |= (ret == 2); // player move
+			interior->update_dynamic_draw_data();
+		}
 		// check for other objects to collide with (including stairs)
 		for (auto c = objs.begin(); c != objs.end(); ++c) {
-			if (c->type == TYPE_PUNCH_BAG) { // player moves punching bag
-				point const prev_pos(pos);
-				int const ret(get_punching_bag_dir(*c, p_last, pos, xy_radius, camera_height, interior->room_geom->punch_bag_hang_dir, cnorm));
-				if (ret == 0) continue; // no coll
-				if (ret == 2) {had_coll = 1;} // player move
-				interior->update_dynamic_draw_data();
-				continue;
-			}
 			if (!c->is_player_collidable()) continue;
 			if (obj_z - radius > c->z2())   continue; // above the object
 			room_object const type(c->type);

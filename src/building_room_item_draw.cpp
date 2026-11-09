@@ -1079,7 +1079,7 @@ void building_room_geom_t::create_dynamic_vbos(building_t const &building, point
 	} // for e
 	for (escalator_t  const &e : building.interior->escalators) {add_escalator(e, floor_spacing, 1);} // draw_dynamic=1
 	for (tunnel_seg_t const &t : building.interior->tunnels   ) {add_tunnel_water(t);}
-	if (punch_bag_obj_ix > 0) {add_punching_bag(get_room_object_by_index(punch_bag_obj_ix));}
+	for (auto &pb : punching_bags) {add_punching_bag(get_room_object_by_index(pb.obj_ix));}
 	mats_dynamic.create_vbos(building);
 }
 
