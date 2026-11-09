@@ -757,22 +757,24 @@ colorRGBA get_outdoor_light_color() {
 unsigned const IS_WINDOW_BIT = (1<<24); // if this bit is set, the light is from a window; if not, it's from a light room object
 
 class lmap_manager_local_t {
-	vector<colorRGB> data;
+	vector<colorRGB> int_data, ext_data; // {room lights, sun/moon/cloud lights}
+	colorRGB *cur_data=nullptr;
 	vector<unsigned char> tex_data;
 	unsigned xsize=0, ysize=0, zsize=0, update_block_ix=0;
+	colorRGBA ext_color=BLACK;
 	vector3d ray_scale, ray_offset;
 	bool realloc_tid=0;
 
-	void update_elem(unsigned i) {
+	void update_elem(unsigned i) { // Note: separate interior vs. exterior light adds about 25% runtime
 		float const light_scale(light_int_scale[LIGHTING_LOCAL]);
 		unsigned const off2(4*i);
-		colorRGB &c(data[i]);
-		if (c == BLACK) {UNROLL_3X(tex_data[off2+i_] = 0;)}
-		else {
-			for (unsigned j = 0; j < 3; ++j) { // similar to gamma correction
-				max_eq(c[j], 0.0f);
-				tex_data[off2+j] = (unsigned char)(255*sqrt(min(c[j]*light_scale, 1.0f)));
-			}
+		colorRGB &ci(int_data[i]), &co(ext_data[i]);
+		if (ci == BLACK && co == BLACK) {UNROLL_3X(tex_data[off2+i_] = 0;); return;} // no light
+
+		for (unsigned j = 0; j < 3; ++j) { // similar to gamma correction
+			max_eq(ci[j], 0.0f);
+			max_eq(co[j], 0.0f);
+			tex_data[off2+j] = (unsigned char)(255*sqrt(min((ci[j] + ext_color[j]*co[j])*light_scale, 1.0f)));
 		}
 	}
 public:
@@ -782,12 +784,18 @@ public:
 		ray_scale  = vector3d(xsize, ysize, zsize)/bounds.get_size();
 		ray_offset = -bounds.get_llc()*ray_scale;
 		indir_light_step_sz = 3.0/(ray_scale.x + ray_scale.y + ray_scale.z); // used in set_indir_lighting_block()
-		data.resize(xsize*ysize*zsize, BLACK);
+		int_data.resize(xsize*ysize*zsize, BLACK);
+		ext_data.resize(xsize*ysize*zsize, BLACK);
 	}
 	void reset_all() {
-		for (colorRGB &c : data) {c = BLACK;}
+		for (colorRGB &c : int_data) {c = BLACK;}
+		for (colorRGB &c : ext_data) {c = BLACK;}
 	}
+	void set_data_src(bool exterior) {cur_data = (exterior ? ext_data : int_data).data();}
+	void set_ext_color(colorRGBA const &ext_color_) {ext_color = ext_color_;}
+
 	void add_path_to_lmcs(point p1, point p2, float weight, colorRGBA const &color, bool skip_first_step) {
+		assert(cur_data);
 		p1 = ray_scale*p1 + ray_offset;
 		p2 = ray_scale*p2 + ray_offset;
 		colorRGBA const cw(color*weight);
@@ -798,14 +806,14 @@ public:
 		for (unsigned s = 0; s < nsteps; ++s) {
 			int const x(p1.x), y(p1.y), z(p1.z);
 			// Note: this is run by multiple threads writing to the same values, so is nondeterministic; removing light won't reset values to exactly 0
-			if ((x >= 0 && x < (int)xsize && y >= 0 && y < (int)ysize && z >= 0 && z < (int)zsize)) {data[(y*xsize + x)*zsize + z] += cw;}
+			if ((x >= 0 && x < (int)xsize && y >= 0 && y < (int)ysize && z >= 0 && z < (int)zsize)) {cur_data[(y*xsize + x)*zsize + z] += cw;}
 			p1 += step;
 		}
 	}
 	void update_indir_light_texture(unsigned &tid, bool incremental) {
-		unsigned const num_grids(data.size());
+		unsigned const num_grids(int_data.size());
 		tex_data.resize(4*num_grids, 0); // computed as RGB but stored as RGBA with zero/unused alpha
-		assert(!data.empty()); // must call alloc() first
+		assert(!int_data.empty()); // must call alloc() first
 		if (tid == 0 || realloc_tid) {incremental = 0;}
 		
 		if (!incremental) { // full update; should end here
@@ -966,7 +974,7 @@ class building_indir_light_mgr_t {
 		float weight(100.0), light_radius(0.0);
 		point light_center;
 		cube_t light_cube;
-		colorRGBA lcolor, pri_lcolor;
+		colorRGBA lcolor(WHITE), pri_lcolor;
 		vector3d light_dir; // points toward the light
 		unsigned light_shape(SHAPE_CUBE);
 
@@ -1001,7 +1009,6 @@ class building_indir_light_mgr_t {
 				no_cache_objs = !bool(window.ix & WIND_BIT_BLINDS); // only cache if this window has blinds (meaning it can be updated with neg light)
 				surface_area  = window.dz()*window.get_sz_dim(!bool(dim));
 				light_cube.translate_dim(dim, (dir ? 1.0 : -1.0)*0.5*b.get_wall_thickness()); // shift slightly inside the building to avoid collision with the exterior wall
-				lcolor = outdoor_color;
 				
 				if (b.is_industrial()) {
 					base_num_rays /= 8; // faster indir lighting, since there are many windows
@@ -1103,6 +1110,7 @@ class building_indir_light_mgr_t {
 			light_clip_area.z1() -= b.get_window_vspace();
 		}
 		ray_cast_args_t const args(light_clip_area, room_area, bvh, room_bvh, in_attic, in_ext_basement, b.is_restroom_with_high_ceil(), bcolors);
+		lmgr.set_data_src(is_window);
 		
 		// Note: dynamic scheduling is faster, and using blocks doesn't help
 #pragma omp parallel for schedule(dynamic) num_threads(num_rt_threads)
@@ -1299,12 +1307,11 @@ public:
 		calc_cur_ambient_diffuse(); // needed for correct outdoor color
 		colorRGBA const cur_outdoor_color(get_outdoor_light_color());
 
-		if (!windows.empty() && cur_outdoor_color != outdoor_color) {
-			// outdoor color change, need to update lighting
-			// Note1: we could remove and re-add window lights, but that may be more work than clearing and re-adding both lights and windows
-			// Note2: we could store separate volumes for indoor vs. outdoor lights, but that would add some overhead per-update, while sun/moon changes would be uncommon
-			invalidate_lighting();
+		if (!windows.empty() && cur_outdoor_color != outdoor_color) { // outdoor color change, need to update lighting
+			//invalidate_lighting();
 			outdoor_color = cur_outdoor_color;
+			lmgr.set_ext_color(outdoor_color);
+			update_volume_light_texture(b);
 		}
 		if (display_framerate && (is_running || lighting_updated)) { // show progress to the user
 			bool const is_remove_pass(num_to_remove > 0);
