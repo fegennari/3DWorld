@@ -1341,8 +1341,6 @@ void building_room_geom_t::add_barrel(room_object_t const &c) { // is_small=1
 }
 
 void building_room_geom_t::add_punching_bag(room_object_t const &c) { // dynamic=1
-	tid_nm_pair_t tex(-1, 1.0f, 1);
-	tex.set_specular(0.5, 80.0);
 	float const height(c.dz()), radius(c.get_radius()), tb_dz(0.5*radius);
 	// draw the bag
 	cube_t pb(c);
@@ -1351,12 +1349,17 @@ void building_room_geom_t::add_punching_bag(room_object_t const &c) { // dynamic
 	pb_mid.expand_in_z(-tb_dz);
 	bot.z2() = pb_mid.z1() + tb_dz;
 	top.z1() = pb_mid.z2() - tb_dz;
-	colorRGBA const color(apply_light_color(c));
-	rgeom_mat_t &bag_mat(get_material(tex, 1, 0)); // inc_shadows=1, dynamic=1, small=0
-	unsigned const bag_verts_start(bag_mat.itri_verts.size());
-	bag_mat.add_vcylin_to_verts(pb_mid, color, 0, 0); // skip top and bottom
-	bag_mat.add_sphere_to_verts(bot,    color, 0,  plus_z); // bot hemisphere
-	bag_mat.add_sphere_to_verts(top,    color, 0, -plus_z); // top hemisphere
+	colorRGBA const color(apply_light_color(c)), logo_color(apply_light_color(c, WHITE));
+	tid_nm_pair_t tb_tex(-1, 1.0f, 1);
+	tid_nm_pair_t logo_tex(get_texture_by_name("interiors/neverlast.png"), 1.0, 1); // shadowed
+	tb_tex  .set_specular(0.5, 80.0);
+	logo_tex.set_specular(0.5, 80.0);
+	rgeom_mat_t &tb_mat  (get_material(tb_tex,   1, 0)); // inc_shadows=1, dynamic=1, small=0
+	rgeom_mat_t &side_mat(get_material(logo_tex, 1, 0)); // inc_shadows=1, dynamic=1, small=0
+	unsigned const side_verts_start(side_mat.itri_verts.size()), tb_verts_start(tb_mat.itri_verts.size());
+	side_mat.add_vcylin_to_verts(pb_mid, logo_color, 0, 0, 0, 0, 1.0, 1.0, 2.0); // skip top and bottom, scaled 2x horizontally for 2x logos
+	tb_mat  .add_sphere_to_verts(bot, color, 0,  plus_z); // bot hemisphere
+	tb_mat  .add_sphere_to_verts(top, color, 0, -plus_z); // top hemisphere
 	// draw the 4 hanging supports
 	float const sup_hwidth(0.12*radius), sup_hthick(0.2*sup_hwidth);
 	cube_t support(c);
@@ -1373,6 +1376,7 @@ void building_room_geom_t::add_punching_bag(room_object_t const &c) { // dynamic
 			rotate_verts(matte_mat.quad_verts, vector_from_dim_dir(!dim, (dim ^ dir)), 0.15*PI, cube_bot_center(support), verts_start); // rotate top to center
 		} // for dir
 	} // for dim
+	// rotate all geom if the bag is hanging at an angle from vertical
 	assert(c.item_flags < punching_bags.size());
 	vector3d const hang_dir(punching_bags[c.item_flags].dir);
 
@@ -1380,7 +1384,8 @@ void building_room_geom_t::add_punching_bag(room_object_t const &c) { // dynamic
 		float const angle(safe_acosf(hang_dir.z));
 		vector3d const axis(-hang_dir.y, hang_dir.x, 0.0); // cross(punch_bag_hang_dir, plus_z)
 		point const about(cube_top_center(c));
-		rotate_verts(bag_mat  .itri_verts, axis, angle, about, bag_verts_start  );
+		rotate_verts(side_mat .itri_verts, axis, angle, about, side_verts_start );
+		rotate_verts(tb_mat   .itri_verts, axis, angle, about, tb_verts_start   );
 		rotate_verts(matte_mat.quad_verts, axis, angle, about, strap_verts_start);
 	}
 }
