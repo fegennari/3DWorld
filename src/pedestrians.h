@@ -41,8 +41,9 @@ struct person_base_t : public waiting_obj_t {
 	float get_hwidth () const {return PED_WIDTH_SCALE *radius;} // half-width/half-depth
 	float get_z1     () const {return (pos.z - radius);}
 	float get_z2     () const {return (get_z1() + get_height());}
+	float get_eye_dz () const {return (EYE_HEIGHT_RATIO*get_height() - radius);}
 	cube_t get_bcube () const;
-	point get_eye_pos() const {return (pos + vector3d(0.0, 0.0, (EYE_HEIGHT_RATIO*get_height() - radius)));}
+	point get_eye_pos() const {return (pos + vector3d(0.0, 0.0, get_eye_dz()));}
 	bool target_valid() const {return (target_pos != all_zeros);}
 	bool is_waiting_or_stopped() const {return (speed == 0.0 || is_stopped || is_stationary || is_idle || (in_building && waiting_start > 0));} // city peds normally have waiting_start > 0
 	void set_velocity(vector3d const &v);

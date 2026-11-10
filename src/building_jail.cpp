@@ -625,12 +625,13 @@ bool building_t::add_gym_objs(rand_gen_t rgen, room_t &room, float &zval, unsign
 		}
 	}
 	// add punching bag
-	float const fc_gap(get_floor_ceil_gap()), ceil_zval(zval + fc_gap), pb_height(0.7*fc_gap), pb_spacing(0.5*pb_height), pb_radius(0.125*pb_height);
+	float const fc_gap(get_floor_ceil_gap()), ceil_zval(zval + fc_gap);
+	float const pb_height(0.7*fc_gap), pb_spacing(0.5*pb_height), pb_wall_space(0.9*pb_height), pb_radius(0.125*pb_height);
 
-	if (min(place_area.dx(), place_area.dy()) > 2.1*(pb_spacing + pb_radius)) { // add if there's space
+	if (min(place_area.dx(), place_area.dy()) > 2.1*(pb_wall_space + pb_radius)) { // add if there's space
 		for (unsigned n = 0; n < 10; ++n) { // 10 placement tries
 			cube_t pb;
-			pb.set_from_sphere(gen_xy_pos_in_area(place_area, pb_spacing, rgen), pb_radius);
+			pb.set_from_sphere(gen_xy_pos_in_area(place_area, pb_wall_space, rgen), pb_radius);
 			set_cube_zvals(pb, (ceil_zval - pb_height), ceil_zval);
 			if (is_obj_placement_blocked(pb, room, 1) || overlaps_other_room_obj(pb, objs_start, 1)) continue; // check_all=1
 			cube_t blocker(pb);
