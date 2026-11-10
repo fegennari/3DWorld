@@ -1058,6 +1058,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 	else if (type == TYPE_PUNCH_BAG) {
 		assert(obj.item_flags < interior->room_geom->punching_bags.size());
 		interior->room_geom->punching_bags[obj.item_flags].apply_force(1.0*vector3d(int_dir.x, int_dir.y, 0.0));
+		gen_sound_thread_safe_at_player(SOUND_KICK_BALL, 1.0, 0.8);
 	}
 	else if (is_ball_type(type)) { // push the ball
 		assert(obj.has_dstate());
@@ -1830,6 +1831,7 @@ bool punching_bag_t::update_physics() {
 	float const gravity = 9.81f; // acceleration of gravity (in game units/s^2)
 	float const damping = 0.993f; // air resistance / joint friction (per frame decay)
 	float const dt(fticks/TICKS_PER_SECOND);
+	vector3d const old_vel(vel);
 
 	if (pushed_this_frame) { // player kinematic
 		vel = (dir - last_dir) / dt; // calculate velocity based on how fast the player is actively shifting the bag
@@ -1844,8 +1846,13 @@ bool punching_bag_t::update_physics() {
 		vel.y *= dampen;
 		dir    = (dir + vel * dt).get_norm(); // integrate position directly in 3D space
 	}
+	float const xy_mag(dir.xy_mag());
+
+	if (!pushed_this_frame && !hit_this_frame && xy_mag > 0.25 && dot_product(vector3d(vel.x, vel.y, 0.0), vector3d(old_vel.x, old_vel.y, 0.0)) < 0.0) {
+		gen_sound_thread_safe_at_player(SOUND_SQUEAK, 0.5*xy_mag*xy_mag, 0.8); // squeak when changing direction at the apex of the swing
+	}
 	last_dir = dir; // record dir before the next player push
-	if (max(fabs(dir.x), fabs(dir.y)) < 0.0001) {dir = plus_z;} // back to rest pos
+	if (xy_mag < 0.0001) {dir = plus_z;} // back to rest pos
 	pushed_this_frame = hit_this_frame = 0; // reset
 	return 1;
 }
