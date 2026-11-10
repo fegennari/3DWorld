@@ -25,7 +25,7 @@ float    const CRITICAL_ANGLE      = 0.5; // in radians, for skipping objects on
 float    const BURN_DAMAGE         = 1200.0;
 unsigned const MAX_FIRE_TIME       = 10000;
 bool     const ball_camera_view    = 0;
-bool     const PRINT_TIME_OF_DAY   = 1;
+bool     const PRINT_TIME_OF_DAY   = 0;
 
 
 // Global Variables
@@ -1757,14 +1757,9 @@ void auto_advance_time() { // T = 1 hour
 	if (vis_recalc) {check_update_global_lighting(vis_recalc);}
 
 	if (PRINT_TIME_OF_DAY) {
-		if (hrtime24 < 12) {
-			cout << "Time = " << (hrtime24==0  ? 12 : hrtime24   ) << ":" << (((itime&1) == 0) ? "00" : "30") << " AM";
-		}
-		else {
-			cout << "Time = " << (hrtime24==12 ? 12 : hrtime24-12) << ":" << (((itime&1) == 0) ? "00" : "30") << " PM";
-		}
-		printf(", Day=%i, Temp=%.3f, Clouds=%.3f, Precip=%.3f/%u/%.3f.\n",
-			date, temperature, cloud_cover, precip, obj_groups[cid].app_rate, prate);
+		if (hrtime24 < 12) {cout << "Time = " << (hrtime24==0  ? 12 : hrtime24   ) << ":" << (((itime&1) == 0) ? "00" : "30") << " AM";}
+		else {cout << "Time = " << (hrtime24==12 ? 12 : hrtime24-12) << ":" << (((itime&1) == 0) ? "00" : "30") << " PM";}
+		printf(", Day=%i, Temp=%.3f, Clouds=%.3f, Precip=%.3f/%u/%.3f.\n", date, temperature, cloud_cover, precip, obj_groups[cid].app_rate, prate);
 		cout << "Wind = " << wind.x << ", " << wind.y << ", " << wind.z << "." << endl;
 	}
 }
