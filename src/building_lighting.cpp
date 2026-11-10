@@ -765,17 +765,20 @@ class lmap_manager_local_t {
 	vector3d ray_scale, ray_offset;
 	bool realloc_tid=0;
 
-	void update_elem(unsigned i) { // Note: separate interior vs. exterior light adds about 25% runtime
+	void update_elem_range(unsigned start_ix, unsigned end_ix) { // Note: separate interior vs. exterior light adds about 25% runtime
 		float const light_scale(light_int_scale[LIGHTING_LOCAL]);
-		unsigned const off2(4*i);
-		colorRGB &ci(int_data[i]), &co(ext_data[i]);
-		if (ci == BLACK && co == BLACK) {UNROLL_3X(tex_data[off2+i_] = 0;); return;} // no light
 
-		for (unsigned j = 0; j < 3; ++j) { // similar to gamma correction
-			max_eq(ci[j], 0.0f);
-			max_eq(co[j], 0.0f);
-			tex_data[off2+j] = (unsigned char)(255*sqrt(min((ci[j] + ext_color[j]*co[j])*light_scale, 1.0f)));
-		}
+		for (unsigned i = start_ix; i < end_ix; ++i) {
+			unsigned const off2(4*i);
+			colorRGB &ci(int_data[i]), &co(ext_data[i]);
+			if (ci == BLACK && co == BLACK) {UNROLL_3X(tex_data[off2+i_] = 0;); continue;} // no light
+
+			for (unsigned j = 0; j < 3; ++j) { // similar to gamma correction
+				max_eq(ci[j], 0.0f);
+				max_eq(co[j], 0.0f);
+				tex_data[off2+j] = (unsigned char)(255*sqrt(min((ci[j] + ext_color[j]*co[j])*light_scale, 1.0f)));
+			}
+		} // for i
 	}
 public:
 	void alloc(unsigned xsize_, unsigned ysize_, unsigned zsize_, cube_t const &bounds) {
@@ -817,11 +820,11 @@ public:
 		if (tid == 0 || realloc_tid) {incremental = 0;}
 		
 		if (!incremental) { // full update; should end here
-#pragma omp parallel for schedule(static, 128) num_threads(min(4U, NUM_THREADS))
-			for (int i = 0; i < (int)num_grids; ++i) {update_elem(i);}
+#pragma omp parallel for schedule(static) num_threads(min(4U, NUM_THREADS))
+			for (int col_ix = 0; col_ix < int(xsize*ysize); ++col_ix) {update_elem_range(col_ix*zsize, (col_ix+1)*zsize);}
 			if (realloc_tid) {free_texture(tid); realloc_tid = 0;}
 			if (tid == 0) {tid = create_3d_texture(zsize, xsize, ysize, 4, tex_data, GL_LINEAR, GL_CLAMP_TO_EDGE);}
-			else {update_3d_texture(tid, 0, 0, 0, zsize, xsize, ysize, 4, tex_data.data());} // stored {Z,X,Y}
+			else {update_3d_texture(tid, 0, 0, 0,  zsize, xsize, ysize, 4, tex_data.data());} // stored {Z,X,Y}
 			update_block_ix = 0;
 		}
 		else { // incremental update
@@ -831,7 +834,7 @@ public:
 			unsigned const end_y(min(ysize, (start_y + yvals_per_block))); // clamp to max in case ysize doesn't divide evenly by num_blocks
 			int const start_ix(cells_per_yval*start_y), end_ix(cells_per_yval*end_y);
 			assert(end_ix <= (int)num_grids);
-			for (int i = start_ix; i < end_ix; ++i) {update_elem(i);}
+			update_elem_range(start_ix, end_ix);
 			update_3d_texture(tid, 0, 0, start_y, zsize, xsize, (end_y - start_y), 4, (tex_data.data() + 4*start_ix));
 			if (++update_block_ix == num_blocks) {update_block_ix = 0;}
 		}
