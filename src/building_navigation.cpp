@@ -40,7 +40,6 @@ void get_sphere_boundary_pts(point const &center, float radius, point *pts, bool
 unsigned get_L_stairs_first_flight_count(stairs_landing_base_t const &s, float landing_width);
 void get_L_stairs_entrances(stairs_landing_base_t const &s, float doorway_width, bool for_placement, cube_t entrances[2]);
 bool bed_is_wide(room_object_t const &c);
-int get_punching_bag_dir(room_object_t const &pb, point const &p_last, point &pos, float radius, float eye_height, vector3d &pb_dir, vector3d *cnorm);
 
 float get_ped_radius     () {return ped_manager_t::get_ped_radius();}
 float get_ped_coll_radius() {return COLL_RADIUS_SCALE*get_ped_radius();}
@@ -3366,12 +3365,8 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	if (has_room_geom()) { // check for punching bag collisions
 		for (auto &pb : interior->room_geom->punching_bags) {
 			room_object_t const &pb_obj(interior->room_geom->get_room_object_by_index(pb.obj_ix));
-		
-			if (get_punching_bag_dir(pb_obj, person.pos, new_pos, coll_dist, person.get_eye_dz(), pb.dir, nullptr)) {
-				pb.pushed_this_frame = 1;
-				interior->update_dynamic_draw_data();
-			}
-		} // for pb
+			if (pb.collision(pb_obj, person.pos, new_pos, coll_dist, person.get_eye_dz(), nullptr)) {interior->update_dynamic_draw_data();}
+		}
 	}
 	handle_vert_cylin_tape_collision(new_pos, person.pos, person.get_z1(), person.get_z2(), radius, 0); // should be okay to use zvals from old pos; is_player=0
 	// logic to clip this person to correct room Z-bounds in case something went wrong; remove if/when this is fixed

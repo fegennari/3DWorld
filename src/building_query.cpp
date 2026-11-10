@@ -1095,26 +1095,6 @@ bool room_object_t::is_player_collidable() const {
 		type == TYPE_METAL_BAR || (type == TYPE_TCAN && (in_mall() || in_hallway()))));
 }
 
-// return value: 0=no coll, 1=punching bag moves, 2=punching bag and player move
-int get_punching_bag_dir(room_object_t const &pb, point const &p_last, point &pos, float radius, float eye_height, vector3d &pb_dir, vector3d *cnorm) {
-	cylinder_3dw cylin(pb.get_cylinder());
-	cylin.p2.z += radius; // extend upward   by radius
-	cylin.p1.z -= radius; // extend downward by radius
-	point coll_pos(pos); // unused
-	vector3d coll_norm; // unused
-	if (!sphere_vert_cylin_intersect(coll_pos, radius, cylin, &coll_norm)) return 0;
-	bool const hard_coll(sphere_vert_cylin_intersect(pos, 0.1*radius, cylin, cnorm)); // central cylinder stops the player
-	vector3d D(point(pos.x, pos.y, pos.z+eye_height) - cube_top_center(pb)); // vector from player's head to anchor at top of cylinder
-	float const d_h(D.xy_mag()), d_length(sqrt(d_h*d_h + D.z*D.z)), r_clear(cylin.r1 + radius);
-	if (d_length < r_clear) return 0; // no collision
-	float const alpha(asin(min(1.0f, (r_clear / d_length))));
-	float const phi(atan2(d_h, -D.z)); // measure the angle of the head position relative to the downward vertical axis
-	float const theta(phi - alpha); // total angle the bag needs to tilt away from the vertical Z-axis
-	float const sin_theta(sin(theta)), cos_theta(cos(theta));
-	if (fabs(cos_theta) < fabs(pb_dir.z)) {pb_dir.assign(((D.x / d_h) * sin_theta), ((D.y / d_h) * sin_theta), cos_theta);} // only update if moved further out
-	return (hard_coll ? 2 : 1);
-}
-
 // Note: used for the player; pos and p_last are already in rotated coordinate space
 // default player is actually too large to fit through doors and too tall to fit between the floor and celing,
 // so player size/height must be reduced in the config file
@@ -1254,9 +1234,8 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 		// check for punching bag collisions
 		for (auto &pb : interior->room_geom->punching_bags) {
 			room_object_t const &pb_obj(interior->room_geom->get_room_object_by_index(pb.obj_ix));
-			int const ret(get_punching_bag_dir(pb_obj, p_last, pos, xy_radius, camera_height, pb.dir, cnorm));
+			int const ret(pb.collision(pb_obj, p_last, pos, xy_radius, camera_height, cnorm));
 			if (ret == 0) continue; // no coll
-			pb.pushed_this_frame = 1;
 			had_coll |= (ret == 2); // player move
 			interior->update_dynamic_draw_data();
 		}

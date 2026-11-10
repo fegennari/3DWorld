@@ -573,7 +573,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 					else if (type == TYPE_PICTURE || type == TYPE_TPROLL || type == TYPE_MWAVE || type == TYPE_TV || type == TYPE_MONITOR || type == TYPE_BLINDS ||
 						type == TYPE_SWITCH || type == TYPE_BOOK || type == TYPE_BRK_PANEL || type == TYPE_BREAKER || type == TYPE_ATTIC_DOOR || type == TYPE_OFF_CHAIR ||
 						type == TYPE_WFOUNTAIN || type == TYPE_VENDING || type == TYPE_MED_CAB || type == TYPE_LOCKER || type == TYPE_TCAN || type == TYPE_CASHREG ||
-						type == TYPE_COM_FRIDGE || type == TYPE_HAND_DRYER || type == TYPE_TV_REMOTE) {keep = 1;}
+						type == TYPE_COM_FRIDGE || type == TYPE_HAND_DRYER || type == TYPE_TV_REMOTE || type == TYPE_PUNCH_BAG) {keep = 1;}
 					else if ((type == TYPE_STOVE || type == TYPE_SHOWER || type == TYPE_SHOWERTUB /*|| type == TYPE_FRIDGE*/) && !i->in_mall()) {keep = 1;} // not in plumbing store
 					else if (type == TYPE_O_SHOWER && i->contains_pt(closest_to)) {keep = 1;} // only if standing inside
 					else if (type == TYPE_LG_BALL && i->has_dstate()) {keep = 1;}
@@ -1054,6 +1054,10 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 	else if (type == TYPE_HAND_DRYER) { // hand dryer
 		gen_sound_thread_safe(SOUND_HAND_DRYER, local_center, 1.0, 1.0, 1.0, 1); // skip_if_already_playing=1
 		sound_scale = 0.5; // very little sound
+	}
+	else if (type == TYPE_PUNCH_BAG) {
+		assert(obj.item_flags < interior->room_geom->punching_bags.size());
+		interior->room_geom->punching_bags[obj.item_flags].apply_force(1.0*vector3d(int_dir.x, int_dir.y, 0.0));
 	}
 	else if (is_ball_type(type)) { // push the ball
 		assert(obj.has_dstate());
@@ -1797,8 +1801,32 @@ void building_t::update_pool_table(room_object_t &ball) {
 	update_ball_pos(ball, dstate, *interior, old_pos, new_pos);
 }
 
+// return value: 0=no coll, 1=punching bag moves, 2=punching bag and player move
+int punching_bag_t::collision(room_object_t const &pb, point const &p_last, point &pos, float radius, float eye_height, vector3d *cnorm) {
+	cylinder_3dw cylin(pb.get_cylinder());
+	cylin.p2.z += radius; // extend upward   by radius
+	cylin.p1.z -= radius; // extend downward by radius
+	point coll_pos(pos); // unused
+	vector3d coll_norm; // unused
+	if (!sphere_vert_cylin_intersect(coll_pos, radius, cylin, &coll_norm)) return 0; // no collision
+	bool const hard_coll(sphere_vert_cylin_intersect(pos, 0.1*radius, cylin, cnorm)); // central cylinder stops the player
+	vector3d D(point(pos.x, pos.y, pos.z+eye_height) - cube_top_center(pb)); // vector from player's head to anchor at top of cylinder
+	float const d_h(D.xy_mag()), d_length(sqrt(d_h*d_h + D.z*D.z)), r_clear(cylin.r1 + radius);
+	if (d_length < r_clear) return 0; // no collision
+	float const alpha(asin(min(1.0f, (r_clear / d_length))));
+	float const phi(atan2(d_h, -D.z)); // measure the angle of the head position relative to the downward vertical axis
+	float const theta(phi - alpha); // total angle the bag needs to tilt away from the vertical Z-axis
+	float const sin_theta(sin(theta)), cos_theta(cos(theta));
+	if (fabs(cos_theta) < fabs(dir.z)) {dir.assign(((D.x / d_h) * sin_theta), ((D.y / d_h) * sin_theta), cos_theta);} // only update if moved further out
+	pushed_this_frame = 1;
+	return (hard_coll ? 2 : 1);
+}
+void punching_bag_t::apply_force(vector3d const &force) {
+	vel += force; // not really a force but more of an impulse
+	hit_this_frame = 1; // wake it up
+}
 bool punching_bag_t::update_physics() {
-	if (dir == plus_z) return 0; // rest pos
+	if (dir == plus_z && !hit_this_frame) return 0; // rest pos
 	float const gravity = 9.81f; // acceleration of gravity (in game units/s^2)
 	float const damping = 0.993f; // air resistance / joint friction (per frame decay)
 	float const dt(fticks/TICKS_PER_SECOND);
@@ -1818,7 +1846,7 @@ bool punching_bag_t::update_physics() {
 	}
 	last_dir = dir; // record dir before the next player push
 	if (max(fabs(dir.x), fabs(dir.y)) < 0.0001) {dir = plus_z;} // back to rest pos
-	pushed_this_frame = 0; // reset
+	pushed_this_frame = hit_this_frame = 0; // reset
 	return 1;
 }
 
