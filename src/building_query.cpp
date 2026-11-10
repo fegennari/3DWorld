@@ -1256,6 +1256,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 			room_object_t const &pb_obj(interior->room_geom->get_room_object_by_index(pb.obj_ix));
 			int const ret(get_punching_bag_dir(pb_obj, p_last, pos, xy_radius, camera_height, pb.dir, cnorm));
 			if (ret == 0) continue; // no coll
+			pb.pushed_this_frame = 1;
 			had_coll |= (ret == 2); // player move
 			interior->update_dynamic_draw_data();
 		}

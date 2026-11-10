@@ -1799,9 +1799,26 @@ void building_t::update_pool_table(room_object_t &ball) {
 
 bool punching_bag_t::update_physics() {
 	if (dir == plus_z) return 0; // rest pos
-	float const delta_dir(1.5*(1.0 - pow(0.7f, fticks)));
-	dir = delta_dir*plus_z + (1.0 - delta_dir)*dir; // TODO: swing back and forth
-	if (max(fabs(dir.x), fabs(dir.y)) < 0.001) {dir = plus_z;} // back to rest pos
+	float const gravity = 9.81f; // acceleration of gravity (in game units/s^2)
+	float const damping = 0.993f; // air resistance / joint friction (per frame decay)
+	float const dt(fticks/TICKS_PER_SECOND);
+
+	if (pushed_this_frame) { // player kinematic
+		vel = (dir - last_dir) / dt; // calculate velocity based on how fast the player is actively shifting the bag
+	}
+	else { // dynamic spherical pendulum
+		// gravity pulls strictly downward; the restoring torque is proportional to the horizontal component of the current dir
+		float const dampen(pow(damping, dt * 60.0f)); // apply friction damping frame-rate independently
+		vel.x += (-gravity * dir.x) * dt;
+		vel.y += (-gravity * dir.y) * dt;
+		vel.z  = 0.0f; // Z changes are handled by the spherical constraint
+		vel.x *= dampen;
+		vel.y *= dampen;
+		dir    = (dir + vel * dt).get_norm(); // integrate position directly in 3D space
+	}
+	last_dir = dir; // record dir before the next player push
+	if (max(fabs(dir.x), fabs(dir.y)) < 0.0001) {dir = plus_z;} // back to rest pos
+	pushed_this_frame = 0; // reset
 	return 1;
 }
 

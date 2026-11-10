@@ -754,7 +754,9 @@ struct particle_source_t {
 
 struct punching_bag_t {
 	unsigned obj_ix;
-	vector3d dir=plus_z; // pointing up to the anchor
+	vector3d dir=plus_z, last_dir=plus_z; // pointing up to the anchor
+	vector3d vel;
+	bool pushed_this_frame=0;
 
 	punching_bag_t(unsigned ix) : obj_ix(ix) {}
 	bool update_physics();
