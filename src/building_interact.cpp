@@ -2121,13 +2121,29 @@ void maybe_play_drip_sound(point const &pos, building_t const &building, float g
 	gen_sound_thread_safe(SOUND_WATER_DROP, pos_cs, gain);
 }
 
+bool skip_part_obj_coll(unsigned effect) {
+	// steam passes through objects, so skip them; also used as an optimization;
+	// skip objects as well for droplets as an optimization since they fall quickly straight down and it won't be obvious if they're wrong
+	return (effect == PART_EFFECT_STEAM || effect == PART_EFFECT_DROPLET);
+}
 void particle_manager_t::next_frame(building_t &building) {
 	if (particles.empty()) return;
 	float const fticks_stable(min(fticks, 4.0f)); // clamp to 0.1s
 	auto const &objs(building.interior->room_geom->objs);
 	//                           in seconds:  none sparks clouds smoke splash bubble, droplet, steam, flash
 	float const lifetimes[NUM_PART_EFFECTS] = {0.0, 2.5,   3.0,   2.0,  0.25,  2.0,    1.0,     2.0,   0.08};
+	bool use_coll_cubes(particles.size() > 10); // if there are enough particles, extract collision cubes once
+	vect_cube_t coll_cubes;
 
+	if (use_coll_cubes) { // calculate bcube of coll_cubes
+		cube_t parts_bcube;
+
+		for (particle_t &p : particles) {
+			if (!skip_part_obj_coll(p.effect)) {parts_bcube.assign_or_union_with_sphere(p.pos, p.get_sphere_coll_radius());}
+		}
+		if (parts_bcube.is_all_zeros()) {use_coll_cubes = 0;} // no parts have collisions
+		else {building.interior->get_collidable_obj_cubes(coll_cubes, &parts_bcube);}
+	}
 	for (particle_t &p : particles) {
 		point const p_last(p.pos);
 		p.pos  += fticks_stable*p.vel;
@@ -2186,12 +2202,25 @@ void particle_manager_t::next_frame(building_t &building) {
 		int obj_ix(-1);
 		float hardness(0.0);
 		auto self(objs.end());
-		if (p.parent_obj_id >= 0) {assert((unsigned)p.parent_obj_id < objs.size()); self = objs.begin() + p.parent_obj_id;}
-		// steam passes through objects, so skip them; also used as an optimization;
-		// skip objects as well for droplets as an optimization since they fall quickly straight down and it won't be obvious if they're wrong
-		bool const skip_objects(p.effect == PART_EFFECT_STEAM || p.effect == PART_EFFECT_DROPLET);
+		cube_t skip_obj;
 
-		if (building.interior->check_sphere_coll(building, p.pos, p_last, p.radius*p.coll_radius, self, cnorm, hardness, obj_ix, 0, skip_objects)) { // is_ball=0
+		if (p.parent_obj_id >= 0) {
+			assert((unsigned)p.parent_obj_id < objs.size());
+			self = objs.begin() + p.parent_obj_id;
+			skip_obj = *self;
+		}
+		bool skip_objects(skip_part_obj_coll(p.effect)), had_coll(0);
+		float const c_radius(p.get_sphere_coll_radius());
+
+		if (use_coll_cubes && !skip_objects) { // optimization for many particles case
+			for (cube_t const &c : coll_cubes) {
+				if (c != skip_obj) {had_coll |= sphere_cube_int_update_pos(p.pos, c_radius, c, p_last, 0, &cnorm);}
+			}
+			skip_objects = 1;
+		}
+		had_coll |= building.interior->check_sphere_coll(building, p.pos, p_last, c_radius, self, cnorm, hardness, obj_ix, 0, skip_objects); // is_ball=0
+
+		if (had_coll) {
 			if (p.effect == PART_EFFECT_CLOUD || p.effect == PART_EFFECT_SMOKE || p.effect == PART_EFFECT_DROPLET || p.effect == PART_EFFECT_STEAM) { // no bounce
 				if (p.effect == PART_EFFECT_DROPLET) {maybe_play_drip_sound(p.pos, building, 0.05, 1.0);} // droplet hitting something other than water
 				p.effect = PART_EFFECT_NONE;

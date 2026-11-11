@@ -518,6 +518,7 @@ class particle_manager_t {
 		particle_t() {}
 		particle_t(point const &p, vector3d const &v, colorRGBA const &c, float r, unsigned e, int pid=-1, float cr=1.0) :
 			pos(p), vel(v), color(c), init_radius(r), radius(r), alpha(color.A), coll_radius(cr), parent_obj_id(pid), effect(e) {}
+		float get_sphere_coll_radius() const {return radius*coll_radius;}
 	};
 	vector<particle_t> particles;
 	quad_batch_draw qbds[NUM_PART_EFFECTS]; // one per perticle effect
@@ -1631,6 +1632,7 @@ struct building_interior_t {
 		vect_room_object_t::const_iterator self, vector3d &cnorm, float &hardness, int &obj_ix, bool is_ball=0, bool skip_objects=0) const;
 	bool check_sphere_coll_room_objects(building_t const &building, point &pos, point const &p_last, float radius,
 		vect_room_object_t::const_iterator self, vector3d &cnorm, float &hardness, int &obj_ix, bool is_ball=0) const;
+	void get_collidable_obj_cubes(vect_cube_t &coll_cubes, cube_t const *test_bcube=nullptr) const;
 	room_object_t const &get_elevator_car(elevator_t const &e) const;
 	bool check_sphere_coll_walls_elevators_doors(building_t const &building, point &pos, point const &p_last, float radius,
 		float wall_test_extra_z, bool is_player, vector3d *cnorm) const;

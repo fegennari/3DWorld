@@ -1767,6 +1767,21 @@ bool building_interior_t::check_sphere_coll(building_t const &building, point &p
 	if (!skip_objects) {had_coll |= check_sphere_coll_room_objects(building, pos, p_last, radius, self, cnorm, hardness, obj_ix, is_ball);}
 	return had_coll;
 }
+
+bool is_room_obj_collidable(room_object_t const &c, cube_t &bc, bool is_ball=0) {
+	// ignore blockers and railings, but allow more than c->no_coll()
+	room_object const type(c.type);
+	if (type == TYPE_BLOCKER || type == TYPE_PAPER || type == TYPE_PEN || type == TYPE_PENCIL || c.is_a_drink() || type == TYPE_FLOORING || type == TYPE_SIGN ||
+		type == TYPE_WBOARD || type == TYPE_WALL_TRIM || type == TYPE_DRAIN || type == TYPE_SWITCH || type == TYPE_BREAKER || type == TYPE_OUTLET || type == TYPE_VENT ||
+		type == TYPE_WIND_SILL || type == TYPE_TEESHIRT || type == TYPE_PANTS || type == TYPE_BLANKET || type == TYPE_FOLD_SHIRT || type == TYPE_SPIWEB ||
+		type == TYPE_ELEC_WIRE || type == TYPE_TESTTUBE || type == TYPE_O_SHOWER || type == TYPE_JAR) return 0;
+	if (type == TYPE_RAILING && (!(c.flags & RO_FLAG_TOS) || !c.is_open())) return 0; // only railings at the top of stairs (non-sloped) with balusters have collisions
+	if (type == TYPE_POOL_TILE && c.no_coll()) return 0;
+	if (type == TYPE_PIPE && !is_ball) return 0; // skip pipes when colliding with water droplets but not balls; skip for roaches as well?
+	bc = get_true_room_obj_bcube(c);
+	if (type == TYPE_CATWALK) {bc = get_catwalk_bottom(c);} // only bottom surface is collidable
+	return 1;
+}
 bool building_interior_t::check_sphere_coll_room_objects(building_t const &building, point &pos, point const &p_last, float radius,
 	vect_room_object_t::const_iterator self, vector3d &cnorm, float &hardness, int &obj_ix, bool is_ball) const
 {
@@ -1775,18 +1790,11 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 
 	// Note: no collision check with expanded_objs
 	for (auto c = room_geom->objs.begin(); c != room_geom->objs.end(); ++c) { // check for other objects to collide with
+		if (c == self) continue;
 		room_object const type(c->type);
-		// ignore blockers and railings, but allow more than c->no_coll()
-		if (c == self || type == TYPE_BLOCKER || type == TYPE_PAPER || type == TYPE_PEN || type == TYPE_PENCIL || c->is_a_drink() || type == TYPE_FLOORING || type == TYPE_SIGN ||
-			type == TYPE_WBOARD || type == TYPE_WALL_TRIM || type == TYPE_DRAIN || type == TYPE_SWITCH || type == TYPE_BREAKER || type == TYPE_OUTLET || type == TYPE_VENT ||
-			type == TYPE_WIND_SILL || type == TYPE_TEESHIRT || type == TYPE_PANTS || type == TYPE_BLANKET || type == TYPE_FOLD_SHIRT || type == TYPE_SPIWEB ||
-			type == TYPE_ELEC_WIRE || type == TYPE_TESTTUBE || type == TYPE_O_SHOWER || type == TYPE_JAR) continue;
-		if (type == TYPE_RAILING && (!(c->flags & RO_FLAG_TOS) || !c->is_open())) continue; // only railings at the top of stairs (non-sloped) with balusters have collisions
-		if (type == TYPE_POOL_TILE && c->no_coll()) continue;
-		if (type == TYPE_PIPE && !is_ball) continue; // skip pipes when colliding with water droplets but not balls; skip for roaches as well?
-		cube_t bc(get_true_room_obj_bcube(*c));
-		if (type == TYPE_CATWALK) {bc = get_catwalk_bottom(*c);} // only bottom surface is collidable
-		if (!sphere_cube_intersect(pos, radius, bc)) continue; // no intersection (optimization)
+		cube_t bc;
+		if (!is_room_obj_collidable(*c, bc, is_ball)) continue;
+		if (!sphere_cube_intersect(pos, radius, bc))  continue; // no intersection (optimization)
 		if (is_ball && type == TYPE_BOOK && c->dz() < 0.2*radius) continue; // large ball vs. small book on the floor: unstable, skip
 		unsigned coll_ret(0);
 		// add special handling for things like elevators? right now these are only in office buildings, where there are no dynamic objects
@@ -1870,6 +1878,16 @@ bool building_interior_t::check_sphere_coll_room_objects(building_t const &build
 		}
 	} // for c
 	return had_coll;
+}
+void building_interior_t::get_collidable_obj_cubes(vect_cube_t &coll_cubes, cube_t const *test_bcube) const { // for particles, etc.
+	if (!room_geom) return;
+
+	for (room_object_t const &c : room_geom->objs) { // Note: no collision check with expanded_objs
+		cube_t bc;
+		if (!is_room_obj_collidable(c, bc)) continue;
+		if (test_bcube && !test_bcube->intersects(bc)) continue;
+		coll_cubes.push_back(bc); // use bounding cube of all collidable objects
+	}
 }
 
 room_object_t const &building_interior_t::get_elevator_car(elevator_t const &e) const {
