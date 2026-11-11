@@ -584,8 +584,8 @@ void building_t::add_missing_backrooms_lights(rand_gen_t rgen, float zval, unsig
 		unsigned const zone_x(zone_x_add + round_fp(i->xc()/zone_spacing)), zone_y(zone_y_add + round_fp(i->yc()/zone_spacing));
 		zone_rgen.set_state(zone_x, zone_y);
 		zone_rgen.rand_mix();
-		if (zone_rgen.rand_float() > 0.2) continue; // 20% chance of colored light
-		i->color = light_colors[zone_rgen.rand() % NUM_LIGHT_COLORS];
+		if      (zone_rgen.rand_float() < 0.2) {i->color  = light_colors[zone_rgen.rand() % NUM_LIGHT_COLORS];} // 20% chance of colored light
+		else if (zone_rgen.rand_float() < 0.2) {i->flags |= RO_FLAG_NO_POWER;} // 20% (16% after colored lights check above) chance of broken/unpowered light
 	} // for i
 	unsigned const lights_end(objs.size());
 	point const ref_light_center(ref_light.get_cube_center());
