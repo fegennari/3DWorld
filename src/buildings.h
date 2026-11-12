@@ -755,12 +755,13 @@ struct particle_source_t {
 
 struct punching_bag_t {
 	unsigned obj_ix;
-	vector3d dir=plus_z, last_dir=plus_z; // pointing up to the anchor
+	vector3d dir=-plus_z, last_dir=-plus_z; // pointing down from the anchor
 	vector3d vel;
 	bool pushed_this_frame=0, hit_this_frame=0;
 
 	punching_bag_t(unsigned ix) : obj_ix(ix) {}
-	int collision(room_object_t const &pb, point const &p_last, point &pos, float radius, float eye_height, vector3d *cnorm);
+	int collision (room_object_t const &pb, point const &p_last, point &pos, float radius, float eye_height, vector3d *cnorm);
+	bool knockback(room_object_t const &pb, point &pos, float radius, float eye_height, vector3d *cnorm) const;
 	void apply_force(vector3d const &force);
 	bool update_physics();
 };

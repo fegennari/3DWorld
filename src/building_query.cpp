@@ -1234,10 +1234,11 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 		// check for punching bag collisions
 		for (auto &pb : interior->room_geom->punching_bags) {
 			room_object_t const &pb_obj(interior->room_geom->get_room_object_by_index(pb.obj_ix));
-			int const ret(pb.collision(pb_obj, p_last, pos, xy_radius, camera_height, cnorm));
-			if (ret == 0) continue; // no coll
+			int ret(pb.knockback(pb_obj, pos, xy_radius, camera_height, cnorm) ? 2 : 0);
+			// player can push the bag when not knocked back and it's not moving too quickly
+			if (!ret && pb.vel.mag() < 0.25) {ret = pb.collision(pb_obj, p_last, pos, xy_radius, camera_height, cnorm);}
 			had_coll |= (ret == 2); // player move
-			interior->update_dynamic_draw_data();
+			if (ret) {interior->update_dynamic_draw_data();}
 		}
 		// check for other objects to collide with (including stairs)
 		for (auto c = objs.begin(); c != objs.end(); ++c) {

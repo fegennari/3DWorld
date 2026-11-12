@@ -743,8 +743,7 @@ bool sphere_intersect_cylinder_ipt(point const &sc, float sr, point const &cp1, 
 	float dmin(0.0);
 	point cpos[3];
 	vector3d norms[3];
-	float const len(v1.mag()), rdist(v2.mag());
-	float const toler(0.0001);
+	float const len(v1.mag()), rdist(v2.mag()), toler(0.0001);
 	assert(len > 0.0);
 
 	if (tok && rdist < rad) { // collision with side
@@ -756,11 +755,11 @@ bool sphere_intersect_cylinder_ipt(point const &sc, float sr, point const &cp1, 
 			p_int = sc + norm*val;
 			return 1;
 		}
-		cpos[npos]  = sc;
+		cpos [npos] = sc;
 		norms[npos] = v2;
-		//if (check_ends || !point_in_cylinder(cp1, cp2, sc, r1, r2)) norms[npos].negate();
+		//if (check_ends || !point_in_cylinder(cp1, cp2, sc, r1, r2)) {norms[npos].negate();}
 		norms[npos].negate();
-		cpos[npos] += norms[npos]*(val/rdist); // r1 != r2 and !check_ends doesn't work well
+		cpos [npos] += norms[npos]*(val/rdist); // r1 != r2 and !check_ends doesn't work well
 		++npos;
 	}
 	if (check_ends) {

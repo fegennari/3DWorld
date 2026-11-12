@@ -1818,23 +1818,41 @@ int punching_bag_t::collision(room_object_t const &pb, point const &p_last, poin
 	float const phi(atan2(d_h, -D.z)); // measure the angle of the head position relative to the downward vertical axis
 	float const theta(phi - alpha); // total angle the bag needs to tilt away from the vertical Z-axis
 	float const sin_theta(sin(theta)), cos_theta(cos(theta));
-	if (fabs(cos_theta) < fabs(dir.z)) {dir.assign(((D.x / d_h) * sin_theta), ((D.y / d_h) * sin_theta), cos_theta);} // only update if moved further out
+	if (fabs(cos_theta) < fabs(dir.z)) {dir.assign(((D.x / d_h) * sin_theta), ((D.y / d_h) * sin_theta), -cos_theta);} // only update if moved further out
 	pushed_this_frame = 1;
 	return (hard_coll ? 2 : 1);
+}
+bool punching_bag_t::knockback(room_object_t const &pb, point &pos, float radius, float eye_height, vector3d *cnorm) const {
+	if (dir == -plus_z) return 0; // stationary, no energy; collision() handles this case
+	// find the lowest zval in the shared Z-range and create a sphere of the punching bag radius at that point, and use this to push pos
+	float const pb_len(pb.dz());
+	vector3d const pb_delta(dir*pb_len);
+	cylinder_3dw cylin(pb.get_cylinder());
+	cylin.p1 = cylin.p2 + pb_delta; // bottom swings out
+	float const zo1(max(cylin.p1.z, pos.z)), zo2(min(cylin.p2.z, pos.z+eye_height));
+	if (zo2 < zo1) return 0; // no Z overlap
+	float const t((cylin.p2.z - zo1)/pb_len); // bottom of shared Z-range; 0 at top, 1 at bottom
+	point const sc(cylin.p2 + t*pb_delta); // center of punching bag colliding sphere
+	vector3d const delta_xy(point(pos.x, pos.y, sc.z) - sc);
+	float const rsum(radius + cylin.r1), dist(delta_xy.xy_mag());
+	if (dist >= rsum) return 0;
+	pos += ((rsum - dist)/dist)*delta_xy;
+	return 1;
 }
 void punching_bag_t::apply_force(vector3d const &force) {
 	vel += force; // not really a force but more of an impulse
 	hit_this_frame = 1; // wake it up
 }
 bool punching_bag_t::update_physics() {
-	if (dir == plus_z && !hit_this_frame) return 0; // rest pos
+	if (dir == -plus_z && !hit_this_frame && !pushed_this_frame) return 0; // rest pos
 	float const gravity = 9.81f; // acceleration of gravity (in game units/s^2)
 	float const damping = 0.993f; // air resistance / joint friction (per frame decay)
 	float const dt(fticks/TICKS_PER_SECOND);
 	vector3d const old_vel(vel);
 
 	if (pushed_this_frame) { // player kinematic
-		vel = (dir - last_dir) / dt; // calculate velocity based on how fast the player is actively shifting the bag
+		//vel = (dir - last_dir) / dt; // calculate velocity based on how fast the player is actively shifting the bag
+		vel = zero_vector; // held in place by the player
 	}
 	else { // dynamic spherical pendulum
 		// gravity pulls strictly downward; the restoring torque is proportional to the horizontal component of the current dir
@@ -1852,7 +1870,7 @@ bool punching_bag_t::update_physics() {
 		gen_sound_thread_safe_at_player(SOUND_SQUEAK, 0.5*xy_mag*xy_mag, 0.8); // squeak when changing direction at the apex of the swing
 	}
 	last_dir = dir; // record dir before the next player push
-	if (xy_mag < 0.0001) {dir = plus_z;} // back to rest pos
+	if (xy_mag < MIN_VELOCITY) {dir = -plus_z; vel = zero_vector;} // back to rest pos
 	pushed_this_frame = hit_this_frame = 0; // reset
 	return 1;
 }
