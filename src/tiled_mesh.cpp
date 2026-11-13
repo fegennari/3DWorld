@@ -101,14 +101,19 @@ cube_t get_city_bcube_overlapping(cube_t const &c);
 void show_gpu_mem_info();
 uint64_t get_reflection_gpu_mem_usage();
 void interpolate_over_time(float &val, float target_val, float transition_secs, int &last_frame);
+float gen_noise(float xv, float yv, int mode, int shape);
 
 
+float get_extb_fog_density_at_player() { // varies randomly with camera pos within 1/4 a terrain tile
+	return max(0.25, (1.0 + 0.5*gen_noise(2.0*camera_pos.x/X_SCENE_SIZE, 2.0*camera_pos.y/Y_SCENE_SIZE, MGEN_SIMPLEX, 0))); // linear noise in ~[-1.0, 1.0]; 0.5 - 1.5x
+}
 float get_tt_fog_scale() {
-	// lower fog distance when rainy/cloudy; very low when player is in the extended basement but not mall;
-	// changes exponentially when inside a building basement
+	// lower fog distance when rainy/cloudy; very low when player is in the extended basement but not mall; changes exponentially when inside a building basement
 	static float fog_scale(1.0); // lower is denser fog
 	static int last_update_frame(0);
-	float const target_fog_scale((player_in_basement == 3 && !player_in_mall) ? 0.01 : (is_cloudy ? 0.25 : 1.0));
+	if (frame_counter == last_update_frame) return fog_scale; // used cached value
+	bool const in_ext_basement(player_in_basement == 3 && !player_in_mall);
+	float const target_fog_scale(in_ext_basement ? 0.01*get_extb_fog_density_at_player() : (is_cloudy ? 0.25 : 1.0));
 	float const change_rate(camera_in_building ? (player_in_basement ? 0.1/(fog_scale*fog_scale) : 0.1) : 1.0);
 	interpolate_over_time(fog_scale, target_fog_scale, change_rate, last_update_frame);
 	return fog_scale;
