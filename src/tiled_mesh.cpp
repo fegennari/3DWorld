@@ -3404,6 +3404,7 @@ void tile_draw_t::draw_animals(bool reflection_pass) {
 void tile_draw_t::draw_tile_clouds(bool reflection_pass) { // reflection_pass is unused
 
 	if (!clouds_enabled() || atmosphere < 0.5) return; // only for high atmosphere
+	if (player_cant_see_outside_building())    return; // skip for player in extended basement or windowless building
 	//timer_t timer("Draw Clouds"); // 0.15ms on old computer
 	to_draw_clouds.clear();
 	unsigned num(0);
