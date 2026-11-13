@@ -1221,11 +1221,14 @@ void add_dynamic_lights_city(cube_t const &scene_bcube, float &dlight_add_thresh
 	for (unsigned ix = 0; ix < ndl;) { // Note: no increment
 		light_source const &ls(dl_sources[ix]); // Note: should always be visible
 		point const &lpos(ls.get_pos());
+		cube_t const &bc(ls.get_custom_bcube()); // may be all zeros
 		unsigned const start_ix(ix);
 
 		for (++ix; ix < ndl; ++ix) { // determine range of stacked lights with the same X/Y value
 			light_source const &ls2(dl_sources[ix]);
+			cube_t const &bc2(ls2.get_custom_bcube()); // may be all zeros
 			if (ls2.get_pos().x != lpos.x || ls2.get_pos().y != lpos.y || ls2.get_radius() != ls.get_radius() || ls2.get_dir() != ls.get_dir()) break;
+			if (bc.x1() != bc2.x1() || bc.x2() != bc2.x2() || bc.y1() != bc2.y1() || bc.y2() != bc2.y2()) break; // clipped bounds disagree (backrooms, etc.), can't stack
 		}
 		int const xcent((lpos.x - scene_llc.x)*grid_dx_inv + 0.5f), ycent((lpos.y - scene_llc.y)*grid_dy_inv + 0.5f);
 		int const radius(max(1, round_fp(ls.get_radius()*max(grid_dx_inv, grid_dy_inv))) + 2), rsq(radius*radius);
