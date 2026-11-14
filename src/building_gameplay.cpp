@@ -314,6 +314,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_GENERATOR ] = bldg_obj_type_t(1, 1, 1, 0, 1, 1, 0, 10000, 5000,  "generator");
 	bldg_obj_types[TYPE_WETF_SIGN ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 16.0,  2.0,   "wet floor sign");
 	bldg_obj_types[TYPE_FLOOR_LAMP] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 80.0,  15.0,  "floor lamp");
+	bldg_obj_types[TYPE_RUB_DUCK  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0,  1.0,  0.02,  "rubber ducky");
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// animals; not room objects
 	bldg_obj_types[TYPE_RAT       ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 8.99,  1.0,   "rat"); // can be picked up
@@ -993,7 +994,7 @@ public:
 			type != TYPE_FEXT_MOUNT && type != TYPE_FEXT_SIGN && type != TYPE_PIZZA_BOX && type != TYPE_PIZZA_TOP && type != TYPE_POOL_BALL && type != TYPE_DRINK_CAN &&
 			type != TYPE_KEY && type != TYPE_HANGER && type != TYPE_PADLOCK && type != TYPE_BANANA && type != TYPE_BAN_PEEL && type != TYPE_ELEC_WIRE && type != TYPE_ERASER &&
 			type != TYPE_TESTTUBE && type != TYPE_APPLE && type != TYPE_FOOD_BOX && type != TYPE_BAR_SOAP && type != TYPE_CARD_DECK && type != TYPE_TRASH &&
-			type != TYPE_BULLETS && type != TYPE_SHELL_CASE && type != TYPE_CIGARETTE && type != TYPE_JAR)
+			type != TYPE_BULLETS && type != TYPE_SHELL_CASE && type != TYPE_CIGARETTE && type != TYPE_JAR && type != TYPE_WETF_SIGN && type != TYPE_RUB_DUCK)
 		{
 			rooms_stolen_from.insert(obj.room_id); // only if was_expanded?
 		}

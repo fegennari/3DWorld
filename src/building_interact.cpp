@@ -41,6 +41,7 @@ colorRGBA get_glow_color(float stime, bool fade);
 void play_hum_sound(point const &pos, float gain, float pitch);
 bool ceiling_fan_is_on(room_object_t &obj, vect_room_object_t const &objs);
 bool object_has_something_on_it(room_object_t const &obj, vect_room_object_t const &objs, vect_room_object_t::const_iterator objs_end);
+float get_tub_water_zval(room_object_t const &c);
 
 // Note: pos is in camera space
 void gen_sound_thread_safe(unsigned id, point const &pos, float gain, float pitch, float gain_scale, bool skip_if_already_playing) {
@@ -703,6 +704,11 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 			if (obj.state_flags < 4) { // water level is 0-4
 				++obj.state_flags;
 				interior->room_geom->invalidate_static_geom();
+
+				if (type == TYPE_TUB && obj_ix+2 < interior->room_geom->objs.size() ) { // move rubber duck with the water level
+					room_object_t &duck(interior->room_geom->get_room_object_by_index(obj_ix + 2)); // should be {tub, blocker, [duck], [soap]}
+					if (duck.type == TYPE_RUB_DUCK) {duck.translate_dim(2, (get_tub_water_zval(obj) - (duck.z1() + 0.25*duck.dz())));} // 25% below water
+				}
 			}
 			refill_thirst(1); // player can drink from tub only if low
 		}

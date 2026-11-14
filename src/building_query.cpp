@@ -777,12 +777,14 @@ cube_t get_catwalk_bottom(room_object_t const &c) {
 }
 
 float get_tub_water_level(room_object_t const &c);
+float get_tub_water_zval (room_object_t const &c) {return c.z1() + min(get_tub_water_level(c), 1.0f)*c.dz();}
+
 void get_tub_cubes(room_object_t const &c, cube_t cubes[5], float radius_if_ball=0.0) { // bottom, front, back, 2 sides
 	float const height(c.get_height()), width(c.get_width()), signed_depth((c.dir ? 1.0 : -1.0)*c.get_depth());
 	cube_t bottom(c), front(c), back(c);
 	float bot_z2(c.z1() + 0.07*height);
 	// if the collider is a ball, assume density=0.5 and it floats centered at the water level; not using ball_type.density here
-	if (radius_if_ball > 0.0) {max_eq(bot_z2, (c.z1() + min(get_tub_water_level(c), 1.0f)*c.dz() - radius_if_ball));}
+	if (radius_if_ball > 0.0) {max_eq(bot_z2, (get_tub_water_zval(c) - radius_if_ball));}
 	bottom.z2() = front.z1() = back.z1() = bot_z2;
 	front.d[c.dim][ c.dir] -= 0.81*signed_depth;
 	back .d[c.dim][!c.dir] += 0.86*signed_depth;
@@ -2758,7 +2760,7 @@ bool room_object_t::is_spider_collidable() const { // include objects on the flo
 			type != TYPE_INT_WINDOW && type != TYPE_IBEAM && type != TYPE_MED_CAB && type != TYPE_PAN_SHELF && !is_pet_container()) return 0;
 	}
 	// these objects are ignored by spiders and will be walked through; ceiling fan is probably okay because it connects to the ceiling with a small cylinder
-	if (type == TYPE_CEIL_FAN || type == TYPE_BANANA || type == TYPE_BAN_PEEL || type == TYPE_APPLE) return 0; // not a cube
+	if (type == TYPE_CEIL_FAN || type == TYPE_BANANA || type == TYPE_BAN_PEEL || type == TYPE_APPLE || type == TYPE_RUB_DUCK) return 0; // not a cube
 	if (type == TYPE_BOOK) return 0; // I guess books don't count, since they're too small to walk on?
 	return 1;
 }

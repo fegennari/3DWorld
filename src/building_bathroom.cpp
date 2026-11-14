@@ -242,7 +242,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 			unsigned const tub_obj_ix(objs.size());
 		
 			if (place_model_along_wall(OBJ_MODEL_TUB, TYPE_TUB, room, tub_height_factor, rgen, zval, room_id, tot_light_amt, place_area_tub, objs_start, 0.4)) {
-				room_object_t const &tub(objs[tub_obj_ix]);
+				room_object_t const tub(objs[tub_obj_ix]); // deep copy
 				placed_obj = 1;
 				bathroom_objs_mask |= PLACED_TUB;
 
@@ -251,6 +251,19 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 					min_blocker.expand_by_xy(tub_clearance);
 					min_blocker.intersect_with_cube_xy(place_area_tub);
 					objs.back().union_with_cube(min_blocker);
+				}
+				if (building_obj_model_loader.is_model_valid(OBJ_MODEL_RUB_DUCK) && rgen.rand_bool()) { // add a rubber ducky
+					vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_RUB_DUCK)); // D, W, H
+					float const height(get_one_inch()*rgen.rand_uniform(2.5, 3.5)), hwidth(0.5*height*sz.y/sz.z), hlen(0.5*height*sz.x/sz.z);
+					bool const dim(rgen.rand_bool());
+					cube_t tub_inner(tub), rd;
+					tub_inner.expand_by_xy(-0.2*tub.get_size_xy()); // shrink
+
+					if (min(tub_inner.dx(), tub_inner.dy()) > 2.5*max(hlen, hwidth)) { // should be true
+						tub_inner.z1() += 0.08*tub.dz();
+						gen_xy_pos_for_cube_obj(rd, tub_inner, vector3d(height, (dim ? hwidth : hlen), (dim ? hlen : hwidth)), height, rgen, 1); // place_at_z1=1
+						objs.emplace_back(rd, TYPE_RUB_DUCK, room_id, dim, rgen.rand_bool(), RO_FLAG_NOCOLL, tot_light_amt);
+					}
 				}
 				if (rgen.rand_bool()) { // add a bar of soap on the edge of the tub
 					float const one_inch(get_one_inch()), soap_hlen(2.0*one_inch), soap_hwidth(1.25*one_inch), soap_height(1.0*one_inch); // 4x2.5x1
