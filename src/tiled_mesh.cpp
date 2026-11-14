@@ -1826,10 +1826,11 @@ void tile_t::update_animals() {
 		fish.gen(num_fish_per_tile, range, this); // Note: could use get_water_bcube() for tighter range
 	}
 	else {
-		fish.update(this);
+		if (!camera_in_building) {fish.update(this);} // usually can't see fish when inside a building
 		propagate_animals_to_neighbor_tiles(fish);
 	}
 	if (atmosphere > 0.4 && vegetation > 0.2) { // need atmosphere and vegetation for birds and butterflies
+		bool const no_update(player_cant_see_outside_building() || player_in_basement >= 2);
 		adj_tiles_t adj_tiles;
 
 		if (!birds.was_generated()) {
@@ -1840,8 +1841,10 @@ void tile_t::update_animals() {
 			birds.gen(num_birds_per_tile, range, this);
 		}
 		else {
-			birds.flock(this, adj_tiles);
-			birds.update(this);
+			if (!no_update) {
+				birds.flock(this, adj_tiles);
+				birds.update(this);
+			}
 			propagate_animals_to_neighbor_tiles(birds);
 		}
 		if (weight_tid == 0) {} // weight texture not yet generated, don't add until we know if there's any grass
@@ -1849,8 +1852,10 @@ void tile_t::update_animals() {
 			bflies.gen(num_bflies_per_tile, get_mesh_bcube_global(), this);
 		}
 		else {
-			bflies.run_mating(this, adj_tiles);
-			bflies.update(this);
+			if (!no_update) {
+				bflies.run_mating(this, adj_tiles);
+				bflies.update(this);
+			}
 			propagate_animals_to_neighbor_tiles(bflies);
 		}
 	}
