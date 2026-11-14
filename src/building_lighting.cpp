@@ -2075,7 +2075,11 @@ bool check_cube_visible_through_cut(vect_cube_t const &cuts, cube_t const &light
 	float const light_dist(p2p_dist(camera_bs, lpos)); // upper bound on line length
 
 	for (cube_t const &s : cuts) { // check visible stairs/ramps
-		if (!light_bounds.intersects_xy(s)) continue; // light does not reach the cut
+		cube_t s_ext(s);
+		bool const xdir(camera_bs.x < s.xc()), ydir(camera_bs.y < s.yc()); // dir to center of stairs cut
+		s_ext += vector3d((s.d[0][xdir] - camera_bs.x), (s.d[1][ydir] - camera_bs.y), 0.0); // skew away from the camera if viewed at an angle
+		s_ext.union_with_cube(s); // make sure to include the unshifted cut
+		if (!light_bounds.intersects_xy(s_ext)) continue; // light does not reach the cut (optimization)
 		float const z(floor_is_above ? s.z2() : s.z1());
 		point const pts[4] = {point(s.x1(), s.y1(), z), point(s.x2(), s.y1(), z), point(s.x2(), s.y2(), z), point(s.x1(), s.y2(), z)};
 
