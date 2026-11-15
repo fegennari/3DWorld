@@ -252,7 +252,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 					min_blocker.intersect_with_cube_xy(place_area_tub);
 					objs.back().union_with_cube(min_blocker);
 				}
-				if (building_obj_model_loader.is_model_valid(OBJ_MODEL_RUB_DUCK) && rgen.rand_bool()) { // add a rubber ducky
+				if (building_obj_model_loader.is_model_valid(OBJ_MODEL_RUB_DUCK) && rgen.rand_float() < 0.25) { // add a rubber ducky 25% of the time
 					vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_RUB_DUCK)); // D, W, H
 					float const height(get_one_inch()*rgen.rand_uniform(2.5, 3.5)), hwidth(0.5*height*sz.y/sz.z), hlen(0.5*height*sz.x/sz.z);
 					bool const dim(rgen.rand_bool());
