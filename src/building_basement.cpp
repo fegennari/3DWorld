@@ -745,6 +745,7 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 	float const space_width(row.get_sz_dim(dim)/num_space_wid), strips_start(virt_room_for_wall.d[!dim][0]), wall_half_gap(2.0*wall_hc), space_shrink(row_width - space_length);
 	float const hcap_dist((is_parking_str ? 3.0 : 1.5)*space_width); // increase distance for parking structures since elevators are off to the side rather than centered
 	bool const add_cars(enable_parked_cars() && !is_rotated()); // skip cars for rotated buildings
+	bool const add_shopping_carts(has_retail() && building_obj_model_loader.is_model_valid(OBJ_MODEL_SHOP_CART));
 	unsigned const max_handicap_spots(capacity/20 + 1);
 	unsigned num_handicap_spots(0);
 	rand_gen_t rgen2(rgen); // make a copy to use with cars so that enabling cars doesn't change the parking garage layout
@@ -857,6 +858,21 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 						pspace.obj_id = (uint16_t)(objs.size() + rgen2.rand()); // will be used for the car model and color
 						pspace.flags |= RO_FLAG_USED;
 						objs.back().obj_id = pspace.obj_id; // will be used for loot collected from the car
+					}
+					else if (add_shopping_carts && rgen.rand_float() < (add_cars ? 0.08 : 0.04)) { // maybe add a shopping cart down in the parking garage
+						vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SHOP_CART)); // D, W, H
+						float const height(0.425*window_vspacing), hlen(0.5*height*sz.x/sz.z), hwidth(0.5*height*sz.y/sz.z);
+						vector2d const sc_sz((dim ? hwidth : hlen), (dim ? hlen : hwidth));
+						cube_t cart_area(space), cart;
+						cart_area.expand_in_dim(!dim, -(hlen + pillar_hwidth)); // avoid pillars
+						cart_area.expand_in_dim( dim, -hwidth);
+						cart_area.d[!dim][!d] = space.get_center_dim(!dim); // restrict to front half of parking space next to the wall
+						set_cube_zvals(cart, zval, zval+height);
+
+						if (cart_area.is_strictly_normalized()) { // should always be normalized
+							for (unsigned d = 0; d < 2; ++d) {set_wall_width(cart, rgen.rand_uniform(cart_area.d[d][0], cart_area.d[d][1]), sc_sz[d], d);}
+							objs.emplace_back(cart, TYPE_SHOP_CART, room_id, !dim, d, 0, tot_light_amt);
+						}
 					}
 					if (no_sep_wall && !at_either_ext_wall) { // add small yellow curbs to block cars
 						float const curb_height(0.04*window_vspacing), curb_width(1.5*curb_height);

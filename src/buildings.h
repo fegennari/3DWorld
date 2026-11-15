@@ -2626,7 +2626,7 @@ private:
 	void add_room_wall_tile(cube_t const &room, unsigned room_id, float tot_light_amt, unsigned tile_type);
 	void add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	bool add_retail_room_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, light_ix_assign_t &light_ix_assign);
-	void add_shopping_carts_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float light_amt, unsigned objs_start, unsigned max_carts);
+	void add_shopping_carts_to_room(rand_gen_t &rgen, cube_t const &room, float zval, unsigned room_id, float light_amt, unsigned objs_start, unsigned max_carts);
 	bool add_small_retail_room_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float light_amt);
 	void add_conv_store_objs(rand_gen_t &rgen, room_t const &room, float &zval, unsigned room_id, float light_amt, cube_t &place_area, bool &dim);
 	bool add_row_of_objects(cube_t const &place_area, float zval, unsigned room_id, float tot_light_amt, float height, float width, float depth,
