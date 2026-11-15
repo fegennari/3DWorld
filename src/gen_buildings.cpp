@@ -25,7 +25,7 @@ unsigned const SHADOW_ONLY_TEX     = RED_TEX;   // alias to differentiate shadow
 
 bool camera_in_building(0), interior_shadow_maps(0), player_is_hiding(0), player_in_unlit_room(0), player_in_walkway(0), player_in_int_elevator(0), player_on_house_stairs(0);
 bool building_has_open_ext_door(0), sec_camera_shadow_mode(0), player_in_ww_elevator(0), player_in_skyway(0), player_on_moving_ww(0), player_on_escalator(0);
-bool player_in_tunnel(0), player_in_mall(0), player_in_uge(0), building_alarm_active(0);
+bool player_in_tunnel(0), player_in_mall(0), player_in_uge(0), building_alarm_active(0), player_in_backrooms(0);
 int player_in_basement(0); // 0=no, 1=below ground level, 2=in basement and not on stairs, 3=in extended basement
 int player_in_closet  (0); // uses flags RO_FLAG_IN_CLOSET (player in closet), RO_FLAG_LIT (closet light is on), RO_FLAG_OPEN (closet door is open)
 int player_in_water   (0); // 0=no, 1=standing in water, 2=head underwater
@@ -4193,7 +4193,7 @@ public:
 		// check for sun or moon; also need the smap pass for drawing with dynamic lights at night, so basically it's always enabled
 		bool const use_tt_smap(check_tile_smap(0)); // && (night || light_valid_and_enabled(0) || light_valid_and_enabled(1)));
 		bool have_windows(0), have_wind_lights(0), have_interior(0), is_city_lighting_setup(0);
-		bool this_frame_camera_in_building(0), this_frame_player_in_mall(0), this_frame_player_in_uge(0);
+		bool this_frame_camera_in_building(0), this_frame_player_in_mall(0), this_frame_player_in_uge(0), this_frame_player_in_backrooms(0);
 		int this_frame_player_in_basement(0), this_frame_player_in_water(0), this_frame_player_in_attic(0);
 		unsigned max_draw_ix(0);
 		shader_t s, amask_shader, holes_shader, city_shader;
@@ -4503,6 +4503,7 @@ public:
 						float const basement_z_adj(2.0*BASEMENT_ENTRANCE_SCALE*b.get_floor_thickness()); // adjust to prevent problems when camera is close to the plane
 						this_frame_camera_in_building = 1;
 						this_frame_player_in_basement =   b.check_player_in_basement(camera_bs - basement_z_adj*plus_z); // set once
+						this_frame_player_in_backrooms= (this_frame_player_in_basement >= 3 && b.has_backrooms());
 						this_frame_player_in_mall     =   b.point_in_mall(camera_bs);
 						this_frame_player_in_attic    =  (b.point_in_attic(camera_bs) ? (b.attic_has_window_or_skylight() ? 1 : 2) : 0);
 						this_frame_player_in_water    =   b.point_in_water_area((camera_bs - get_bldg_player_height()*plus_z), 0); // full_room_height=0
@@ -4542,6 +4543,7 @@ public:
 			if (!reflection_pass) { // update once; non-interior buildings (such as city buildings) won't update this
 				camera_in_building = this_frame_camera_in_building;
 				player_in_basement = this_frame_player_in_basement;
+				player_in_backrooms= this_frame_player_in_backrooms;
 				player_in_mall     = this_frame_player_in_mall;
 				player_in_uge      = this_frame_player_in_uge;
 				player_in_attic    = this_frame_player_in_attic;

@@ -59,7 +59,7 @@ vector<clear_area_t> tile_smaps_to_clear;
 
 extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater, fog_enabled, volume_lighting, combined_gu, enable_depth_clamp, tt_triplanar_tex, use_grass_tess;
 extern bool use_instanced_pine_trees, enable_tt_model_reflect, water_is_lava, tt_fire_button_down, flashlight_on, camera_in_building, rotate_trees, tree_bindless_textures;
-extern bool player_in_int_elevator, player_in_mall;
+extern bool player_in_int_elevator, player_in_mall, player_in_backrooms;
 extern unsigned grass_density, max_unique_trees, shadow_map_sz, erosion_iters_tt, num_rnd_grass_blocks, tiled_terrain_gen_heightmap_sz;
 extern unsigned num_birds_per_tile, num_fish_per_tile, num_bflies_per_tile, room_geom_mem;
 extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees, window_width, window_height, player_in_basement;
@@ -105,6 +105,7 @@ float gen_noise(float xv, float yv, int mode, int shape);
 
 
 float get_extb_fog_density_at_player() { // varies randomly with camera pos within 1/4 a terrain tile
+	if (!player_in_backrooms) return 1.0;
 	return max(0.25, (1.0 + 0.5*gen_noise(2.0*camera_pos.x/X_SCENE_SIZE, 2.0*camera_pos.y/Y_SCENE_SIZE, MGEN_SIMPLEX, 0))); // linear noise in ~[-1.0, 1.0]; 0.5 - 1.5x
 }
 float get_tt_fog_scale() {
