@@ -315,6 +315,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_WETF_SIGN ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 16.0,  2.0,   "wet floor sign");
 	bldg_obj_types[TYPE_FLOOR_LAMP] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 80.0,  15.0,  "floor lamp");
 	bldg_obj_types[TYPE_RUB_DUCK  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0,  1.0,  0.02,  "rubber ducky");
+	bldg_obj_types[TYPE_UNICORN   ] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0, 20.0,  1.0,   "unicorn float");
 	// player_coll, ai_coll, rat_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// animals; not room objects
 	bldg_obj_types[TYPE_RAT       ] = bldg_obj_type_t(0, 0, 1, 1, 0, 1, 0, 8.99,  1.0,   "rat"); // can be picked up

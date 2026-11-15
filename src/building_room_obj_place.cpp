@@ -3336,12 +3336,24 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 	if (pool_len > 3.0*floor_spacing && pool_depth > 0.8*floor_spacing) { // add pool float(s) if pool is large and deep enough
 		unsigned const num_floats(rgen.rand() % 3); // 0-2
 		float const pf_radius(0.25*floor_spacing), pf_height(0.6*pf_radius);
+		bool added_unicorn(0);
 
 		for (unsigned n = 0; n < num_floats; ++n) {
 			if (min(pool_area.dx(), pool_area.dy()) < 3.0*pf_radius) break; // pool place area is too small
+			bool const is_unicorn(!added_unicorn && building_obj_model_loader.is_model_valid(OBJ_MODEL_UNICORN) && rgen.rand_bool());
 			cube_t pfloat;
-			gen_xy_pos_for_round_obj(pfloat, pool_area, pf_radius, pf_height, pf_radius, rgen, 1); // place_at_z1=1
-			
+			bool dim(0); // for unicorn
+
+			if (is_unicorn) { // make this a unicorn float; at most one per pool
+				vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_UNICORN)); // D, W, H
+				float const hwidth(0.75*pf_radius), hlen(hwidth*sz.x/sz.y), height(2.0*hwidth*sz.z/sz.y); // radius sets half width
+				dim = rgen.rand_bool();
+				gen_xy_pos_for_round_obj(pfloat, pool_area, hwidth, height, max(hlen, hwidth), rgen, 1); // place_at_z1=1
+				pfloat.expand_in_dim(dim, (hlen - hwidth)); // expand length; should fit in pool_area
+			}
+			else { // normal tube float
+				gen_xy_pos_for_round_obj(pfloat, pool_area, pf_radius, pf_height, pf_radius, rgen, 1); // place_at_z1=1
+			}
 			if (!pool_has_water) { // resting on the bottom of the pool if there's no water
 				point const center(cube_bot_center(pfloat));
 				float float_zval(center.z);
@@ -3350,11 +3362,18 @@ void building_t::add_swimming_pool_room_objs(rand_gen_t rgen, room_t const &room
 			if (overlaps_other_room_obj(pfloat, objs_start)) continue; // if placement falls, leave it out; should only collide with another float
 			if (cube_int_if_nonzero(pfloat, ladder))         continue; // check the pool ladder
 			if (!pool_has_water && pfloat.intersects(drain)) continue;
-			bool const deflated(!pool_has_water);
-			unsigned flags(0);
-			if (deflated) {flags |= RO_FLAG_BROKEN; pfloat.z2() -= 0.9*pfloat.dz();}
-			colorRGBA const &color(pfloat_colors[rgen.rand() % NUM_PFLOAT_COLORS]);
-			objs.emplace_back(pfloat, TYPE_POOL_FLOAT, room_id, 0, 0, flags, tot_light_amt, (deflated ? SHAPE_CYLIN : SHAPE_VERT_TORUS), color);
+
+			if (is_unicorn) { // make this a unicorn float
+				objs.emplace_back(pfloat, TYPE_UNICORN, room_id, dim, rgen.rand_bool(), 0, tot_light_amt, SHAPE_CUBE, WHITE);
+				added_unicorn = 1;
+			}
+			else { // normal tube float
+				bool const deflated(!pool_has_water);
+				unsigned flags(0);
+				if (deflated) {flags |= RO_FLAG_BROKEN; pfloat.z2() -= 0.9*pfloat.dz();}
+				colorRGBA const &color(pfloat_colors[rgen.rand() % NUM_PFLOAT_COLORS]);
+				objs.emplace_back(pfloat, TYPE_POOL_FLOAT, room_id, 0, 0, flags, tot_light_amt, (deflated ? SHAPE_CYLIN : SHAPE_VERT_TORUS), color);
+			}
 		} // for n
 	}
 	if (pool_len > 2.0*floor_spacing) { // add beach ball(s) if pool is large enough
