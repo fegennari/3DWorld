@@ -1678,12 +1678,12 @@ void building_t::get_pipe_basement_water_connections(vect_riser_pos_t &sewer, ve
 		float const per_wh_radius(is_house ? WHEATER_PIPE_RADIUS*water_heaters.front().get_radius() : radius_hot*pow(1.0/water_heaters.size(), 1/4.0));
 
 		for (room_object_t const &wh : water_heaters) {
-			bool const in_house_basement(wh.z1() < ground_floor_z1);
+			bool const wh_in_basement(wh.z1() < ground_floor_z1);
 			float const radius(wh.get_radius()), shift_val(WHEATER_PIPE_SPACING*radius);
 			point center(wh.xc(), wh.yc(), ceil_zval);
 			vector3d wh_shift_dir(shift_dir);
 
-			if (!in_house_basement) { // office building first floor water heater: use exact location where bent over pipes meet the floor
+			if (!wh_in_basement) { // office building first floor water heater: use exact location where bent over pipes meet the floor
 				center[wh.dim] += (wh.dir ? 1.0 : -1.0)*radius*WHEATER_PIPE_H_DIST; // offset to front
 			}
 			// shift to actual pipe offset from center

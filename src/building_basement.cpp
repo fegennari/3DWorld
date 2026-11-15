@@ -51,6 +51,7 @@ unsigned building_t::add_water_heaters(rand_gen_t &rgen, room_t const &room, flo
 	cube_t place_area(room_bounds);
 	place_area.expand_by(-(1.05*radius + get_trim_thickness())); // account for the pan
 	if (!place_area.is_strictly_normalized()) return 0; // too small to place water heater
+	bool const in_basement(zval < ground_floor_z1);
 	vect_room_object_t &objs(interior->room_geom->objs);
 	point center(0.0, 0.0, zval);
 	bool first_xdir(rgen.rand_bool()), first_ydir(rgen.rand_bool()), first_dim(0);
@@ -96,8 +97,8 @@ unsigned building_t::add_water_heaters(rand_gen_t &rgen, room_t const &room, flo
 		c_exp.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.25*radius; // add more keepout in front where the controls are
 		c_exp.intersect_with_cube(room); // don't pick up objects on the other side of the wall
 		if (overlaps_other_room_obj(c_exp, objs_start)) continue; // check existing objects, in particular storage room boxes that will have already been placed
-		if (zval > ground_floor_z1 && check_if_against_window(c, room, dim, dir)) continue; // can fail for apartment and hotel utility rooms
-		unsigned flags((is_house ? RO_FLAG_IS_HOUSE : 0) | RO_FLAG_INTERIOR);
+		if (!in_basement && check_if_against_window(c, room, dim, dir)) continue; // can fail for apartment and hotel utility rooms
+		unsigned flags((is_house ? RO_FLAG_IS_HOUSE : 0) | (in_basement ? RO_FLAG_ADJ_TOP : 0) | RO_FLAG_INTERIOR);
 		if (room.has_tall_ceil(floor_spacing)) {flags |= RO_FLAG_ADJ_HI;} // tall ceiling room, flag so that vent extends further up
 		objs.emplace_back(c, TYPE_WHEATER, room_id, dim, !dir, flags, tot_light_amt, SHAPE_CYLIN, WATER_HEATER_COLOR);
 		unsigned num_added(1);
