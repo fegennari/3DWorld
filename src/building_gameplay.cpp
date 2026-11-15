@@ -2642,7 +2642,9 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 	player_bcube.set_from_sphere(at_pos, get_scaled_player_radius());
 	player_bcube.z1() -= get_player_height();
 	// Note: setting this to 0 will allow objects to be pushed/pulled out of the room, but it may also allow doors to be closed on objects
-	bool const keep_in_room = 1;
+	bool keep_in_room(1);
+	if (point_in_mall(at_pos) && (obj.type == TYPE_SHOP_CART || obj.type == TYPE_TROLLEY)) {keep_in_room = 0;} // allow pushing shopping cars and trolleys out of mall stores
+	// what about pushing TYPE_WHEELCHAIR in hospitals?
 
 	// attempt to move the object
 	for (unsigned mdir = 0; mdir < 3; ++mdir) { // X+Y, closer dim, further dim
