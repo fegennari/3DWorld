@@ -433,6 +433,11 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 			return;
 		}
 	}
+	bool inset_ground_floor(0);
+	
+	if (is_in_city && num_levels >= (do_split ? 3 : 2)) { // maybe inset ground floor
+		inset_ground_floor = (max(base.dx(), base.dy()) > min(base.dx(), base.dy()) + 2.0*floor_spacing); // if long enough that long dim is still longer after inset
+	}
 	parts.resize(num_levels);
 
 	for (unsigned i = 0; i < num_levels; ++i) {
@@ -440,20 +445,24 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 		if (i == 0) {bc = base;} // use full building footprint
 		else {
 			cube_t const &prev(parts[i-1]);
-			float const shift_mult(was_cube ? 1.0 : 0.5); // half the shift for non-cube buildings
 
-			for (unsigned d = 0; d < 2; ++d) {
-				float const len(prev.get_sz_dim(d)), min_edge_len((0.2f/shift_mult)*(bcube.get_sz_dim(d)));
-				bool const inv(rgen.rand_bool());
+			if (inset_ground_floor && i == 1) {bc = prev;} // don't shrink the floor above the inset ground floor
+			else {
+				float const shift_mult(was_cube ? 1.0 : 0.5); // half the shift for non-cube buildings
 
-				for (unsigned e = 0; e < 2; ++e) {
-					float delta(0.0);
-					if (rgen.rand()&3) {delta = shift_mult*rgen.rand_uniform(0.1, 0.4);} // 25% chance of no shift, 75% chance of 20-40% shift
-					bc.d[d][e] = prev.d[d][e] + (e ? -delta : delta)*len;
-				}
-				for (unsigned E = 0; E < 2; ++E) {
-					bool const e((E != 0) ^ inv); // no dir favoritism for 20% check
-					if (bc.get_sz_dim(d) < min_edge_len) {bc.d[d][e] = prev.d[d][e];} // if smaller than 20% base width, revert the change
+				for (unsigned d = 0; d < 2; ++d) {
+					float const len(prev.get_sz_dim(d)), min_edge_len((0.2f/shift_mult)*(bcube.get_sz_dim(d)));
+					bool const inv(rgen.rand_bool());
+
+					for (unsigned e = 0; e < 2; ++e) {
+						float delta(0.0);
+						if (rgen.rand()&3) {delta = shift_mult*rgen.rand_uniform(0.1, 0.4);} // 25% chance of no shift, 75% chance of 20-40% shift
+						bc.d[d][e] = prev.d[d][e] + (e ? -delta : delta)*len;
+					}
+					for (unsigned E = 0; E < 2; ++E) {
+						bool const e((E != 0) ^ inv); // no dir favoritism for 20% check
+						if (bc.get_sz_dim(d) < min_edge_len) {bc.d[d][e] = prev.d[d][e];} // if smaller than 20% base width, revert the change
+					}
 				}
 			}
 			bc.z1() = prev.z2(); // z1
@@ -469,6 +478,18 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 	}
 	adjust_part_zvals_for_floor_spacing(parts[num_levels-1]); // last one
 	max_eq(bcube.z2(), parts[num_levels-1].z2()); // adjust bcube if needed
+
+	if (inset_ground_floor) { // make ground floor single floor height, inset with an overhang
+		cube_t &gf(parts[0]);
+		unsigned const gf_num_floors(min(round_fp(gf.dz()/floor_spacing), (2 + (rgen.rand() & 1)))); // 2-3 floors
+		gf.z2() = parts[1].z1() = gf.z1() + gf_num_floors*floor_spacing;
+		bool const inset_dim(gf.dx() < gf.dy()); // larger dim; more likely to be the exterior doors
+		bool const dir((street_dir && get_street_dim() == inset_dim) ? get_street_side() : rgen.rand_bool()); // inset on the side facing the street, if possible
+		float const length(gf.get_sz_dim(inset_dim)), width(gf.get_sz_dim(!inset_dim));
+		float const inset_amt(min(rgen.rand_uniform(0.8, 0.99)*(length - width), rgen.rand_uniform(0.2, 0.3)*length));
+		gf.d[inset_dim][dir] -= (dir ? 1.0 : -1.0)*inset_amt;
+		have_part_overhang = 1;
+	}
 	cube_t const split_cube(parts.back());
 
 	if (do_split && split_cube.dx() > 0.4*bcube.dx() && split_cube.dy() > 0.4*bcube.dy()) { // generate L, T, or U shape for top level if not too small

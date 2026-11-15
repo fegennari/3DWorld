@@ -1985,7 +1985,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 
 			if (clip_part_ceiling_for_stairs(test_cube, bdraw.temp_cubes, bdraw.temp_cubes2)) {
 				for (auto c = bdraw.temp_cubes.begin(); c != bdraw.temp_cubes.end(); ++c) { // add floors after removing stairwells
-					set_cube_zvals(*c, i->z1(), i->z2()); // set back to the correct zvals
+					copy_zvals(*c, *i); // set back to the correct zvals
 					bdraw.add_section(*this, 0, *c, roof_tex, roof_color, 4, 0, 1, is_house, 0); // only bottom surface
 				}
 				continue;
@@ -1993,6 +1993,18 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 		}
 		bdraw.add_section(*this, 1, *i, roof_tex, roof_color, 4, is_stacked_cube, skip_top, is_house, 0); // only Z dim
 	} // for i
+	if (have_part_overhang) { // draw bottom surface of overhang
+		assert(parts.size() >= 2);
+		vect_cube_t overhang;
+		subtract_cube_from_cube(parts[1], parts[0], overhang);
+		assert(overhang.size() == 1);
+
+		for (cube_t &c : overhang) {
+			bdraw.add_section(*this, 0, c, roof_tex, roof_color, 4, 0, 1, is_house, 0); // only bottom surface
+			// TODO: draw pillars
+			// TODO: company sign too low for single floor part
+		}
+	}
 	if (is_parking()) {
 		vect_cube_with_ix_t walls;
 		get_parking_struct_ext_walls(walls, 1); // exterior_surfaces=1
