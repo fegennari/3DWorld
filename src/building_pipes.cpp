@@ -1838,4 +1838,47 @@ void building_t::add_house_basement_pipes(rand_gen_t &rgen) {
 	add_basement_pipes(obstacles, walls, beams, gas_pipes,  pipe_cubes, room_id, num_floors, objs_start, gas_zval,   rgen, PIPE_TYPE_GAS,   1); // gas
 }
 
+void building_t::add_backrooms_pipes(rand_gen_t &rgen) {
+	assert(has_backrooms());
+	assert(has_room_geom());
+	bool const dim(interior->extb_wall_dim);
+	cube_t const &backrooms(interior->basement_ext_bcube);
+	float const floor_spacing(get_window_vspace()), ceil_zval(backrooms.z2() - get_fc_thickness()); // top level only
+	vect_room_object_t &objs(interior->room_geom->objs);
+	assert(interior->ext_basement_hallway_room_id >= 0);
+	unsigned const pipe_flags(RO_FLAG_NOCOLL | RO_FLAG_HANGING), room_id(interior->ext_basement_hallway_room_id);
+	colorRGBA const colors[3] = {COPPER_C, LT_GRAY, DK_GRAY};
+	// add pipes along the ceiling, parallel to the backrooms entrance dir
+	unsigned const num_pipes(1 + (rgen.rand() % 8)); // 1-8
+	vect_cube_t pipes;
+
+	for (unsigned n = 0; n < num_pipes; ++n) {
+		float const pipe_radius(rgen.rand_uniform(0.8, 1.25)*0.02*floor_spacing), pipe_zval(ceil_zval - rgen.rand_uniform(1.0, 2.0)*pipe_radius);
+		float const pipe_pos(rgen.rand_uniform((backrooms.d[!dim][0] + pipe_radius), (backrooms.d[!dim][1] - pipe_radius)));
+		cube_t pipe(backrooms);
+		set_wall_width(pipe, pipe_zval, pipe_radius, 2); // set zvals
+		set_wall_width(pipe, pipe_pos,  pipe_radius, !dim);
+		if (is_obj_placement_blocked(pipe, backrooms, 1, 1)) continue;
+		if (has_bcube_int(pipe, pipes)) continue; // rare
+		// TODO: avoid lights
+		objs.emplace_back(pipe, TYPE_PIPE, room_id, dim, 0, pipe_flags, 1.0, SHAPE_CYLIN, colors[rgen.rand() % 3]);
+		pipes.push_back(pipe);
+	} // for n
+	// add pipes vertical along exterior walls
+	for (unsigned d = 0; d < 2; ++d) {
+		unsigned const num(1 + (rgen.rand() % 4)); // 1-4
+		float zval(ceil_zval);
+
+		for (unsigned n = 0; n < num; ++n) {
+			float const pipe_radius(rgen.rand_uniform(0.8, 1.25)*0.02*floor_spacing), pipe_zval(zval - rgen.rand_uniform(1.0, 2.0)*pipe_radius);
+			float const pipe_pos(backrooms.d[!dim][d] + (d ? -1.0 : 1.0)*pipe_radius);
+			cube_t pipe(backrooms);
+			set_wall_width(pipe, pipe_zval, pipe_radius, 2); // set zvals
+			set_wall_width(pipe, pipe_pos,  pipe_radius, !dim);
+			if (is_obj_placement_blocked(pipe, backrooms, 1, 1)) continue; // is this possible?
+			objs.emplace_back(pipe, TYPE_PIPE, room_id, dim, 0, pipe_flags, 1.0, SHAPE_CYLIN, colors[rgen.rand() % 3]);
+			zval = pipe_zval - pipe_radius;
+		} // for n
+	} // for d
+}
 

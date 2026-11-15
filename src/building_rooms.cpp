@@ -1433,6 +1433,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	if (!is_rotated()) {add_window_trim_and_coverings(0, 1, 1);} // add_trim=0, add_coverings=1, add_ext_sills=1
 	if (is_house && has_basement()) {add_basement_electrical_house(rgen);}
 	if (is_house && has_basement_pipes) {add_house_basement_pipes (rgen);}
+	if (has_backrooms() && !has_backrooms_texture()) {add_backrooms_pipes(rgen);} // only for concrete backrooms
 	if (has_ext_basement() && !has_mall() && !has_backrooms()) {add_extb_steam_pipes(rgen);}
 	if (has_basement()) {add_basement_room_detail_objs(rgen);}
 	if (has_attic()) {add_attic_objects(rgen);}
