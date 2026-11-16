@@ -435,7 +435,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 	}
 	bool inset_ground_floor(0);
 	
-	if (is_in_city && num_levels >= (do_split ? 3 : 2)) { // maybe inset ground floor
+	if (is_in_city && is_cube() && num_levels >= (do_split ? 3 : 2)) { // maybe inset ground floor
 		inset_ground_floor = (max(base.dx(), base.dy()) > min(base.dx(), base.dy()) + 2.0*floor_spacing); // if long enough that long dim is still longer after inset
 	}
 	parts.resize(num_levels);
