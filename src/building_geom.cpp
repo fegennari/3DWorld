@@ -435,7 +435,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 	}
 	bool inset_ground_floor(0);
 	
-	if (is_in_city && is_cube() && num_levels >= (do_split ? 3 : 2)) { // maybe inset ground floor
+	if (is_in_city && is_cube() && num_levels >= (do_split ? 3U : 2U)) { // maybe inset ground floor
 		inset_ground_floor = (max(base.dx(), base.dy()) > min(base.dx(), base.dy()) + 2.0*floor_spacing); // if long enough that long dim is still longer after inset
 	}
 	parts.resize(num_levels);
@@ -509,6 +509,33 @@ void building_t::change_roof_type_to_flat() {
 	roof_type  = ROOF_TYPE_FLAT;
 	bcube.z2() = get_parts_z2(); // reset bcube z2 to remove the roof peak
 	roof_tquads.clear(); // in case it was assigned a sloped roof
+}
+
+void building_t::get_overhang_cubes(vect_cube_t &overhang) const {
+	if (!have_part_overhang) return;
+	assert(parts.size() >= 2);
+	subtract_cube_from_cube(parts[1], parts[0], overhang);
+	assert(overhang.size() == 1); // currently limited to a single overhang side, but can relax later
+}
+void building_t::get_overhang_pillars(vect_cube_t &pillars) const {
+	vect_cube_t overhang;
+	get_overhang_cubes(overhang);
+	cube_t const &base(parts[0]);
+
+	for (cube_t const &c : overhang) {
+		bool const dim(c.y1() != base.y1() || c.y2() != base.y2()), dir(base.get_center_dim(dim) < c.get_center_dim(dim));
+		float const floor_spacing(get_window_vspace()), width(c.get_sz_dim(!dim)), depth(c.get_sz_dim(dim));
+		unsigned const num_pillars(max(2, 2*round_fp(width/(4.0*floor_spacing)))); // at least 2, always even number to not block center door
+		float const radius(min(0.25*depth, 0.15*floor_spacing)), edge_gap(1.5*radius), spacing((width - 2.0*edge_gap)/(num_pillars - 1));
+		cube_t pillar(base); // copy ground floor zvals
+		set_wall_width(pillar, (c.d[dim][dir] - (dir ? 1.0 : -1.0)*edge_gap), radius, dim);
+		pillars.reserve(num_pillars);
+
+		for (unsigned n = 0; n < num_pillars; ++n) {
+			set_wall_width(pillar, (c.d[!dim][0] + edge_gap + n*spacing), radius, !dim);
+			pillars.push_back(pillar);
+		}
+	} // for c
 }
 
 void building_t::setup_damage_vals() {

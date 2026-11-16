@@ -1820,6 +1820,7 @@ struct building_t : public building_geom_t {
 	cube_t const &get_industrial_area() const {assert(is_industrial()); return get_first_part();}
 	cube_t const &get_basement   () const {assert(has_basement()); return parts[basement_part_ix];}
 	cube_t const &get_attic_part () const;
+	cube_t const &get_ground_floor_bc() const {assert(!parts.empty()); return (have_part_overhang ? parts[0] : bcube);}
 	bool get_retail_long_dim     () const;
 	int check_player_in_basement(point const &pos) const;
 	colorRGBA get_avg_side_color  () const {return side_color  .modulate_with(get_material().side_tex.get_avg_color());}
@@ -1863,6 +1864,8 @@ struct building_t : public building_geom_t {
 	float get_attic_floor_z1          () const {return (has_attic() ? interior->attic_access.z2() : get_first_part().z2());} // handle case of "attic" with no access door
 	bool is_ground_floor_excluding_retail(float zval) const;
 	float get_ground_floor_z_thresh(bool for_spider) const;
+	void get_overhang_cubes(vect_cube_t &overhang) const;
+	void get_overhang_pillars(vect_cube_t &pillars) const;
 	void gen_roof_and_side_color(rand_gen_t &rgen);
 	void gen_rotation(rand_gen_t &rgen);
 	point get_inv_rot_pos(point const &pos) const;

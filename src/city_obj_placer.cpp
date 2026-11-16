@@ -32,6 +32,7 @@ void get_city_building_walkways(cube_t const &city_bcube, vector<building_walkwa
 void get_ivy_house_walls_for_plot(cube_t const &plot, vect_wall_with_windows_t &walls, rand_gen_t &rgen);
 bool place_city_building_at(building_t const &bldg, unsigned plot_ix, rand_gen_t &rgen);
 cube_t get_city_building_driveway(unsigned building_id);
+void get_building_pillars(cube_t const &xy_range, vect_cube_t &pillars);
 float get_inner_sidewalk_width();
 cube_t get_plot_coll_region(cube_t const &plot_bcube);
 void play_hum_sound(point const &pos, float gain, float pitch);
@@ -2713,7 +2714,8 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 {
 	// Note: fills in plots.has_parking
 	//highres_timer_t timer("Gen Parking Lots and Place Objects");
-	vect_cube_t blockers, temp_cubes, underground_blockers; // blockers, driveways, extended basement rooms
+	vect_cube_t blockers, temp_cubes, underground_blockers, oh_pillars; // blockers, driveways, extended basement rooms, overhang pillars
+	vect_cube_with_ix_t bldg_blockers;
 	vector<point> tree_pos, hospital_signs;
 	rand_gen_t rgen, detail_rgen;
 	rgen.set_state(city_id, 123);
@@ -2742,10 +2744,24 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	for (auto i = plots.begin(); i != plots.end(); ++i) {
 		tree_pos.clear();
 		blockers.clear();
-		get_building_gf_bcubes(*i, blockers);
+		bldg_blockers.clear();
+		//get_building_gf_bcubes(*i, blockers);
+		get_building_bcubes(*i, bldg_blockers); // need full height blockers, for placing tall objects that may extend up to the overhang second part
+		vector_add_to(bldg_blockers, blockers);
 		size_t const plot_id(i - plots.begin()), buildings_end(blockers.size());
 		assert(plot_id < plot_colliders.size());
 		vect_cube_t &colliders(plot_colliders[plot_id]); // used for pedestrians
+
+		if (!is_residential) {
+			bool const is_concrete(!((i - plots.begin()) & 1)); // alternate for plots
+			oh_pillars.clear();
+			get_building_pillars(*i, oh_pillars);
+
+			for (cube_t const &pillar : oh_pillars) {
+				pillar_groups.add_obj(pillar_t(pillar, is_concrete), pillars);
+				add_cube_to_colliders_and_blockers(pillar, colliders, blockers);
+			}
+		}
 		// add gas stations first, since they're large
 		if (add_gas_stations) {maybe_place_gas_station(*i, city_id, plot_id, plot_id_offset, plot_cuts, cars, blockers, colliders, rgen, have_cars);}
 		if (add_parking_lots && !i->is_park) {i->has_parking = gen_parking_lots_for_plot(*i, cars, city_id, plot_id, blockers, colliders, plot_cuts, rgen, have_cars);}

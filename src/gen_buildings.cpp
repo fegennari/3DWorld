@@ -1994,16 +1994,9 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 		bdraw.add_section(*this, 1, *i, roof_tex, roof_color, 4, is_stacked_cube, skip_top, is_house, 0); // only Z dim
 	} // for i
 	if (have_part_overhang) { // draw bottom surface of overhang
-		assert(parts.size() >= 2);
 		vect_cube_t overhang;
-		subtract_cube_from_cube(parts[1], parts[0], overhang);
-		assert(overhang.size() == 1);
-
-		for (cube_t &c : overhang) {
-			bdraw.add_section(*this, 0, c, roof_tex, roof_color, 4, 0, 1, is_house, 0); // only bottom surface
-			// TODO: draw pillars
-			// TODO: company sign too low for single floor part
-		}
+		get_overhang_cubes(overhang);
+		for (cube_t &c : overhang) {bdraw.add_section(*this, 0, c, roof_tex, roof_color, 4, 0, 1, is_house, 0);} // only bottom surface
 	}
 	if (is_parking()) {
 		vect_cube_with_ix_t walls;
@@ -5392,8 +5385,10 @@ public:
 		return 1;
 	}
 
+	enum {QUERY_BCUBES=0, QUERY_GFLOOR, QUERY_DRIVEWAYS, QUERY_PILLARS};
+
 	// Note: called on init, don't need to use get_camera_coord_space_xlate()
-	template<typename RET> void query_for_cube(cube_t const &query_cube, vector<RET> &cubes, int query_mode, bool ground_floor_only) const {
+	template<typename RET, int query_mode> void query_for_cube(cube_t const &query_cube, vector<RET> &cubes) const {
 		if (empty()) return; // nothing to do
 		unsigned ixr[2][2];
 		get_grid_range(query_cube, ixr);
@@ -5406,25 +5401,25 @@ public:
 				for (cube_with_ix_t const &b : ge.bc_ixs) {
 					if (!query_cube.intersects_xy(b)) continue;
 					if (get_grid_ix(query_cube.get_llc().max(b.get_llc())) != (y*grid_sz + x)) continue; // add only if in home grid (to avoid duplicates)
+					if constexpr (query_mode == QUERY_BCUBES) {cubes.push_back(b); continue;} // return building bcube
+					building_t const &B(get_building(b.ix));
 
-					if (query_mode == 0) { // return building bcube
-						if (ground_floor_only && get_building(b.ix).have_part_overhang) {cubes.push_back(get_building(b.ix).parts[0]);}
-						else {cubes.push_back(b);}
-					}
-					else if (query_mode == 1) { // return house driveways
-						building_t const &B(get_building(b.ix));
+					if constexpr (query_mode == QUERY_GFLOOR) {cubes.push_back(B.get_ground_floor_bc());} // return ground floor bcubes
+					else if constexpr (query_mode == QUERY_DRIVEWAYS) { // return house driveways
 						// B.city_driveway will be the added driveway; if a valid driveway already connects the garage to the road, it will remain all zeros
 						if (B.maybe_add_city_driveway(query_cube, b.ix) && !B.city_driveway.is_all_zeros()) {cubes.push_back(B.city_driveway);} // ix not set
 						if (!B.city_walkway.is_all_zeros()) {cubes.push_back(B.city_walkway);} // ix not set
 					}
+					else if constexpr (query_mode == QUERY_PILLARS) {B.get_overhang_pillars(cubes);} // return office building overhang pillars
 					else {assert(0);} // invalid mode/not implemented
 				} // for b
 			} // for x
 		} // for y
 	}
-	void get_overlapping_gf_bcubes(cube_t const &xy_range, vect_cube_t         &bcubes) const {query_for_cube(xy_range, bcubes,    0, 1);} // query_mode=0, ground_floor_only=1
-	void get_overlapping_bcubes   (cube_t const &xy_range, vect_cube_with_ix_t &bcubes) const {query_for_cube(xy_range, bcubes,    0, 0);} // query_mode=0, ground_floor_only=0
-	void add_driveways_for_plot   (cube_t const &plot,     vect_cube_t      &driveways) const {query_for_cube(plot,     driveways, 1, 0);} // query_mode=1, ground_floor_only=0
+	void get_overlapping_bcubes   (cube_t const &xy_range, vect_cube_with_ix_t &bcubes) const {query_for_cube<cube_with_ix_t, QUERY_BCUBES   >(xy_range, bcubes   );}
+	void get_overlapping_gf_bcubes(cube_t const &xy_range, vect_cube_t         &bcubes) const {query_for_cube<cube_t,         QUERY_GFLOOR   >(xy_range, bcubes   );}
+	void get_overlapping_pillars  (cube_t const &xy_range, vect_cube_t        &pillars) const {query_for_cube<cube_t,         QUERY_PILLARS  >(xy_range, pillars  );}
+	void add_driveways_for_plot   (cube_t const &plot,     vect_cube_t      &driveways) const {query_for_cube<cube_t,         QUERY_DRIVEWAYS>(plot,     driveways);}
 
 	void get_building_ext_basement_bcubes(cube_t const &city_bcube, vect_cube_t &bcubes) const {
 		vector<cube_with_ix_t> cand_bldgs;
@@ -6181,8 +6176,9 @@ cube_t get_grid_bcube_for_building(building_t const &b) {
 // city interface
 void set_buildings_pos_range(cube_t const &pos_range) {global_building_params.set_pos_range(pos_range);}
 // Note: no xlate applied for any of these four queries below
-void get_building_bcubes   (cube_t const &xy_range, vect_cube_with_ix_t     &bcubes) {building_creator_city.get_overlapping_bcubes   (xy_range, bcubes);}
-void get_building_gf_bcubes(cube_t const &xy_range, vect_cube_t             &bcubes) {building_creator_city.get_overlapping_gf_bcubes(xy_range, bcubes);}
+void get_building_bcubes   (cube_t const &xy_range, vect_cube_with_ix_t     &bcubes) {building_creator_city.get_overlapping_bcubes   (xy_range, bcubes );}
+void get_building_gf_bcubes(cube_t const &xy_range, vect_cube_t             &bcubes) {building_creator_city.get_overlapping_gf_bcubes(xy_range, bcubes );}
+void get_building_pillars  (cube_t const &xy_range, vect_cube_t            &pillars) {building_creator_city.get_overlapping_pillars  (xy_range, pillars);}
 void get_building_ext_basement_bcubes(cube_t const &city_bcube, vect_cube_t &bcubes) {building_creator_city.get_building_ext_basement_bcubes(city_bcube, bcubes);}
 void get_walkways_for_city(cube_t const &city_bcube, vect_bldg_walkway_t &walkways ) {building_creator_city.get_walkways_for_city(city_bcube, walkways);}
 void get_building_power_points(cube_t const &xy_range, vector<point> &ppts         ) {building_creator_city.get_power_points(xy_range, ppts);}
