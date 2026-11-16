@@ -1122,7 +1122,7 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 		if (get_building_door_pos_closest_to(dest_bldg, pos, door_pos, 0, (is_female ? 1 : 0))) {dest_pos.x = door_pos.x; dest_pos.y = door_pos.y;}
 	}
 	unsigned const start_ix(avoid.size()); // skip parked car avoid cubes
-	get_building_bcubes(cur_plot, avoid);
+	get_building_gf_bcubes(cur_plot, avoid); // ground floor only, under overhangs
 	expand_cubes_by_xy(avoid, expand, start_ix); // expand building cubes in x and y to approximate a cylinder collision (conservative)
 	//remove_cube_if_contains_pt_xy(avoid, pos); // init coll cases (for example from previous dest_bldg) are handled by path_finder_t
 	if (is_home_plot && has_dest_bldg) {remove_cube_if_contains_pt_xy(avoid, dest_pos);} // exclude our dest building, we do want to collide with it
@@ -1155,7 +1155,7 @@ bool pedestrian_t::check_path_blocked(ped_manager_t &ped_mgr, point const &dest,
 	cube_t const check_area(pos, dest); // area between pos and dest
 	vect_cube_t &avoid(ped_mgr.path_finder.get_avoid_vector());
 	avoid.clear();
-	if (check_buildings) {get_building_bcubes(check_area, avoid);}
+	if (check_buildings) {get_building_gf_bcubes(check_area, avoid);} // ground floor only, under overhangs
 	road_plot_t const &cur_plot(ped_mgr.get_city_plot_for_peds(city, plot));
 	cube_t const region(get_plot_coll_region(cur_plot));
 	point const test_pts[2] = {pos, dest};

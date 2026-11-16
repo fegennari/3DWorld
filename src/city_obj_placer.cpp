@@ -1253,7 +1253,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t &plot, vect_cube_t &blo
 		float const height(0.3*car_length), width(height*sz.y/sz.z), depth(height*sz.x/sz.z);
 		point const center(plot.get_cube_center());
 		vect_cube_with_ix_t bcubes; // we need the building index for the get_building_door_pos_closest_to() call
-		get_building_bcubes(plot, bcubes);
+		get_building_bcubes(plot, bcubes); // Note: no dumpsters under overhangs
 		
 		for (cube_with_ix_t const &b : bcubes) {
 			// Note: placements often fail, and usually fail for non-cube buildings
@@ -2742,7 +2742,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	for (auto i = plots.begin(); i != plots.end(); ++i) {
 		tree_pos.clear();
 		blockers.clear();
-		get_building_bcubes(*i, blockers);
+		get_building_gf_bcubes(*i, blockers);
 		size_t const plot_id(i - plots.begin()), buildings_end(blockers.size());
 		assert(plot_id < plot_colliders.size());
 		vect_cube_t &colliders(plot_colliders[plot_id]); // used for pedestrians

@@ -1526,7 +1526,7 @@ bool building_t::maybe_add_city_driveway(cube_t const &plot, unsigned building_i
 	} // for d
 	static vect_cube_t bcubes, avoid; // reused across calls
 	bcubes.clear();
-	get_building_bcubes(plot, bcubes); // Note: could be passed in by the caller, but requires many changes
+	get_building_gf_bcubes(plot, bcubes); // Note: could be passed in by the caller, but requires many changes
 	// garages should be placed so that their driveways exit toward the edge of the plot
 	if (has_driveway() && extend_existing_driveway(driveway, plot, bcube, bcubes, city_driveway)) return 1;
 	rand_gen_t rgen;
