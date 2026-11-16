@@ -1770,7 +1770,8 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	float min_ewidth(1.5*doorway_width), ewidth(min_ewidth); // square; for elevators
 	float z(part.z1());
 	cube_t stairs_cut, elevator_cut;
-	bool stairs_dim(0), bend_dir(0), stairs_have_railing(1), extended_from_above(0), open_back_wall(0), stairs_against_wall[2] = {0, 0};
+	bool stairs_dim(0), bend_dir(0), stairs_have_railing(1), extended_from_above(0), extended_from_below(0), open_back_wall(0);
+	bool stairs_against_wall[2] = {0, 0};
 	stairs_shape sshape(SHAPE_STRAIGHT); // straight by default
 	bool must_add_stairs(first_part_this_stack || (is_prison() && interior->stairwells.empty()));
 	bool const is_basement_room((int)part_ix == basement_part_ix);
@@ -1797,6 +1798,53 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		interior->stairwells.clear(); // will be re-added below
 		for (unsigned d = 0; d < 2; ++d) {stairs_against_wall[d] = stairs.against_wall[d];}
 	}
+	else if (use_hallway && have_part_overhang && has_pri_hall() && part_ix == 1 && interior->stairwells.size() == 1) { // overhang part above ground floor
+		// our part contains the ground floor part in XY, so extend the stairs and elevators upward
+		cube_t const &base(parts[0]);
+		assert(part.contains_cube_xy(base));
+		room_t &room(interior->rooms.back()); // hallway is always the last room to be added
+		// extend stairs
+		stairwell_t &s(interior->stairwells.front());
+		assert(base.contains_cube(s));
+		room.has_stairs = 255; // stairs on all floors
+		room.set_has_center_stairs();
+		s.extends_above  = 1;
+		stairs_cut       = s;
+		stairs_dim       = s.dim; // == hallway_dim
+		force_stairs_dir = s.dir;
+		sshape           = s.shape;
+		extended_from_below = 1;
+		copy_zvals(stairs_cut, part);
+		stairs_cut.z1() -= fc_thick; // extend to ceiling of floor below
+		subtract_cube_from_cubes(s, interior->ceilings);
+		// extend landings
+		bool landing_found(0);
+
+		for (landing_t &landing : interior->landings) {
+			if (landing.for_elevator || !landing.is_at_top || !landing.intersects(s)) continue; // not the top landing of the stairs
+			landing.is_at_top = 0; // top landing below is no longer at the top
+			if (landing.shape == SHAPE_WALLED) {landing.shape = SHAPE_WALLED_SIDES;} // remove the top wall
+			landing_t new_landing(landing);
+			new_landing.translate_dim(2, window_vspacing); // will be the landing starting at the bottom of this part
+			interior->landings.push_back(new_landing);
+			landing_found = 1;
+			break; // there can be only one
+		} // for landing
+		assert(landing_found);
+
+		// extend elevator(s)
+		for (auto &e : interior->elevators) {
+			if (!base.contains_cube(e)) continue; // Note: would not be true for side elevators, maybe remove this?
+			e.z2() = part.z2(); // extend to include this part's height
+			add_or_extend_elevator(e, 0); // add=0
+			elevator_cut.assign_or_union_with_cube(e);
+			// clip elevator bounds out of the ceiling/floor below to connect the parts
+			cube_t sub(e);
+			sub.z1() -= floor_thickness; // extend into the ceiling below
+			subtract_cube_from_cubes(sub, interior->ceilings);
+		} // for e
+		parts_0_1_connected = 1;
+	}
 	else if (use_hallway) { // part is the hallway cube
 		assert(!interior->rooms.empty());
 		room_t &room(interior->rooms.back()); // hallway is always the last room to be added
@@ -1806,7 +1854,8 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		else {sshape = SHAPE_WALLED_SIDES;} // walled sides to meet fire codes
 		cube_t stairs(hall); // start as hallway
 		// add elevator(s)
-		bool const add_side_elevator(!is_apt_or_hotel() && rgen.rand_bool()); // as opposed to central elevators; not valid for fixed floorplans of apartments/hotels/datacenters
+		// consider side elevators vs. central elevators; not valid for fixed floorplans of apartments/hotels/datacenters; not valid for overhangs since extend upward may be invalid
+		bool const add_side_elevator(!is_apt_or_hotel() && !(have_part_overhang && part_ix == 0) && rgen.rand_bool());
 		float const hall_len(room.get_sz_dim(long_dim)), stairs_len(4.0*doorway_width), ehwidth(0.5*ewidth);
 		unsigned const num_elevators((hall_len > 10.0*ewidth) ? 2 : 1); // two elevators if there's space; will only add 1 if there's a side elevator
 		unsigned const room_ix(interior->rooms.size() - 1);
@@ -2175,7 +2224,16 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	cube_t C(part);
 	C.z1() = z; C.z2() = z + fc_thick;
 	unsigned const floors_start(interior->floors.size());
-	interior->floors.push_back(C); // ground floor, full area
+
+	if (extended_from_below) {
+		vect_cube_t temp;
+		subtract_cube_from_cube(C, stairs_cut, temp);
+		if (!elevator_cut.is_all_zeros()) {subtract_cube_from_cubes(elevator_cut, temp);}
+		vector_add_to(temp, interior->floors);
+	}
+	else { // ground floor, full area
+		interior->floors.push_back(C);
+	}
 	bool const has_stairs(!stairs_cut.is_all_zeros()), has_elevator(!elevator_cut.is_all_zeros());
 	bool const stairs_dir((force_stairs_dir < 2) ? force_stairs_dir : (has_stairs ? rgen.rand_bool() : 0)); // same for every floor, could maybe alternate for stairwells
 	float const floor_vert_spacing(is_single_floor ? part.dz() : (is_retail_part(part) ? retail_floor_levels : 1)*window_vspacing);
@@ -2197,9 +2255,9 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			if (has_stairs && has_elevator) {subtract_cube_from_cubes(stairs_cut, to_add);} // both
 
 			if (has_stairs) { // add landings and stairwells
-				// make sure to enable back wall for the first flight of stairs
+				// make sure to enable back wall for the first flight of stairs if not extending from below
  				landing_t landing(stairs_cut, 0, f, stairs_dim, stairs_dir, stairs_have_railing,
-					((f == 1 && sshape == SHAPE_WALLED_SIDES) ? (stairs_shape)SHAPE_WALLED : sshape), 0, is_at_top);
+					((f == 1 && !extended_from_below && sshape == SHAPE_WALLED_SIDES) ? (stairs_shape)SHAPE_WALLED : sshape), 0, is_at_top);
 				set_cube_zvals(landing, zc, zf);
 				landing.set_against_wall(stairs_against_wall, open_back_wall);
 				landing.bend_dir = bend_dir;
@@ -2207,9 +2265,11 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				interior->landings.push_back(landing);
 
 				if (f == 1) { // only add for first floor
-					interior->stairwells.emplace_back(stairs_cut, num_floors, stairs_dim, stairs_dir, sshape);
-					interior->stairwells.back().set_against_wall(stairs_against_wall, open_back_wall);
-					interior->stairwells.back().bend_dir = bend_dir;
+					stairwell_t s(stairs_cut, num_floors, stairs_dim, stairs_dir, sshape);
+					s.set_against_wall(stairs_against_wall, open_back_wall);
+					s.bend_dir      = bend_dir;
+					s.extends_below = extended_from_below;
+					interior->stairwells.push_back(s);
 				}
 			}
 			if (has_elevator) {
@@ -2571,6 +2631,7 @@ void get_room_cands(vector<room_t> const &rooms, unsigned part_ix, cube_t const 
 
 void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t const &part, unsigned lower_part_ix) { // and extend elevators vertically; part is lower
 
+	if (parts_0_1_connected && lower_part_ix == 0) return; // already connected by stairs/elevator by an earlier step
 	//highres_timer_t timer("Connect Stairs", 1, 1, 1); // track_not_print=1; 256ms total
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
 	float const doorway_width(get_nominal_doorway_width()), stairs_len(4.0*doorway_width), railing_pad(0.5*wall_thickness);
