@@ -944,7 +944,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 
 				if (r->get_is_entryway()) { // this is the room that has the front entry door connected to the hallway
 					if (!not_private_room) { // no number if this is a public room connected to a walkway
-						unsigned room_num(100*(f+1) + numbered_rooms_seen);
+						unsigned const floor_number(get_door_number_floor_for_zval(room_center.z)); // not f+1, to account for stacking
+						unsigned const room_num(100*floor_number + numbered_rooms_seen);
 						add_door_sign(std::to_string(room_num), *r, room_center.z, room_id); // Note: sign text is always unique
 					}
 					else if (is_hotel()) { // hotel doors should not auto close
