@@ -1838,6 +1838,11 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			e.z2() = part.z2(); // extend to include this part's height
 			add_or_extend_elevator(e, 0); // add=0
 			elevator_cut.assign_or_union_with_cube(e);
+
+			if (e.is_side_elevator) { // clip out hallway and room walls around side elevator; currently not reachable as side elevators are disabled for overhangs
+				cube_t const sub_cube(e.get_bcube_padded(window_vspacing)); // trim is excluded
+				for (unsigned d = 0; d < 2; ++d) {subtract_cube_from_cubes(sub_cube, interior->walls[d], nullptr, 1);}
+			}
 			// clip elevator bounds out of the ceiling/floor below to connect the parts
 			cube_t sub(e);
 			sub.z1() -= floor_thickness; // extend into the ceiling below
@@ -1868,6 +1873,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			elevator_t elevator(room, room_ix, !long_dim, !dir, 0, 1); // elevator shaft; at_edge=0, interior_room=1 (considered interior-enough)
 			elevator.d[!long_dim][!dir] = wall_pos;
 			elevator.d[!long_dim][ dir] = wall_pos + (dir ? 1.0 : -1.0)*ewidth; // cuts into rooms
+			elevator.is_side_elevator   = 1;
 			float const stairs_spacing(0.5*stairs_len), end_spacing(max((stairs_len + stairs_spacing), 0.2f*hall_len));
 			float const place_lo(room.d[long_dim][0] + end_spacing), place_hi(room.d[long_dim][1] - end_spacing);
 			cube_t const room_bc(interior->has_sec_hallways ? cube_t() : room); // for door coll test; use an empty room because the door may open to a side hallway
