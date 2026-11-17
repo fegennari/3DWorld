@@ -1843,6 +1843,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				cube_t const sub_cube(e.get_bcube_padded(window_vspacing)); // trim is excluded
 				for (unsigned d = 0; d < 2; ++d) {subtract_cube_from_cubes(sub_cube, interior->walls[d], nullptr, 1);}
 			}
+			room.has_elevator = 1;
 			// clip elevator bounds out of the ceiling/floor below to connect the parts
 			cube_t sub(e);
 			sub.z1() -= floor_thickness; // extend into the ceiling below
