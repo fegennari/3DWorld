@@ -3086,10 +3086,8 @@ unsigned building_t::add_stairs_door(cube_t const &stairs_bc, bool dim, bool sta
 	return door_ix;
 }
 
-bool building_t::are_parts_stacked(cube_t const &p1, cube_t const &p2) const {
-	if (p1.z2() == p2.z1() && p1.contains_cube_xy(p2)) return 1; // p2 stacked on p1
-	if (p2.z2() == p1.z1() && p2.contains_cube_xy(p1)) return 1; // p1 stacked on p2
-	return 0;
+bool building_t::are_parts_stacked(cube_t const &p1, cube_t const &p2) const { // includes office building overhangs
+	return ((p1.z2() == p2.z1() || p2.z2() == p1.z1()) && (p1.contains_cube_xy(p2) || p2.contains_cube_xy(p1))); // p2 stacked on p1 or p1 stacked on p2
 }
 
 // clip exterior ceiling for stairs, elevators, ramps, and skylights
