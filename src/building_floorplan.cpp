@@ -1815,7 +1815,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		sshape           = s.shape;
 		extended_from_below = 1;
 		copy_zvals(stairs_cut, part);
-		stairs_cut.z1() -= fc_thick; // extend to ceiling of floor below
+		stairs_cut.z1() -= window_vspacing; // extend to the floor below so that building AI people can use these stairs to move between parts
 		subtract_cube_from_cubes(s, interior->ceilings);
 		// extend landings
 		bool landing_found(0);
