@@ -5368,8 +5368,8 @@ public:
 		// Note: assumes buildings are separated so that only one ped collision can occur
 		for (auto b = bixes.begin(); b != bixes.end(); ++b) {
 			building_t const &building(get_building(*b));
-			if (building.bcube.x1() > bcube.x2())     break; // no further buildings can intersect (sorted by x1)
-			if (!building.bcube.intersects_xy(bcube)) continue;
+			if (building.bcube.x1() > bcube.x2()) break; // no further buildings can intersect (sorted by x1)
+			if (!building.get_ground_floor_bc().intersects_xy(bcube)) continue;
 			// inc_attic=0, inc_ext_basement=0, inc_roof_acc=0, inc_details=1, for_pedestrian=1
 			int const ret(building.check_point_or_cylin_contained(pos, detail_radius, points, 0, 0, 0, 1, 1, coll_cube));
 			if (ret) {building_id = *b; return ret;}
