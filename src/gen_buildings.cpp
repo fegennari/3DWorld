@@ -910,8 +910,8 @@ public:
 		return (quads_or_tris ? block.tri_verts : block.quad_verts);
 	}
 private:
-	static void setup_ao_color(colorRGBA const &color, float bcz1, float ao_bcz2, float z1, float z2, color_wrapper cw[2], vert_norm_comp_tc_color &vert, bool no_ao) {
-		if (!no_ao && global_building_params.ao_factor > 0.0) {
+	static void setup_ao_color(colorRGBA const &color, float bcz1, float ao_bcz2, float z1, float z2, color_wrapper cw[2], vert_norm_comp_tc_color &vert, bool apply_ao) {
+		if (apply_ao) {
 			min_eq(z1, ao_bcz2); min_eq(z2, ao_bcz2); // clamp zvals to AO zmax
 			float const dz_mult(global_building_params.ao_factor/(ao_bcz2 - bcz1));
 			UNROLL_2X(cw[i_].set_c4(color*((1.0f - global_building_params.ao_factor) + dz_mult*((i_ ? z2 : z1) - bcz1)));)
@@ -1013,7 +1013,7 @@ public:
 		bool const apply_ao(!no_ao && global_building_params.ao_factor > 0.0);
 		vert_norm_comp_tc_color vert;
 		color_wrapper cw[2];
-		setup_ao_color(color, bcz1, bg.ao_bcz2, pos.z, z_top, cw, vert, no_ao);
+		setup_ao_color(color, bcz1, bg.ao_bcz2, pos.z, z_top, cw, vert, apply_ao);
 		float tex_pos[2] = {0.0, 1.0};
 		building_draw_utils::calc_normals(bg, normals, ndiv);
 		UNROLL_2X(tex_pos[i_] = ((i_ ? z_top : pos.z) - bcz1););
@@ -1157,7 +1157,7 @@ public:
 		float const tscale[2] = {tex.get_drawn_tscale_x(), tex.get_drawn_tscale_y()};
 		bool const apply_ao(!no_ao && global_building_params.ao_factor > 0.0);
 		color_wrapper cw[2];
-		setup_ao_color(color, bg.bcube.z1(), bg.ao_bcz2, cube.z1(), cube.z2(), cw, vert, no_ao);
+		setup_ao_color(color, bg.bcube.z1(), bg.ao_bcz2, cube.z1(), cube.z2(), cw, vert, apply_ao);
 		vector3d tex_vert_off(((world_mode == WMODE_INF_TERRAIN) ? zero_vector : vector3d(xoff2*DX_VAL, yoff2*DY_VAL, 0.0)));
 		point const bcube_llc(bg.bcube.get_llc());
 		// don't adjust X/Y pos for windows, because other code needs to know where windows are placed; see tc_xlate code below
@@ -2208,9 +2208,11 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 			continue;
 		}
 		bool const skip_bot(i->type != ROOF_OBJ_SCAP && i->type != ROOF_OBJ_SIGN && i->type != ROOF_OBJ_SIGN_CONN);
-		bool const pointed (i->type == ROOF_OBJ_ANT); // draw antenna as a point
+		bool const pointed (i->type == ROOF_OBJ_ANT ); // draw antenna as a point
+		bool const add_ao  (i->type == ROOF_OBJ_WALL);
 		building_t b(building_geom_t(4, rot_sin, rot_cos, pointed)); // cube
-		b.bcube = bcube;
+		b.bcube   = bcube;
+		b.ao_bcz2 = ao_bcz2;
 		tid_nm_pair_t tex;
 		colorRGBA color;
 
@@ -2225,7 +2227,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 			tex   = ((i->type == ROOF_OBJ_SCAP) ? roof_acc_tex : roof_tex).get_scaled_version(1.5);
 			color = detail_color*(pointed ? 0.5 : 1.0);
 		}
-		bdraw.add_section(b, 0, *i, tex, color, 7, skip_bot, 0, 1, 0); // all dims, no AO
+		bdraw.add_section(b, 0, *i, tex, color, 7, skip_bot, 0, !add_ao, 0); // all dims
 
 		if (i->type == ROOF_OBJ_SIGN) { // add sign text
 			bool const dim(i->dy() < i->dx());
