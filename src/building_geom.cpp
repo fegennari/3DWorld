@@ -2452,19 +2452,21 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 	add_company_sign(rgen);
 
 	if (!is_rectangle) { // polygon roof, can only add walls and AC units
-		if (add_walls && rgen.rand_bool()) { // add walls 50% of the time
+		if (add_walls) { // add walls always
+			float top_part_z2(ground_floor_z1);
+			for (cube_t const &part : parts) {max_eq(top_part_z2, part.z2());}
 			cube_t temp[4];
 			vect_cube_t cubes, to_add;
 
 			for (auto p = parts.begin(); p != parts.end(); ++p) {
-				if (p->z2() < bcube.z2()) continue; // not the top floor
+				if (p->z2() < top_part_z2) continue; // not the top floor
 				add_roof_walls(*p, wall_width, 1, temp); // overlap_corners=1 so that clipping works correctly
 				cubes.resize(4);
 				for (unsigned i = 0; i < 4; ++i) {cubes[i] = temp[i];}
 				float const z2(cubes[0].z2());
 
 				for (auto p2 = parts.begin(); p2 != parts.end(); ++p2) { // remove any interior wall sections that overlap another top part
-					if (p2 == p || p2->z2() < p->z2()) continue; // skip self and non-top floors
+					if (p2 == p || p2->z2() < p->z2()) continue; // skip self and non-top/higher floors
 					
 					for (unsigned d = 0; d < 2; ++d) {
 						cube_t clip_cube(*p2);
