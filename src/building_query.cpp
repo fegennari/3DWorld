@@ -1207,7 +1207,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 		// check for and handle stairs first
 		for (auto c = interior->room_geom->get_stairs_start(); c != objs.end(); ++c) {
 			if (c->no_coll() || c->type != TYPE_STAIR) continue;
-			if (!c->contains_pt_xy(pos))  continue; // sphere not on this stair
+			if (!c->contains_pt_xy_inclusive(pos))     continue; // sphere not on this stair
 			if (obj_z < c->z1())          continue; // below the stair
 			if (pos.z - radius > c->z2()) continue; // above the stair
 			bool const is_u(c->shape == SHAPE_STAIRS_U), is_l(c->shape == SHAPE_STAIRS_L), is_ul(is_u || is_l);
