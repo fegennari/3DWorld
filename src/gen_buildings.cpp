@@ -2207,7 +2207,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 			bdraw.add_two_sided_cylin(*this, *i, side_tex, side_color, N_CYL_SIDES, 1.0, 0.0, 0.7, 1.0, 4.0);
 			continue;
 		}
-		bool const skip_bot(i->type != ROOF_OBJ_SCAP && i->type != ROOF_OBJ_SIGN && i->type != ROOF_OBJ_SIGN_CONN);
+		bool const skip_bot(i->type != ROOF_OBJ_SCAP && i->type != ROOF_OBJ_SIGN && i->type != ROOF_OBJ_SIGN_CONN || i->type == ROOF_OBJ_WALL);
 		bool const pointed (i->type == ROOF_OBJ_ANT ); // draw antenna as a point
 		bool const add_ao  (i->type == ROOF_OBJ_WALL);
 		building_t b(building_geom_t(4, rot_sin, rot_cos, pointed)); // cube
@@ -2215,10 +2215,12 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 		b.ao_bcz2 = ao_bcz2;
 		tid_nm_pair_t tex;
 		colorRGBA color;
+		unsigned dim_mask(7); // all dims
 
 		if (i->type == ROOF_OBJ_WALL && (mat.add_windows || is_parking())) { // wall of brick/block/concrete building, use side color
 			tex   = side_tex;
 			color = side_color;
+			if (i->z2() < interior_z2) {dim_mask = ((i->dx() < i->dy()) ? 5 : 6);} // disable ends for lower part walls (may intersect taller parts, no inside corners)
 		}
 		else if (i->type == ROOF_OBJ_SIGN || i->type == ROOF_OBJ_SIGN_CONN) {
 			color = WHITE; // also untextured, but casts shadows
@@ -2227,7 +2229,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 			tex   = ((i->type == ROOF_OBJ_SCAP) ? roof_acc_tex : roof_tex).get_scaled_version(1.5);
 			color = detail_color*(pointed ? 0.5 : 1.0);
 		}
-		bdraw.add_section(b, 0, *i, tex, color, 7, skip_bot, 0, !add_ao, 0); // all dims
+		bdraw.add_section(b, 0, *i, tex, color, dim_mask, skip_bot, 0, !add_ao, 0);
 
 		if (i->type == ROOF_OBJ_SIGN) { // add sign text
 			bool const dim(i->dy() < i->dx());
