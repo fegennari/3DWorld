@@ -771,7 +771,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 						hang_pictures_whiteboard_chalkboard_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement);
 						if (rgen.rand_bool()) {add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);} // 50% of the time; not all rugs will be placed
 					}
-					else if (*r == pri_hall) { // office building/school/hospital primary hallway
+					else if (*r == pri_hall || (have_part_overhang && r->part_id == 1 && r->contains_cube_xy(pri_hall))) {
+						// office building/school/hospital primary hallway on ground floor or overhang
 						add_pri_hall_objs(rgen, room_rgen, *r, room_center.z, room_id, tot_light_amt, f, objs_start);
 						if (is_school()) {add_hallway_lockers(rgen, *r, room_center.z, room_id, f, tot_light_amt, objs_start);}
 						if (is_ground_floor) {r->assign_to(RTYPE_LOBBY, f);} // first floor primary hallway, make it the lobby
