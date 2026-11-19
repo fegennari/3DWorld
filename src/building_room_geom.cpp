@@ -6211,6 +6211,7 @@ void building_room_geom_t::add_false_door_int(room_object_t const &c) {
 			door_tex.set_specular(0.4, 40.0, 1.0);
 			get_material(door_tex, 0, 0, 0, exterior).add_cube_to_verts(c, c.color, c.get_llc(), (front_skip | EF_Z1)); // skip bottom
 			// draw wheel/handle(s)
+			point const center(c.get_cube_center());
 			rgeom_mat_t &handle_mat(get_metal_material(1, 0, 0, exterior));
 			colorRGBA const handle_color((c.room_id & 1) ? DK_RED : GRAY);
 			float const wheel_radius(0.2*width), wheel_depth(0.08*width + 0.5*depth);
@@ -6218,14 +6219,22 @@ void building_room_geom_t::add_false_door_int(room_object_t const &c) {
 
 			for (unsigned n = 0; n < (two_side_interior ? 2U : 1U); ++n) { // front and maybe back side wheels
 				bool const dir(front_dir ^ bool(n));
-				wheel.set_from_point(c.get_cube_center());
+				wheel.set_from_point(center);
 				wheel.d[c.dim][dir] = c.d[c.dim][dir] + (dir ? 1.0 : -1.0)*wheel_depth; // extend outward
 				wheel.expand_in_dim(!c.dim, wheel_radius);
 				wheel.expand_in_dim(2,      wheel_radius); // Z
 				draw_metal_handle_wheel(wheel, c.dim, handle_color, LT_GRAY, handle_mat, handle_mat);
 			}
+			// add biohazard sign
+			float const sign_hwidth(0.1*width);
+			cube_t sign(c);
+			set_wall_width(sign, center[!c.dim], sign_hwidth, !c.dim);
+			set_wall_width(sign, (center.z + 0.25*c.dz()), sign_hwidth, 2); // Z
+			sign.expand_in_dim(c.dim, 0.05*depth);
+			rgeom_mat_t &sign_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/biohazard.jpg"), 0.0f, 0))); // unshadowed
+			sign_mat.add_cube_to_verts(sign, c.color, all_zeros, ~get_skip_mask_for_xy(c.dim)); // draw only front and back face
 		}
-		else {
+		else { // normal interior door
 			unsigned const skip_faces(two_side_interior ? ~get_skip_mask_for_xy(c.dim) : get_face_mask(c.dim, front_dir)); // draw only front and/or back
 			int const tid((c.flags & RO_FLAG_WALKWAY) ? get_bldg_door_tid() : (c.is_house() ? get_int_door_tid() : get_off_door_tid()));
 			rgeom_mat_t &fb_mat(get_material(tid_nm_pair_t(tid, 0.0, shadowed), 0, 0, 0, exterior));
