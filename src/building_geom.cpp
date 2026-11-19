@@ -2450,40 +2450,45 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 	assert(!parts.empty());
 	create_per_part_ext_verts(); // needed for roof containment queries
 	add_company_sign(rgen);
+	
+	if (is_cube()) { // add rooftop walls
+		interior_z2 = ground_floor_z1;
+		for (cube_t const &part : parts) {max_eq(interior_z2, part.z2());} // will be recalculated in building_t::gen_interior(), but it's needed here for roof walls
+		cube_t temp[4];
+		vect_cube_t cubes, to_add;
 
-	if (!is_rectangle) { // polygon roof, can only add walls and AC units
-		if (add_walls) { // add walls always
-			float top_part_z2(ground_floor_z1);
-			for (cube_t const &part : parts) {max_eq(top_part_z2, part.z2());}
-			cube_t temp[4];
-			vect_cube_t cubes, to_add;
+		for (auto p = parts.begin(); p != parts.end(); ++p) {
+			bool const at_top(p->z2() == interior_z2);
+			if (at_top && (!add_walls || is_rectangle)) continue; // skip top floor if not flat or has a rectangular top (added later)
+			if (!at_top && has_complex_floorplan)       continue; // lower floor walls look wrong
+			add_roof_walls(*p, wall_width, 1, temp); // overlap_corners=1 so that clipping works correctly
+			cubes.resize(4);
+			for (unsigned i = 0; i < 4; ++i) {cubes[i] = temp[i];}
+			float const z2(cubes[0].z2());
 
-			for (auto p = parts.begin(); p != parts.end(); ++p) {
-				if (p->z2() < top_part_z2) continue; // not the top floor
-				add_roof_walls(*p, wall_width, 1, temp); // overlap_corners=1 so that clipping works correctly
-				cubes.resize(4);
-				for (unsigned i = 0; i < 4; ++i) {cubes[i] = temp[i];}
-				float const z2(cubes[0].z2());
+			for (auto p2 = parts.begin(); p2 != parts.end(); ++p2) { // remove any interior wall sections that overlap another top part
+				if (p2 == p || p2->z2() < p->z2()) continue; // skip self and non-top/higher floors
 
-				for (auto p2 = parts.begin(); p2 != parts.end(); ++p2) { // remove any interior wall sections that overlap another top part
-					if (p2 == p || p2->z2() < p->z2()) continue; // skip self and non-top/higher floors
-					
-					for (unsigned d = 0; d < 2; ++d) {
-						cube_t clip_cube(*p2);
-						clip_cube.z2() = z2;
+				for (unsigned d = 0; d < 2; ++d) {
+					cube_t clip_cube(*p2);
+					clip_cube.z2() = z2;
+
+					if (at_top) { // only expand/overlap walls for top parts with no higher levels that could intersect them
 						float const exp(d ? wall_width : -wall_width);
 						clip_cube.expand_by(exp, -exp, 0.0);
-						subtract_part_from_walls(clip_cube, cubes, wall_width);
 					}
-				} // for p2
-				vector_add_to(cubes, to_add);
-			} // for p
-			merge_cubes_xy(to_add); // optimization
+					subtract_part_from_walls(clip_cube, cubes, wall_width);
+				} // for d
+			} // for p2
+			vector_add_to(cubes, to_add);
+		} // for p
+		merge_cubes_xy(to_add); // optimization
 
-			for (auto i = to_add.begin(); i != to_add.end(); ++i) {
-				if (!i->is_all_zeros()) {details.emplace_back(*i, (uint8_t)ROOF_OBJ_WALL);}
-			}
+		for (auto i = to_add.begin(); i != to_add.end(); ++i) {
+			if (!i->is_all_zeros()) {details.emplace_back(*i, (uint8_t)ROOF_OBJ_WALL);}
 		}
+	}
+	if (!is_rectangle) { // polygon roof, can only add walls and AC units
 		if (num_ac_units > 0) {
 			float xy_sz(0.75*bcube.get_size_xy().mag()*rgen.rand_uniform(0.012, 0.02)); // size based on bcube
 			if (is_datacenter()) {xy_sz *= 1.5;} // larger

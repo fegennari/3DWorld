@@ -2216,11 +2216,12 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 		tid_nm_pair_t tex;
 		colorRGBA color;
 		unsigned dim_mask(7); // all dims
+		// disable ends for lower part walls (may intersect taller parts, no inside corners)
+		if (i->type == ROOF_OBJ_WALL && i->z2() < interior_z2) {dim_mask = ((i->dx() < i->dy()) ? 5 : 6);}
 
 		if (i->type == ROOF_OBJ_WALL && (mat.add_windows || is_parking())) { // wall of brick/block/concrete building, use side color
 			tex   = side_tex;
 			color = side_color;
-			if (i->z2() < interior_z2) {dim_mask = ((i->dx() < i->dy()) ? 5 : 6);} // disable ends for lower part walls (may intersect taller parts, no inside corners)
 		}
 		else if (i->type == ROOF_OBJ_SIGN || i->type == ROOF_OBJ_SIGN_CONN) {
 			color = WHITE; // also untextured, but casts shadows
