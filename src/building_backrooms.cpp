@@ -442,7 +442,7 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 	auto &pgbr_wall_ixs(interior->room_geom->pgbr_wall_ixs);
 	if (pgbr_wall_ixs.empty()) {pgbr_wall_ixs.emplace_back(pbgr_walls);} // add first index
 
-	for (unsigned d = 0; d < 2; ++d) {
+	for (unsigned d = 0; d < 2; ++d) { // dim
 		sort(walls_per_dim[d].begin(), walls_per_dim[d].begin(), cube_by_sz(!d)); // sort walls longest to shortest to improve occlusion culling time
 		
 		for (cube_t &wall : walls_per_dim[d]) {
@@ -454,8 +454,28 @@ void building_t::add_backrooms_objs(rand_gen_t rgen, room_t &room, float zval, u
 			c.expand_by_xy(get_ped_coll_radius());
 			objs.emplace_back(c, TYPE_DBG_SHAPE, room_id, d, 0, (RO_FLAG_NOCOLL | RO_FLAG_BACKROOM), 1.0, SHAPE_CUBE, RED);
 #endif
-		}
+		} // for wall
 	} // for d
+	if (has_backrooms_texture()) { // add outlets if using backrooms textures
+		float const plate_height(1.8*wall_thickness), plate_hwidth(0.5*wall_thickness), plate_thickness(0.03*wall_thickness), edge_gap(2.0*plate_hwidth);
+		float const outlet_z1(zval + get_trim_height() + 0.4*plate_height);
+		cube_t outlet;
+		set_cube_zvals(outlet, outlet_z1, (outlet_z1 + plate_height)); // same for all walls
+
+		for (unsigned d = 0; d < 2; ++d) { // dim
+			for (cube_t const &wall : walls_per_dim[d]) {
+				if (wall.get_sz_dim(!d) < 4.0*edge_gap) continue; // wall too short
+				if (rgen.rand_float() > 0.25)           continue; // add outlets to 25% of walls
+				bool const dir(rgen.rand_bool());
+				float const wall_face(wall.d[d][!dir]);
+				outlet.d[d][ dir] = wall_face; // flush with wall
+				outlet.d[d][!dir] = wall_face + (dir ? -1.0 : 1.0)*plate_thickness; // expand out a bit
+				set_wall_width(outlet, rgen.rand_uniform((wall.d[!d][0] + edge_gap), (wall.d[!d][1] - edge_gap)), plate_hwidth, !d);
+				if (has_bcube_int(outlet, walls_per_dim[!d]) || has_bcube_int(outlet, pillar_avoid)) continue; // avoid doors, stairs, etc. - same as pillars
+				objs.emplace_back(outlet, TYPE_OUTLET, room_id, d, dir, RO_FLAG_NOCOLL, 1.0); // dim/dir matches wall; fully lit
+			} // for wall
+		} // for d
+	}
 	pgbr_wall_ixs.emplace_back(pbgr_walls); // end of range
 	
 	// Add vents, light switch, and outlets (on all walls - or should it be only on the wall adjacent to building or next to the door?)
