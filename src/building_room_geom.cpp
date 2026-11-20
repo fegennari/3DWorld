@@ -6225,14 +6225,15 @@ void building_room_geom_t::add_false_door_int(room_object_t const &c) {
 				wheel.expand_in_dim(2,      wheel_radius); // Z
 				draw_metal_handle_wheel(wheel, c.dim, handle_color, LT_GRAY, handle_mat, handle_mat);
 			}
-			// add biohazard sign
-			float const sign_hwidth(0.1*width);
-			cube_t sign(c);
-			set_wall_width(sign, center[!c.dim], sign_hwidth, !c.dim);
-			set_wall_width(sign, (center.z + 0.25*c.dz()), sign_hwidth, 2); // Z
-			sign.expand_in_dim(c.dim, 0.05*depth);
-			rgeom_mat_t &sign_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/biohazard.jpg"), 0.0f, 0))); // unshadowed
-			sign_mat.add_cube_to_verts(sign, c.color, all_zeros, ~get_skip_mask_for_xy(c.dim)); // draw only front and back face
+			if (!c.is_open()) { // add biohazard or radiation sign if closed
+				float const sign_hwidth(0.1*width);
+				cube_t sign(c);
+				set_wall_width(sign, center[!c.dim], sign_hwidth, !c.dim);
+				set_wall_width(sign, (center.z + 0.25*c.dz()), sign_hwidth, 2); // Z
+				sign.expand_in_dim(c.dim, 0.05*depth);
+				rgeom_mat_t &sign_mat(get_material(tid_nm_pair_t(((c.dim ^ c.dir) ? RADIATION_TEX : get_texture_by_name("interiors/biohazard.jpg")), 0.0f, 0))); // unshadowed
+				sign_mat.add_cube_to_verts(sign, c.color, all_zeros, ~get_skip_mask_for_xy(c.dim)); // draw only front and back face
+			}
 		}
 		else { // normal interior door
 			unsigned const skip_faces(two_side_interior ? ~get_skip_mask_for_xy(c.dim) : get_face_mask(c.dim, front_dir)); // draw only front and/or back
