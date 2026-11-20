@@ -514,7 +514,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 			if (found_item && dist_sq >= closest_dist_sq) continue; // not the closest
 			if (!check_obj_dir_dist(closest_to, in_dir, *i, center, (player_in_closet ? 0.5 : 1.0)*dmax)) continue; // door not in the correct direction or too far away
 			point const p_int(ray_ortho_plane_int(closest_to, query_ray_end, i->get_center_dim(i->dim), i->dim)); // use intersect point to avoid intersecting far wall
-			if (check_for_wall_ceil_floor_int(closest_to, p_int, 0, 1, 1, 0)) continue; // pbgr_walls=0, transparent=1, bars=1, doors=0
+			if (check_for_wall_ceil_floor_int(closest_to, p_int, 1, 1, 1, 0)) continue; // pbgr_walls=1, transparent=1, bars=1, doors=0
 			cube_t const door_bcube(i->get_true_bcube()); // expand to nonzero area
 
 			if (!door_bcube.line_intersects(closest_to, query_ray_end)) { // if camera ray doesn't intersect the door frame, check for ray intersection with opened door
@@ -614,7 +614,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 				// checking for office chair rotation is expensive, so it's done last, just before updating closest
 				if (type == TYPE_OFF_CHAIR && !chair_can_be_rotated(*i)) continue;
 				//if (check_for_wall_ceil_floor_int(closest_to, query_ray_end)) continue; // skip if it's on the other side of a wall, ceiling, or floor; too strong
-				if (check_line_int_interior_window(closest_to, center) || line_intersect_jail_walls_bars(closest_to, center)) return 1;
+				if (check_for_interact_blocker(closest_to, center, 1, 1, 1, 0)) continue; // inc_pg_br_walls=1, inc_tranparent=1, inc_bars=1, inc_doors=0
 				if (type == TYPE_BUTTON && dot_product_ptv(i->get_dir(), closest_to, center) < 0.0) continue; // can't press from behind
 				if (type == TYPE_SWITCH && dot_product_ptv(i->get_dir(), closest_to, center) > 0.0) continue; // can't press from behind (inverted from button dir)
 				if (type == TYPE_BOX    && object_has_something_on_it(*i, obj_vect, obj_vect_end))  continue; // check for another box or crate stacked on this box

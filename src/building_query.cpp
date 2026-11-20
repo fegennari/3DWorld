@@ -2577,6 +2577,9 @@ bool building_t::check_for_wall_ceil_floor_int(point const &p1, point const &p2,
 		if (has_cube_line_coll(p1, p2, interior->walls[d])) return 1;
 	}
 	if (p1.z != p2.z && has_cube_line_coll(p1, p2, interior->fc_occluders)) return 1; // skip for horizontal lines
+	return check_for_interact_blocker(p1, p2, inc_pg_br_walls, inc_tranparent, inc_bars, inc_doors);
+}
+bool building_t::check_for_interact_blocker(point const &p1, point const &p2, bool inc_pg_br_walls, bool inc_tranparent, bool inc_bars, bool inc_doors) const {
 	if (inc_doors && check_line_intersect_doors(p1, p2)) return 1;
 
 	if (inc_pg_br_walls && has_parking_garage && has_room_geom() && min(p1.z, p2.z) < ground_floor_z1) {
