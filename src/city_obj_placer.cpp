@@ -2672,7 +2672,9 @@ template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs,
 
 		for (unsigned i = start_ix; i < g->ix; ++i) {
 			T const &obj(objs[i]);
-			if (dstate.check_sphere_visible(obj.pos, obj.get_bsphere_radius(shadow_only))) {obj.draw(dstate, *this, dist_scale, shadow_only);}
+			if (!obj.draw_this_pass(dstate.pass_ix)) continue;
+			if (!dstate.check_sphere_visible(obj.pos, obj.get_bsphere_radius(shadow_only))) continue;
+			obj.draw(dstate, *this, dist_scale, shadow_only);
 		}
 		bool const have_hedges_or_ivy(!dstate.hedge_draw.empty() || !dstate.ivy_manager.empty());
 		if (shadow_only) {assert(!have_hedges_or_ivy);}

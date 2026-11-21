@@ -358,7 +358,6 @@ void set_corrugated_metal_texture() {
 	city_obj_t::post_draw(dstate, shadow_only);
 }
 void trashcan_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	if (is_cylin != (dstate.pass_ix == 1)) return; // wrong pass
 	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
 
 	if (is_cylin) { // cylindrical residential trashcan
@@ -509,7 +508,8 @@ plot_divider_type_t plot_divider_types[DIV_NUM_TYPES] = {
 	else {plot_divider_types[dstate.pass_ix].post_draw(shadow_only);}
 }
 void divider_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	if (dstate.pass_ix == DIV_NUM_TYPES && type == DIV_CHAINLINK) { // add chainlink fence posts
+	if (dstate.pass_ix == DIV_NUM_TYPES) { // add chainlink fence posts
+		assert(type == DIV_CHAINLINK);
 		if (!dstate.check_cube_visible(bcube, 1.5*dist_scale, 1)) return; // is_likely=1
 		float const length(get_width()), height(bcube.dz()), thickness(get_depth());
 		float const post_hwidth(1.5*thickness), post_width(2.0*post_hwidth), top_width(1.5*thickness);
@@ -530,7 +530,6 @@ void divider_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_sc
 		dstate.draw_cube(qbds.untex_qbd, top, cw, 1);
 		return;
 	}
-	if (type != dstate.pass_ix) return; // this type not enabled in this pass
 	if (type == DIV_CHAINLINK) {dist_scale *= 0.5;} // less visible
 	if (!dstate.check_cube_visible(bcube, dist_scale, 1)) return; // is_likely=1
 	assert(dstate.pass_ix < DIV_NUM_TYPES);
@@ -2131,7 +2130,6 @@ void building_walkway_t::attach_elevator(cube_t const &e) {
 	else {dstate.s.clear_specular_and_metalness();} // untextured steel cylinder
 }
 void pillar_t::draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const {
-	if (is_concrete != (dstate.pass_ix == 0)) return; // wrong pass
 	if (is_concrete) {dstate.draw_cube(qbds.qbd, bcube, WHITE, 1, 16.0, 4);} // skip top and bottom
 	else {
 		unsigned const ndiv(shadow_only ? 8 : max(4U, min(32U, unsigned(2.0f*dist_scale*dstate.get_lod_factor(pos)))));

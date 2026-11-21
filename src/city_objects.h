@@ -43,6 +43,7 @@ struct city_obj_t : public sphere_t {
 	city_obj_t(cube_t const &bcube_) : bcube(bcube_) {set_bsphere_from_bcube();}
 	city_obj_t(point const &pos_, float radius_) : sphere_t(pos_, radius_) {}
 	bool operator<(city_obj_t const &b) const {return (bcube.x1() < b.bcube.x1());} // sort by bcube x1
+	bool draw_this_pass(unsigned draw_pass) const {return 1;}
 	cube_t const &get_outer_bcube() const {return bcube;}
 	float get_bsphere_radius(bool shadow_only) const {return radius;}
 	float get_overlay_radius() const {return radius;} // for overhead map mode
@@ -113,6 +114,7 @@ struct tree_dirt_t : public city_obj_t {
 struct trashcan_t : public city_obj_t {
 	bool is_cylin;
 	trashcan_t(point const &pos_, float radius_, float height, bool is_cylin_);
+	bool draw_this_pass(unsigned pass_ix) const {return (is_cylin == (pass_ix == 1));}
 	float get_cylin_radius() const {assert(is_cylin); return 0.5*bcube.dx();}
 	//cube_t get_bird_bcube() const {} // custom, not single cube; handled during object placement
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
@@ -162,6 +164,7 @@ struct divider_t : public oriented_city_obj_t {
 	divider_t(cube_t const &c, unsigned type_, bool dim_, bool dir_, bool ec, unsigned sd, unsigned dix, unsigned pix, unsigned cix, unsigned sdir=0, bool udb=0) :
 		oriented_city_obj_t(c.get_cube_center(), c.get_bsphere_radius(), dim_, dir_), type(type_),
 		divider_ix(dix), plot_ix(pix), city_ix(cix), skip_dims(sd), street_dir(sdir), ends_clipped(ec), use_dir_for_birds(udb) {bcube = c;}
+	bool draw_this_pass(unsigned pass_ix) const {return (type == pass_ix || (pass_ix == DIV_NUM_TYPES && type == DIV_CHAINLINK));}
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
@@ -448,6 +451,7 @@ struct pillar_t : public city_obj_t { // for walkway support
 
 	pillar_t(cube_t const &bcube_, bool is_concrete_) : city_obj_t(bcube_), is_concrete(is_concrete_) {}
 	float get_cylin_radius() const {return 0.25*(bcube.dx() + bcube.dy());}
+	bool draw_this_pass(unsigned pass_ix) const {return (is_concrete == (pass_ix == 0));}
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, city_draw_qbds_t &qbds, float dist_scale, bool shadow_only) const;
