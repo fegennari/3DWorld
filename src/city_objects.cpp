@@ -872,7 +872,10 @@ cube_t newsrack_t::get_bird_bcube() const {
 /*static*/ void newsrack_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (shadow_only) {}
 	else if (dstate.pass_ix == 1) {select_texture(get_texture_by_name("roads/fake_news.jpg"));}
-	else {dstate.s.set_specular(0.35, 40.0, 0.5);} // metal: low specular; partially reflective
+	else {
+		select_no_texture();
+		dstate.s.set_specular(0.35, 40.0, 0.5); // metal: low specular; partially reflective
+	}
 }
 /*static*/ void newsrack_t::post_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only && dstate.pass_ix == 0) {dstate.s.clear_specular_and_metalness();}
@@ -1100,7 +1103,7 @@ bool clothesline_t::add_item(unsigned id, float dz, float hwidth, float hthick, 
 	}
 	return 0; // failed
 }
-/*static*/ void clothesline_t::pre_draw (draw_state_t &dstate, bool shadow_only) {
+/*static*/ void clothesline_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (shadow_only) return;
 	if (dstate.pass_ix == 0) { // line
 		select_texture(get_texture_by_name("interiors/blinds.jpg"));
