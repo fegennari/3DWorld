@@ -199,6 +199,9 @@ void city_bird_t::next_frame(float timestep, float delta_dir, point const &camer
 				adjust_new_dest_zval();
 				start_end_zmax = max(dest.z, pos.z);
 				state          = BIRD_STATE_TAKEOFF;
+				// play pigeon sound when beginning takeoff and the player is close
+				float const dist(p2p_dist(pos, camera_bs)), dmax(100.0*radius);
+				if (dist < dmax) {gen_sound_thread_safe(SOUND_PIGEON, (pos + get_camera_coord_space_xlate()), (1.0 - dist/dmax));}
 			}
 		}
 		break;
