@@ -2207,7 +2207,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 			bdraw.add_two_sided_cylin(*this, *i, side_tex, side_color, N_CYL_SIDES, 1.0, 0.0, 0.7, 1.0, 4.0);
 			continue;
 		}
-		bool const skip_bot(i->type != ROOF_OBJ_SCAP && i->type != ROOF_OBJ_SIGN && i->type != ROOF_OBJ_SIGN_CONN || i->type == ROOF_OBJ_WALL);
+		bool const skip_bot(i->type != ROOF_OBJ_SCAP && i->type != ROOF_OBJ_SIGN && i->type != ROOF_OBJ_SIGN_CONN);
 		bool const pointed (i->type == ROOF_OBJ_ANT ); // draw antenna as a point
 		bool const add_ao  (i->type == ROOF_OBJ_WALL);
 		building_t b(building_geom_t(4, rot_sin, rot_cos, pointed)); // cube
