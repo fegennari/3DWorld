@@ -414,7 +414,8 @@ bool building_t::add_vanity_to_room(rand_gen_t &rgen, room_t &room, float &zval,
 		unsigned const vanity_obj_ix(objs.size());
 		objs.emplace_back(vanity,  TYPE_VANITY,  room_id, dim, !dir, flags, tot_light_amt);
 		objs.emplace_back(blocker, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS); // add blocker in front
-		add_poi_object(vanity_obj_ix, 0.75); // dscale=0.75; should we restrict the stand area to in front of the sink?
+		add_poi_object(vanity_obj_ix, 0.75); // dscale=0.75
+		interior->room_geom->pois.back().act_area.expand_in_dim(!dim, -0.33*length); // restrict the stand area to in front of the sink
 		// add a mirror/medicine cabinet above the sink; shouldn't need to check for overlaps since vanity is placed first
 		cube_t mirror(vanity); // start with the sink left and right position
 		mirror.z1() = vanity.z2() + 0.14*floor_spacing;
@@ -762,6 +763,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 			if (cube_int_if_nonzero(sink, avoid))                       continue;
 			if (use_sink_model) {objs.emplace_back(sink, TYPE_SINK,   room_id, br_dim, !dir, 0, tot_light_amt);} // sink 3D model
 			else                {objs.emplace_back(sink, TYPE_BRSINK, room_id, br_dim, !dir, 0, tot_light_amt);} // flat basin sink
+			add_poi_object(objs.size()-1, 0.75); // dscale=0.75
 			if (use_sink_model) {add_bathroom_plumbing(objs.back());}
 			// if we started the mirror, but we have a gap with no sink (blocked by a door, etc.), then end the mirror
 			hit_mirror_end |= (n > last_sink_ix+1 && !sinks_bcube.is_all_zeros());
@@ -827,7 +829,6 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 			mirror.z1() = sinks_bcube.z2() + 0.25*floor_thickness;
 			mirror.z2() = zval + 0.9*floor_spacing - floor_thickness;
 			if (mirror.is_strictly_normalized()) {mirrors[dir] = room_object_t(mirror, TYPE_MIRROR, room_id, br_dim, !dir, RO_FLAG_NOCOLL, tot_light_amt);}
-			add_poi_dim_dir(sinks_bcube, room_id, br_dim, !dir, 0.75); // dscale=0.75
 		}
 		// add wall items on each side that has sinks
 		float const side_wall_pos(place_area_uc.d[!br_dim][sink_side]), sink_edge(place_area.d[!br_dim][sink_side]);
