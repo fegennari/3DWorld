@@ -1198,7 +1198,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		if (multi_family) {btype = BTYPE_MULT_FAM;}
 		else if (num_floors == 2 && bcube.get_size_xy().get_min_val() > 8.0*floor_spacing) { // large 2 floor rectangular house can be a restaurant
 			btype    = BTYPE_RESTAURANT;
-			is_house = 0;
+			is_house = use_modern_door = 0;
 			assign_name(rgen);
 		}
 		maybe_add_basement(rgen);
