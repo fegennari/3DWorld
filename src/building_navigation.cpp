@@ -3533,7 +3533,7 @@ void building_t::get_poi_stand_areas_for_room(unsigned room_id, float radius, fl
 
 	for (point_of_interest_t const &p : interior->room_geom->pois) {
 		if (p.room_id != room_id || p.act_area.z1() > zval || p.act_area.z2() < zval) continue;
-		//if (p.obj_id < 0 || get_room_object_by_index(p.obj_id).type != TYPE_URINAL) continue; // TESTING
+		//if (p.obj_id < 0 || get_room_object_by_index(p.obj_id).type != TYPE_TOILET) continue; // TESTING
 		unsigned const num(p.get_stand_areas(room_area, sa, radius));
 		for (unsigned n = 0; n < num; ++n) {stand_areas.push_back(sa[n]);} // should we be weighting based on p.use_count here?
 	}
@@ -3601,15 +3601,18 @@ point_of_interest_t const *building_t::maybe_interact_with_poi(person_t &person,
 	if (poi->obj_id < 0        ) return nullptr; // POI not associated with a room object
 	point_of_interest_t const *next_poi(nullptr);
 	room_object_t &obj(get_room_object_by_index(poi->obj_id));
+	float const floor_spacing(get_window_vspace());
+	bool const on_player_floor(fabs(get_camera_pos().z - person.pos.z) < 0.5*floor_spacing);
 
 	// Note: a removed object (TYPE_BLOCKER or TYPE_DRAIN) won't match any of the cases below and will be ignored; maybe the POI should be removed?
 	if (obj.is_sink_type()) {
-		if (arrived) {obj.flags |=  RO_FLAG_IS_ACTIVE;} // turn on  water
-		else         {obj.flags &= ~RO_FLAG_IS_ACTIVE;} // turn off water
+		if (on_player_floor) {
+			if (arrived) {obj.flags |=  RO_FLAG_IS_ACTIVE;} // turn on  water
+			else         {obj.flags &= ~RO_FLAG_IS_ACTIVE;} // turn off water
+		}
 	}
 	else if (obj.type == TYPE_TOILET || obj.type == TYPE_URINAL) { // flush toilet/urinal when departing
 		if (arrived) { // close bathroom door if close; should be done earlier
-			float const floor_spacing(get_window_vspace());
 			room_t const &room(get_room(poi->room_id));
 			
 			if (room.get_room_type_for_zval(person.pos.z, floor_spacing) == RTYPE_BATH) { // not shared men's/women's room
@@ -3631,12 +3634,11 @@ point_of_interest_t const *building_t::maybe_interact_with_poi(person_t &person,
 			}
 		}
 		else { // departing
-			play_flush_sound(obj);
-			// find sinks in the same room; they could be placed before or after this POI, so search from the beginning
-			float const dz_max(0.5*get_window_vspace());
+			if (on_player_floor) {play_flush_sound(obj);}
 
+			// find sinks in the same room; they could be placed before or after this POI, so search from the beginning
 			for (point_of_interest_t const &p : interior->room_geom->pois) {
-				if (p.room_id != poi->room_id || p.obj_id < 0 || fabs(p.act_area.z1() - poi->act_area.z1()) > dz_max) continue;
+				if (p.room_id != poi->room_id || p.obj_id < 0 || fabs(p.act_area.z1() - poi->act_area.z1()) > 0.5*floor_spacing) continue;
 				room_object_t &obj2(get_room_object_by_index(p.obj_id));
 				if (!obj2.is_sink_type()) continue;
 				if (!next_poi || p.use_count < next_poi->use_count) {next_poi = &p;}
@@ -3648,15 +3650,15 @@ point_of_interest_t const *building_t::maybe_interact_with_poi(person_t &person,
 
 		if (arrived) { // turn a burner on
 			obj.item_flags |= (1 << (person.ssn % 3)); // select a random burner; should it be one with a pot on it?
-			gen_sound_thread_safe(SOUND_HISS, local_center, 0.25, 0.6);
+			if (on_player_floor) {gen_sound_thread_safe(SOUND_HISS, local_center, 0.25, 0.6);}
 		}
 		else { // turn all burners off
 			obj.item_flags = 0;
-			gen_sound_thread_safe(SOUND_CLICK, local_center, 0.75);
+			if (on_player_floor) {gen_sound_thread_safe(SOUND_CLICK, local_center, 0.75);}
 		}
 	}
 	else if (obj.type == TYPE_VENDING || obj.type == TYPE_CHECKOUT) { // beep
-		if (arrived) {gen_sound_thread_safe(SOUND_BEEP, local_to_camera_space(obj.get_cube_center()), 0.25, 0.75);}
+		if (arrived && on_player_floor) {gen_sound_thread_safe(SOUND_BEEP, local_to_camera_space(obj.get_cube_center()), 0.25, 0.75);}
 	}
 	return next_poi;
 }
