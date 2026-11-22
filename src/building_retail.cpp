@@ -537,7 +537,7 @@ void building_t::add_checkout_objs(cube_t const &place_area, float zval, unsigne
 
 		for (cube_t const &c : to_add) {
 			objs.emplace_back(c, TYPE_CHECKOUT, room_id, dim, cr_dir, 0);
-			add_poi_dim_dir(get_true_room_obj_bcube(objs.back()), room_id, !dim, !cr_dir); // opposite dim/dir
+			add_poi_dim_dir(get_true_room_obj_bcube(objs.back()), room_id, !dim, !cr_dir, 1.0, objs.size()-1); // opposite dim/dir
 		}
 		if (!store_is_closed && global_building_params.people_per_office_max > 0) { // place people at the checkout counters if store is open
 			float const radius(get_ped_coll_radius());
@@ -585,16 +585,18 @@ cube_t building_t::add_shelf_rack(cube_t const &c, bool dim, unsigned style_id, 
 	srack.item_flags   = rack_id++; // unique per rack
 	srack.drawer_flags = item_category;
 	while (get_srack_num_shelves(srack) > max_num_shelves) {++srack.obj_id;}
-	interior->room_geom->objs.push_back(srack);
+	vect_room_object_t &objs(interior->room_geom->objs);
+	unsigned const sr_obj_ix(objs.size());
+	objs.push_back(srack);
 	cube_t back, top, sides[2], shelves[5];
 	unsigned const num_shelves(get_shelf_rack_cubes(srack, back, top, sides, shelves));
-	interior->room_geom->get_shelfrack_objects(srack, interior->room_geom->objs, 1); // add_models_mode=1
+	interior->room_geom->get_shelfrack_objects(srack, objs, 1); // add_models_mode=1
 	
 	if (add_occluders) {
 		interior->room_geom->shelf_rack_occluders[0].push_back(back);
 		interior->room_geom->shelf_rack_occluders[1].push_back(top.is_all_zeros() ? shelves[num_shelves-1] : top); // top, or top shelf
 	}
-	if (!is_empty) {add_poi_dim(c, room_id, !dim);} // add point of interest so that people will look at shelf racks when idle/stopped
+	if (!is_empty) {add_poi_dim(c, room_id, !dim, sr_obj_ix);} // add point of interest so that people will look at shelf racks when idle/stopped
 	return back; // return back for mall stores so that they can be used as occluders
 }
 

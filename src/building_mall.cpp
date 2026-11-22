@@ -2396,7 +2396,7 @@ void building_t::add_clothing_rack(cube_t const &rack, unsigned room_id, bool di
 		unsigned const num_hangers(round_fp(15.0*rgen.rand_uniform(1.0, 1.5)*rack_length/(num_segs*window_vspace)));
 		building_room_geom_t::add_hangers_and_clothing(window_vspace, num_hangers, flags, hanger_model_id, clothing_model_id, hanger_rod, objs, rgen, add_jumpsuits);
 	} // for n
-	if (!add_jumpsuits) {add_poi_dim(rack, room_id, !dim);} // mall clothing stores only
+	if (!add_jumpsuits) {add_poi_dim(rack, room_id, !dim);} // mall clothing stores only; not a single object
 }
 
 void building_t::add_mall_back_hallway_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float light_amt) {

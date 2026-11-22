@@ -2964,6 +2964,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 			wait_time = 0.0;
 			person.abort_dest(); // force choose_dest=1 below
 			person.ai_state = AI_WAITING; // waiting, but no longer for an elevator
+			maybe_interact_with_poi(person, 0); // arrived=0 (departed)
 		}
 	}
 	if (!point_in_building_or_basement_bcube(person.pos)) { // person must be inside the building
@@ -3183,7 +3184,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 			// don't wait if we can follow the player or if we're on mall entrance stairs
 			else if (!(global_building_params.ai_target_player && (can_target_player(person) || has_nearby_sound(person, floor_spacing))) && !person.in_tunnel) {
 				person.wait_for(rgen.rand_uniform(1.0, (can_ai_follow_player(person) ? 2.0 : 10.0))); // stop for 1-10s, 1-2s if player is in this building in gameplay mode
-				set_look_dir(person);
+				maybe_interact_with_poi(person, 1); // arrived=1
 			}
 			person.on_new_path_seg    = 1; // allow player following AI update logic to rerun this frame
 			person.last_used_elevator = 0;
@@ -3475,29 +3476,29 @@ unsigned point_of_interest_t::get_stand_areas(cube_t const &room_bounds, cube_t 
 
 float building_t::get_poi_act_dist() const {return 0.4*get_window_vspace();} // about arm's reach distance
 
-void building_t::add_poi(cube_t const &c, cube_t const &act_area, unsigned room_id) {
+void building_t::add_poi(cube_t const &c, cube_t const &act_area, unsigned room_id, int obj_id) {
 	assert(has_room_geom());
-	interior->room_geom->pois.emplace_back(c, act_area, room_id);
+	interior->room_geom->pois.emplace_back(c, act_area, room_id, obj_id);
 }
-void building_t::add_poi_xy(cube_t const &c, unsigned room_id) {
+void building_t::add_poi_xy(cube_t const &c, unsigned room_id, int obj_id) {
 	cube_t act_area(c);
 	act_area.expand_by_xy(get_poi_act_dist());
-	add_poi(c, act_area, room_id);
+	add_poi(c, act_area, room_id, obj_id);
 }
-void building_t::add_poi_dim(cube_t const &c, unsigned room_id, bool dim) {
+void building_t::add_poi_dim(cube_t const &c, unsigned room_id, bool dim, int obj_id) {
 	cube_t act_area(c);
 	act_area.expand_in_dim(dim, get_poi_act_dist());
-	add_poi(c, act_area, room_id);
+	add_poi(c, act_area, room_id, obj_id);
 }
-void building_t::add_poi_dim_dir(cube_t const &c, unsigned room_id, bool dim, bool dir, float dscale) {
+void building_t::add_poi_dim_dir(cube_t const &c, unsigned room_id, bool dim, bool dir, float dscale, int obj_id) {
 	cube_t act_area(c);
 	act_area.d[dim][dir] += (dir ? 1.0 : -1.0)*max(dscale*get_poi_act_dist(), 0.5f*get_min_front_clearance_inc_people());
-	add_poi(c, act_area, room_id);
+	add_poi(c, act_area, room_id, obj_id);
 }
 void building_t::add_poi_object(unsigned obj_id, float dscale) {
 	assert(has_room_geom());
 	room_object_t const &obj(get_room_object_by_index(obj_id));
-	add_poi_dim_dir(obj, obj.room_id, obj.dim, obj.dir, dscale);
+	add_poi_dim_dir(obj, obj.room_id, obj.dim, obj.dir, dscale, obj_id);
 }
 bool building_t::room_has_poi(unsigned room_id) const {
 	return (has_room_geom() && !interior->room_geom->pois.empty() && get_room(room_id).get_has_pois());
@@ -3549,25 +3550,43 @@ bool building_t::select_person_poi(unsigned room_id, float radius, point &pos, r
 	// some other ideas: select least used or least recently used POI? use sink after toilet in bathroom? return false sometimes if there's only one?
 	return poi_cache.select_stand_area(*this, room_id, radius, pos, rgen);
 }
-void building_t::set_look_dir(person_t &person) const {
+void building_t::maybe_interact_with_poi(person_t &person, bool arrived) { // and set look dir
 	if (!has_room_geom() || person.cur_room < 0) return;
 	float dmin_sq(0.0);
-	bool found(0);
+	point_of_interest_t const *poi(nullptr);
 
 	for (point_of_interest_t const &p : interior->room_geom->pois) {
 		if ((int)p.room_id != person.cur_room)   continue; // wrong room
 		if (!p.act_area.contains_pt(person.pos)) continue;
-		point const closest_pt(p.look_area.closest_pt(person.pos));
-		float const dist_sq(p2p_dist_xy_sq(person.pos, closest_pt));
-		if (found && dist_sq >= dmin_sq) continue; // not better
-		// look at the closest point if outside the POI bounds, otherwise look at the center
-		point const look_pt(p.look_area.contains_pt(person.pos) ? p.look_area.get_cube_center() : closest_pt);
+		float const dist_sq(p2p_dist_xy_sq(person.pos, p.look_area.closest_pt(person.pos)));
+		if (!poi || dmin_sq < dist_sq) {poi = &p; dmin_sq = dist_sq;} // choose the closest
+	}
+	if (poi == nullptr) return; // no POI
+	
+	if (arrived) { // look at the closest point if outside the POI bounds, otherwise look at the center
+		point const look_pt(poi->look_area.contains_pt(person.pos) ? poi->look_area.get_cube_center() : poi->look_area.closest_pt(person.pos));
 		person.look_dir.assign((look_pt.x - person.pos.x), (look_pt.y - person.pos.y));
 		person.look_dir.normalize();
-		++p.use_count;
-		dmin_sq = dist_sq;
-		found   = 1;
-	} // for p
+		++poi->use_count;
+	}
+	if (this != player_building) return; // not the player's building; no object interaction
+	if (poi->obj_id < 0        ) return; // POI not associated with a room object
+	room_object_t &obj(get_room_object_by_index(poi->obj_id));
+
+	// Note: a removed object (TYPE_BLOCKER or TYPE_DRAIN) won't match any of the cases below and will be ignored; maybe the POI should be removed?
+	if (obj.is_sink_type()) {
+		if (arrived) {obj.flags |=  RO_FLAG_IS_ACTIVE;} // turn on  water
+		else         {obj.flags &= ~RO_FLAG_IS_ACTIVE;} // turn off water
+	}
+	if (obj.type == TYPE_TOILET || obj.type == TYPE_URINAL) { // flush toilet/urinal when departing
+		if (arrived) {
+			// TODO: close bathroom door if private bathroom and door is close; should be done earlier
+		}
+		else { // departing
+			play_flush_sound(obj);
+			// TODO: set sink in same room as next POI
+		}
+	}
 }
 
 void building_room_geom_t::get_path_nodes_for_pt_and_room(cube_t const &path_area, float zval, float max_dz, unsigned room_id, vector<point> &cand_nodes) const {

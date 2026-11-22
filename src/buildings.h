@@ -736,8 +736,9 @@ struct person_place_t {
 struct point_of_interest_t {
 	cube_t look_area, act_area; // look_area is zero area if a point
 	unsigned room_id=0;
+	int obj_id=-1; // -1 if it's not a room object
 	mutable unsigned use_count=0; // or last frame used?
-	point_of_interest_t(cube_t const &la, cube_t const &aa, unsigned rid) : look_area(la), act_area(aa), room_id(rid) {}
+	point_of_interest_t(cube_t const &la, cube_t const &aa, unsigned rid, int id=-1) : look_area(la), act_area(aa), room_id(rid), obj_id(id) {}
 	unsigned get_stand_areas(cube_t const &room_bounds, cube_t sas[4], float radius=0.0) const;
 };
 struct path_node_t : public point {
@@ -2067,6 +2068,7 @@ struct building_t : public building_geom_t {
 	bool apply_player_action_key(point const &closest_to_in, vector3d const &in_dir_in, int mode, bool check_only=0, bool no_check_conn_building=0);
 	void assign_correct_room_to_object(room_object_t &obj) const;
 	bool move_nearest_object(point const &at_pos, vector3d const &in_dir, float range, int mode);
+	void play_flush_sound(room_object_t const &obj) const;
 	bool interact_with_object(unsigned obj_ix, point const &int_pos, point const &query_ray_end, vector3d const &int_dir);
 	bool adjust_blinds_state(unsigned obj_ix);
 	void add_box_contents(room_object_t const &box);
@@ -2180,12 +2182,12 @@ private:
 	elevator_t const &get_elevator(unsigned eix) const {assert(interior); assert(eix < interior->elevators.size()); return interior->elevators[eix];}
 	// points of interest
 	float get_poi_act_dist() const;
-	void add_poi        (cube_t const &c, cube_t const &act_area, unsigned room_id);
-	void add_poi_xy     (cube_t const &c, unsigned room_id);
-	void add_poi_dim    (cube_t const &c, unsigned room_id, bool dim);
-	void add_poi_dim_dir(cube_t const &c, unsigned room_id, bool dim, bool dir, float dscale=1.0);
+	void add_poi        (cube_t const &c, cube_t const &act_area, unsigned room_id, int obj_id=-1);
+	void add_poi_xy     (cube_t const &c, unsigned room_id, int obj_id=-1);
+	void add_poi_dim    (cube_t const &c, unsigned room_id, bool dim, int obj_id=-1);
+	void add_poi_dim_dir(cube_t const &c, unsigned room_id, bool dim, bool dir, float dscale=1.0, int obj_id=-1);
 	void add_poi_object(unsigned obj_id, float dscale=1.0);
-	void set_look_dir(person_t &person) const;
+	void maybe_interact_with_poi(person_t &person, bool arrived);
 public:
 	bool room_has_poi(unsigned room_id) const;
 	void get_poi_stand_areas_for_room(unsigned room_id, float radius, float zval, vect_cube_t &stand_areas) const;

@@ -2463,7 +2463,7 @@ void building_t::add_shelves(cube_t const &c, bool dim, bool dir, unsigned room_
 	vect_room_object_t &objs(interior->room_geom->objs);
 	objs.emplace_back(c, TYPE_SHELVES, room_id, dim, dir, flags, tot_light_amt, SHAPE_CUBE, WHITE, item_flags);
 	set_obj_id(objs);
-	if (objs.back().is_nonempty()) {add_poi_dim_dir(c, room_id, dim, !dir);} // opposite dir
+	if (objs.back().is_nonempty()) {add_poi_dim_dir(c, room_id, dim, !dir, 1.0, objs.size()-1);} // opposite dir
 	unsigned const objs_start(objs.size());
 	interior->room_geom->expand_shelves(objs.back(), 1); // add_models_mode=1
 
@@ -3068,7 +3068,7 @@ bool building_t::add_pool_room_objs(rand_gen_t rgen, room_t const &room, float z
 	bool const table_dir(rgen.rand_bool()); // dir doesn't much matter, though the ends of the table are slightly different
 	room_object_t const pool_table(ptable, TYPE_POOL_TABLE, room_id, long_dim, table_dir, 0, tot_light_amt, SHAPE_CUBE);
 	objs.push_back(pool_table);
-	add_poi_xy(ptable, room_id);
+	add_poi_xy(ptable, room_id, objs.size()-1);
 
 	// place pool balls
 	float const ball_radius(0.0117*length), ball_diameter(2.0*ball_radius); // pool ball diameter is 2.25", 1.125" radius; length is 8', so radius is ~0.0117*length
@@ -3645,7 +3645,7 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 					wf.d[dim][ dir] = wall_pos;
 					wf.d[dim][!dir] = wall_pos - (dir ? 1.0 : -1.0)*depth;
 					objs.emplace_back(wf, TYPE_WFOUNTAIN, room_id, dim, dir, 0, tot_light_amt, SHAPE_CUBE);
-					add_poi_dim_dir(wf, room_id, dim, !dir, 0.5); // dscale=0.5; opposite dir
+					add_poi_dim_dir(wf, room_id, dim, !dir, 0.5, objs.size()-1); // dscale=0.5; opposite dir
 					break;
 				}
 			} // for n

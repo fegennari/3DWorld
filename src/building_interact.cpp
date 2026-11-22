@@ -666,6 +666,11 @@ void obj_dynamic_to_static(room_object_t &obj, building_interior_t &interior) {
 	interior.room_geom->invalidate_small_geom(); // add to small static objects
 }
 
+void building_t::play_flush_sound(room_object_t const &obj) const {
+	bool const is_urinal(obj.type == TYPE_URINAL); // urinal is quieter and higher pitch
+	gen_sound_thread_safe(SOUND_FLUSH, local_to_camera_space(obj.get_cube_center()), (is_urinal ? 0.5 : 1.0), (is_urinal ? 1.25 : 1.0));
+}
+
 bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, point const &query_ray_end, vector3d const &int_dir) {
 	auto &obj(get_room_object_by_index(obj_ix));
 	point const sound_origin(get_cube_center_zval(obj, int_pos.z)), local_center(local_to_camera_space(sound_origin)); // generate sound from the player height
@@ -675,8 +680,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 	cube_t dishwasher;
 
 	if (type == TYPE_TOILET || type == TYPE_URINAL) { // toilet/urinal can be flushed, but otherwise is not modified
-		bool const is_urinal(type == TYPE_URINAL); // urinal is quieter and higher pitch
-		gen_sound_thread_safe(SOUND_FLUSH, local_center, (is_urinal ? 0.5 : 1.0), (is_urinal ? 1.25 : 1.0));
+		play_flush_sound(obj);
 		sound_scale = 0.5;
 		refill_thirst(1); // player can drink from toilet or urinal only if low
 	}
