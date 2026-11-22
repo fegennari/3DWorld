@@ -2950,7 +2950,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 					move_person_to_not_collide(person, *p, person.pos, rsum, coll_dist); // if we get here, we have to actively move out of the way
 					was_bumped = 1;
 				} // for p
-				if (was_bumped) {wait_time  = 0.0;} // stop waiting so that we can react
+				if (was_bumped) {wait_time  = 0.0;} // stop waiting so that we can react; may skip POI interaction
 				else            {wait_time -= fticks;}
 			}
 			person.anim_time = 0.0; // reset just in case (though should already be at 0.0)
@@ -3562,6 +3562,10 @@ bool building_t::select_person_poi(unsigned room_id, float radius, point &pos, r
 	return poi_cache.select_stand_area(*this, room_id, radius, pos, rgen);
 }
 void building_t::maybe_interact_with_poi(person_t &person, bool arrived) { // and set look dir
+	if (!arrived) { // departed
+		if (!person.at_poi) return; // not at a POI, done
+		person.at_poi = 0; // no longer at a POI
+	}
 	if (!has_room_geom() || person.cur_room < 0) return;
 	float dmin_sq(0.0);
 	point_of_interest_t const *poi(nullptr);
@@ -3578,6 +3582,7 @@ void building_t::maybe_interact_with_poi(person_t &person, bool arrived) { // an
 		point const look_pt(poi->look_area.contains_pt(person.pos) ? poi->look_area.get_cube_center() : poi->look_area.closest_pt(person.pos));
 		person.look_dir.assign((look_pt.x - person.pos.x), (look_pt.y - person.pos.y));
 		person.look_dir.normalize();
+		person.at_poi = 1;
 		++poi->use_count;
 	}
 	if (this != player_building) return; // not the player's building; no object interaction
