@@ -1613,6 +1613,17 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 		if (!in_building_gameplay_mode()) { // handle bathroom genders, unless we're a zombie
 			room_type const rtype(room.get_room_type_for_zval(person.target_pos.z, floor_spacing));
 			if (rtype == (person.is_female ? RTYPE_MENS : RTYPE_WOMENS)) continue; // wrong gender
+
+			if (rtype == RTYPE_BATH) { // private bathroom; don't go there if someone is already there or heading there
+				bool is_bad_room(0);
+
+				for (person_t const &p : interior->people) {
+					if (&p == &person) continue; // skip self
+					if (p.cur_room  == cand_room && fabs(p.pos.z        - person.target_pos.z) < 0.5*window_vspace) {is_bad_room = 1; break;}
+					if (p.dest_room == cand_room && fabs(p.target_pos.z - person.target_pos.z) < 0.5*window_vspace) {is_bad_room = 1; break;} // questionable; how do they know the other's dest?
+				}
+				if (is_bad_room) continue;
+			}
 		}
 		person.dest_room = cand_room; // set but not yet used
 		person.goal_type = GOAL_TYPE_ROOM;
