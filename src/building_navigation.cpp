@@ -1489,7 +1489,8 @@ int building_t::maybe_use_escalator(person_t &person, building_loc_t const &loc,
 	return 0;
 }
 
-int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // used for randomly walking around the building
+// used for randomly walking around the building
+int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen, point_of_interest_t const *next_poi) const {
 
 	assert(interior && interior->nav_graph);
 	building_loc_t const loc(get_building_loc_for_pt(person.pos));
@@ -1499,8 +1500,20 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 	person.is_on_stairs = person.path_is_fixed = person.missed_player_room_change = 0;
 	if (interior->rooms.size() == 1) return 0; // no other room to move to
 	bool const last_used_escalator(person.last_used_escalator); // Note: maybe can remove, since last_used_escalator is never set to 1?
-	person.last_used_escalator = 0;
+	person.last_used_escalator = person.last_used_stairs = 0;
 	
+	if (next_poi) { // POI already selected for us
+		cube_t sa[4];
+		unsigned const num(next_poi->get_stand_areas(get_room(next_poi->room_id), sa, COLL_RADIUS_SCALE*person.radius));
+
+		if (num > 0) {
+			person.target_pos = person.pos;
+			person.dest_room  = next_poi->room_id; // set but not yet used
+			person.goal_type  = GOAL_TYPE_ROOM;
+			gen_xy_pos_in_cube(person.target_pos, sa[rgen.rand() % num], rgen); // select a random stand area
+			return 1;
+		}
+	}
 	// maybe use retail area escalator
 	if (maybe_use_escalator(person, loc, last_used_escalator, rgen)) return 1;
 	float const window_vspace(get_window_vspace());
@@ -1527,7 +1540,6 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 					person.goal_type    = GOAL_TYPE_ELEVATOR;
 					person.cur_elevator = (uint8_t)nearest_elevator;
 					person.last_used_elevator = 1;
-					person.last_used_stairs   = 0; // non-stairs dest, reset
 					return 1;
 				}
 			}
@@ -1627,7 +1639,6 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen) const { // 
 		}
 		person.dest_room = cand_room; // set but not yet used
 		person.goal_type = GOAL_TYPE_ROOM;
-		person.last_used_stairs = 0; // non-stairs dest, reset
 		return 1;
 	} // for n
 
@@ -2916,6 +2927,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	float &wait_time(person.waiting_start); // reuse this field
 	float const base_speed_mult(is_house ? 1.0 : 1.2); // 20% faster in office buildings, if targeting the player, player last pos, or sound
 	float speed_mult((person.goal_type >= GOAL_TYPE_PLAYER) ? base_speed_mult : 1.0);
+	point_of_interest_t const *next_poi(nullptr);
 	person.following_player = person.is_stopped = person.is_idle = 0; // reset for this frame
 	// skip the same building check for coll if both this person and the player may be in different but connected buildings
 	bool allow_diff_building(interior->conn_info && person.pos.z < ground_floor_z1 && cur_player_building_loc.pos.z < ground_floor_z1 &&
@@ -2975,7 +2987,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 			wait_time = 0.0;
 			person.abort_dest(); // force choose_dest=1 below
 			person.ai_state = AI_WAITING; // waiting, but no longer for an elevator
-			maybe_interact_with_poi(person, 0); // arrived=0 (departed)
+			next_poi = maybe_interact_with_poi(person, 0); // arrived=0 (departed)
 		}
 	}
 	if (!point_in_building_or_basement_bcube(person.pos)) { // person must be inside the building
@@ -3079,7 +3091,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	if (choose_dest) { // no current destination, choose a new destination
 		++person.cur_rseed; // update rseed so that this person will choose a different path if the previous path finding call failed
 		if (!update_path) {person.anim_time = 0.0;} // reset animation if not a failed update path frame
-		int const ret(choose_dest_room(person, rgen)); // 0=failed, 1=success, 2=failed but can retry
+		int const ret(choose_dest_room(person, rgen, next_poi)); // 0=failed, 1=success, 2=failed but can retry
 
 		if (ret == 2 && interior->door_state_updated) { // wait rather than stopping in case the player trapped this person in a room by closing the door
 			person.wait_for(1.0); // stop for a second, then try again
@@ -3521,6 +3533,7 @@ void building_t::get_poi_stand_areas_for_room(unsigned room_id, float radius, fl
 
 	for (point_of_interest_t const &p : interior->room_geom->pois) {
 		if (p.room_id != room_id || p.act_area.z1() > zval || p.act_area.z2() < zval) continue;
+		//if (p.obj_id < 0 || get_room_object_by_index(p.obj_id).type != TYPE_URINAL) continue; // TESTING
 		unsigned const num(p.get_stand_areas(room_area, sa, radius));
 		for (unsigned n = 0; n < num; ++n) {stand_areas.push_back(sa[n]);} // should we be weighting based on p.use_count here?
 	}
@@ -3550,8 +3563,7 @@ struct poi_cache_t {
 		}
 		if (rpool.empty()) return 0; // shouldn't fail
 		unsigned const ix((rpool.size() == 1) ? 0 : (rgen.rand() % rpool.size()));
-		cube_t const &area(stand_areas[rpool[ix]]);
-		gen_xy_pos_in_cube(pos, area, rgen);
+		gen_xy_pos_in_cube(pos, stand_areas[rpool[ix]], rgen);
 		return 1;
 	}
 };
@@ -3561,12 +3573,12 @@ bool building_t::select_person_poi(unsigned room_id, float radius, point &pos, r
 	// some other ideas: select least used or least recently used POI? use sink after toilet in bathroom? return false sometimes if there's only one?
 	return poi_cache.select_stand_area(*this, room_id, radius, pos, rgen);
 }
-void building_t::maybe_interact_with_poi(person_t &person, bool arrived) { // and set look dir
+point_of_interest_t const *building_t::maybe_interact_with_poi(person_t &person, bool arrived) { // and set look dir
 	if (!arrived) { // departed
-		if (!person.at_poi) return; // not at a POI, done
+		if (!person.at_poi) return nullptr; // not at a POI, done
 		person.at_poi = 0; // no longer at a POI
 	}
-	if (!has_room_geom() || person.cur_room < 0) return;
+	if (!has_room_geom() || person.cur_room < 0) return nullptr;
 	float dmin_sq(0.0);
 	point_of_interest_t const *poi(nullptr);
 
@@ -3576,7 +3588,7 @@ void building_t::maybe_interact_with_poi(person_t &person, bool arrived) { // an
 		float const dist_sq(p2p_dist_xy_sq(person.pos, p.look_area.closest_pt(person.pos)));
 		if (!poi || dmin_sq < dist_sq) {poi = &p; dmin_sq = dist_sq;} // choose the closest
 	}
-	if (poi == nullptr) return; // no POI
+	if (poi == nullptr) return nullptr; // no POI
 	
 	if (arrived) { // look at the closest point if outside the POI bounds, otherwise look at the center
 		point const look_pt(poi->look_area.contains_pt(person.pos) ? poi->look_area.get_cube_center() : poi->look_area.closest_pt(person.pos));
@@ -3585,8 +3597,9 @@ void building_t::maybe_interact_with_poi(person_t &person, bool arrived) { // an
 		person.at_poi = 1;
 		++poi->use_count;
 	}
-	if (this != player_building) return; // not the player's building; no object interaction
-	if (poi->obj_id < 0        ) return; // POI not associated with a room object
+	if (this != player_building) return nullptr; // not the player's building; no object interaction
+	if (poi->obj_id < 0        ) return nullptr; // POI not associated with a room object
+	point_of_interest_t const *next_poi(nullptr);
 	room_object_t &obj(get_room_object_by_index(poi->obj_id));
 
 	// Note: a removed object (TYPE_BLOCKER or TYPE_DRAIN) won't match any of the cases below and will be ignored; maybe the POI should be removed?
@@ -3619,7 +3632,15 @@ void building_t::maybe_interact_with_poi(person_t &person, bool arrived) { // an
 		}
 		else { // departing
 			play_flush_sound(obj);
-			// TODO: set sink in same room as next POI
+			// find sinks in the same room; they could be placed before or after this POI, so search from the beginning
+			float const dz_max(0.5*get_window_vspace());
+
+			for (point_of_interest_t const &p : interior->room_geom->pois) {
+				if (p.room_id != poi->room_id || p.obj_id < 0 || fabs(p.act_area.z1() - poi->act_area.z1()) > dz_max) continue;
+				room_object_t &obj2(get_room_object_by_index(p.obj_id));
+				if (!obj2.is_sink_type()) continue;
+				if (!next_poi || p.use_count < next_poi->use_count) {next_poi = &p;}
+			}
 		}
 	}
 	else if (obj.type == TYPE_STOVE) {
@@ -3637,6 +3658,7 @@ void building_t::maybe_interact_with_poi(person_t &person, bool arrived) { // an
 	else if (obj.type == TYPE_VENDING || obj.type == TYPE_CHECKOUT) { // beep
 		if (arrived) {gen_sound_thread_safe(SOUND_BEEP, local_to_camera_space(obj.get_cube_center()), 0.25, 0.75);}
 	}
+	return next_poi;
 }
 
 void building_room_geom_t::get_path_nodes_for_pt_and_room(cube_t const &path_area, float zval, float max_dz, unsigned room_id, vector<point> &cand_nodes) const {

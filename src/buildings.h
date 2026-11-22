@@ -2164,7 +2164,7 @@ private:
 	void build_nav_graph() const;
 	bool is_valid_ai_placement(point const &pos, float radius, bool skip_nocoll, bool no_check_objs=0) const;
 	bool choose_dest_goal(person_t &person, rand_gen_t &rgen) const;
-	int  choose_dest_room(person_t &person, rand_gen_t &rgen) const;
+	int  choose_dest_room(person_t &person, rand_gen_t &rgen, point_of_interest_t const *next_poi) const;
 	int  maybe_use_escalator(person_t &person, building_loc_t const &loc, bool last_used_escalator, rand_gen_t &rgen) const;
 	bool select_person_dest_in_room(person_t &person, rand_gen_t &rgen, unsigned room_id) const;
 	void get_avoid_cubes(float zval, float height, float radius, vect_cube_t &avoid, bool following_player, cube_t const *const fires_select_cube=nullptr) const;
@@ -2187,7 +2187,7 @@ private:
 	void add_poi_dim    (cube_t const &c, unsigned room_id, bool dim, int obj_id=-1);
 	void add_poi_dim_dir(cube_t const &c, unsigned room_id, bool dim, bool dir, float dscale=1.0, int obj_id=-1);
 	void add_poi_object(unsigned obj_id, float dscale=1.0);
-	void maybe_interact_with_poi(person_t &person, bool arrived);
+	point_of_interest_t const *maybe_interact_with_poi(person_t &person, bool arrived);
 public:
 	bool room_has_poi(unsigned room_id) const;
 	void get_poi_stand_areas_for_room(unsigned room_id, float radius, float zval, vect_cube_t &stand_areas) const;
