@@ -3578,7 +3578,7 @@ void building_t::maybe_interact_with_poi(person_t &person, bool arrived) { // an
 		if (arrived) {obj.flags |=  RO_FLAG_IS_ACTIVE;} // turn on  water
 		else         {obj.flags &= ~RO_FLAG_IS_ACTIVE;} // turn off water
 	}
-	if (obj.type == TYPE_TOILET || obj.type == TYPE_URINAL) { // flush toilet/urinal when departing
+	else if (obj.type == TYPE_TOILET || obj.type == TYPE_URINAL) { // flush toilet/urinal when departing
 		if (arrived) {
 			// TODO: close bathroom door if private bathroom and door is close; should be done earlier
 		}
@@ -3586,6 +3586,21 @@ void building_t::maybe_interact_with_poi(person_t &person, bool arrived) { // an
 			play_flush_sound(obj);
 			// TODO: set sink in same room as next POI
 		}
+	}
+	else if (obj.type == TYPE_STOVE) {
+		point const local_center(local_to_camera_space(obj.get_cube_center()));
+
+		if (arrived) { // turn a burner on
+			obj.item_flags |= (1 << (person.ssn % 3)); // select a random burner; should it be one with a pot on it?
+			gen_sound_thread_safe(SOUND_HISS, local_center, 0.25, 0.6);
+		}
+		else { // turn all burners off
+			obj.item_flags = 0;
+			gen_sound_thread_safe(SOUND_CLICK, local_center, 0.75);
+		}
+	}
+	else if (obj.type == TYPE_VENDING || obj.type == TYPE_CHECKOUT) { // beep
+		if (arrived) {gen_sound_thread_safe(SOUND_BEEP, local_to_camera_space(obj.get_cube_center()), 0.25, 0.75);}
 	}
 }
 
