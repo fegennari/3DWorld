@@ -3595,8 +3595,27 @@ void building_t::maybe_interact_with_poi(person_t &person, bool arrived) { // an
 		else         {obj.flags &= ~RO_FLAG_IS_ACTIVE;} // turn off water
 	}
 	else if (obj.type == TYPE_TOILET || obj.type == TYPE_URINAL) { // flush toilet/urinal when departing
-		if (arrived) {
-			// TODO: close bathroom door if private bathroom and door is close; should be done earlier
+		if (arrived) { // close bathroom door if close; should be done earlier
+			float const floor_spacing(get_window_vspace());
+			room_t const &room(get_room(poi->room_id));
+			
+			if (room.get_room_type_for_zval(person.pos.z, floor_spacing) == RTYPE_BATH) { // not shared men's/women's room
+				float const dz_max(0.5*floor_spacing);
+				vect_door_stack_t &doorways(get_doorways_for_room(room, person.pos.z));
+
+				for (auto &ds : doorways) {
+					if (ds.get_auto_close()) continue; // no need to close this door
+					assert(ds.first_door_ix < interior->doors.size());
+
+					for (unsigned dix = ds.first_door_ix; dix < interior->doors.size(); ++dix) {
+						door_t &door(interior->doors[dix]);
+						if (!ds.is_same_stack(door)) break; // moved to a different stack, done
+						if (!door.open || fabs(door.zc() - person.pos.z) > dz_max) continue; // skip closed doors and doors on other floors
+						if (!dist_xy_less_than(door.get_cube_center(), person.pos, 1.0*floor_spacing)) continue; // too far away to close from here
+						toggle_door_state(dix, 1, 0, person.pos); // player_in_this_building=1; by_player=0
+					}
+				} // for ds
+			}
 		}
 		else { // departing
 			play_flush_sound(obj);
