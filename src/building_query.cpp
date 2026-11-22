@@ -1235,7 +1235,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, flo
 
 		// check for punching bag collisions
 		for (auto &pb : interior->room_geom->punching_bags) {
-			room_object_t const &pb_obj(interior->room_geom->get_room_object_by_index(pb.obj_ix));
+			room_object_t const &pb_obj(get_room_object_by_index(pb.obj_ix));
 			int ret(pb.knockback(pb_obj, pos, xy_radius, camera_height, cnorm) ? 2 : 0);
 			// player can push the bag when not knocked back and it's not moving too quickly
 			if (!ret && pb.vel.mag() < 0.25) {ret = pb.collision(pb_obj, p_last, pos, xy_radius, camera_height, cnorm);}
@@ -1895,8 +1895,7 @@ void building_interior_t::get_collidable_obj_cubes(vect_cube_t &coll_cubes, cube
 
 room_object_t const &building_interior_t::get_elevator_car(elevator_t const &e) const {
 	assert(room_geom);
-	assert(e.car_obj_id < room_geom->objs.size());
-	room_object_t const &obj(room_geom->objs[e.car_obj_id]); // elevator car for this elevator
+	room_object_t const &obj(room_geom->get_room_object_by_index(e.car_obj_id)); // elevator car for this elevator
 	assert(obj.type == TYPE_ELEVATOR);
 	return obj;
 }

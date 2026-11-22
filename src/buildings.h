@@ -2123,6 +2123,8 @@ struct building_t : public building_geom_t {
 	room_t       &get_room(unsigned room_ix)       {assert(interior); return interior->get_room(room_ix);}
 	door_t const &get_door(unsigned door_ix) const {assert(interior); return interior->get_door(door_ix);}
 	door_t       &get_door(unsigned door_ix)       {assert(interior); return interior->get_door(door_ix);}
+	room_object_t &get_room_object_by_index(unsigned obj_id) {assert(has_room_geom()); return interior->room_geom->get_room_object_by_index(obj_id);}
+	room_object_t const &get_room_object_by_index(unsigned obj_id) const {assert(has_room_geom()); return interior->room_geom->get_room_object_by_index(obj_id);}
 	point get_center_of_room(unsigned room_ix) const {return get_room(room_ix).get_cube_center();}
 	room_t const &get_pool_room() const {assert(interior); return get_room(interior->pool.room_ix);}
 	cube_t get_prison_hall_for_room(room_t const &r) const;
@@ -2178,10 +2180,11 @@ private:
 	elevator_t const &get_elevator(unsigned eix) const {assert(interior); assert(eix < interior->elevators.size()); return interior->elevators[eix];}
 	// points of interest
 	float get_poi_act_dist() const;
-	void add_poi(cube_t const &c, cube_t const &act_area, unsigned room_id);
-	void add_poi_xy(cube_t const &c, unsigned room_id);
-	void add_poi_dim(cube_t const &c, unsigned room_id, bool dim);
+	void add_poi        (cube_t const &c, cube_t const &act_area, unsigned room_id);
+	void add_poi_xy     (cube_t const &c, unsigned room_id);
+	void add_poi_dim    (cube_t const &c, unsigned room_id, bool dim);
 	void add_poi_dim_dir(cube_t const &c, unsigned room_id, bool dim, bool dir, float dscale=1.0);
+	void add_poi_object(unsigned obj_id, float dscale=1.0);
 	void set_look_dir(person_t &person) const;
 public:
 	bool room_has_poi(unsigned room_id) const;

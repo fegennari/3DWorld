@@ -1267,8 +1267,7 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 	surface_orienter.init(spider.pos, spider.last_pos, size);
 
 	if (spider.in_tank) { // pet store tank spider
-		assert(spider.tunnel_tank_ix < interior->room_geom->objs.size());
-		room_object_t const &tank(interior->room_geom->objs[spider.tunnel_tank_ix]);
+		room_object_t const &tank(get_room_object_by_index(spider.tunnel_tank_ix));
 
 		if (!tank.is_pet_container()) { // tank was taken, set the spider free
 			spider.in_tank = 0;

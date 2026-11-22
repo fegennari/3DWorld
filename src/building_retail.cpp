@@ -424,7 +424,7 @@ void building_t::add_conv_store_objs(rand_gen_t &rgen, room_t const &room, float
 		vm.d[ dim][!dir] = vm_area.d[ dim][dir] -           dscale*depth; // set depth
 		vm.d[!dim][!d  ] = vm_area.d[!dim][d  ] - (d ? 1.0 : -1.0)*width; // set width
 		objs.emplace_back(vm, TYPE_VENDING, room_id, dim, !dir, 0, light_amt, SHAPE_CUBE, vtype.color, vtype_id);
-		add_poi_dim_dir(vm, room_id, dim, !dir);
+		add_poi_object(objs.size()-1);
 	} // for d
 	// block off this area from shelf racks
 	place_area.d[dim][dir] = counter_front; // add a gap for shelf racks
@@ -537,7 +537,7 @@ void building_t::add_checkout_objs(cube_t const &place_area, float zval, unsigne
 
 		for (cube_t const &c : to_add) {
 			objs.emplace_back(c, TYPE_CHECKOUT, room_id, dim, cr_dir, 0);
-			add_poi_dim_dir(get_true_room_obj_bcube(objs.back()), room_id, !dim, !cr_dir);
+			add_poi_dim_dir(get_true_room_obj_bcube(objs.back()), room_id, !dim, !cr_dir); // opposite dim/dir
 		}
 		if (!store_is_closed && global_building_params.people_per_office_max > 0) { // place people at the checkout counters if store is open
 			float const radius(get_ped_coll_radius());

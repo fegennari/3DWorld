@@ -1100,13 +1100,14 @@ bool building_t::add_vending_machine_type(rand_gen_t &rgen, room_t const &room, 
 	cube_t const &place_area, unsigned vtype_id, unsigned pref_orient)
 {
 	assert(vtype_id < NUM_VEND_TYPES);
-	unsigned const obj_id(interior->room_geom->objs.size());
+	vect_room_object_t &objs(interior->room_geom->objs);
+	unsigned const obj_id(objs.size());
 	vending_info_t const &vtype(get_vending_type(vtype_id));
 	float const floor_spacing(get_window_vspace()), height(0.75*floor_spacing*(vtype.size.z/72)); // normalized to 72"
 	if (!place_obj_along_wall(TYPE_VENDING, room, height, vtype.size, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, 0, pref_orient, 0, vtype.color, 1)) return 0;
-	room_object_t &vm(interior->room_geom->objs[obj_id]);
+	room_object_t &vm(objs[obj_id]);
 	vm.item_flags = vtype_id;
-	add_poi_dim_dir(vm, room_id, vm.dim, vm.dir);
+	add_poi_object(obj_id);
 
 	if (vtype.size.z < 48) { // short objects are placed on a small table; this assumes we have space to raise it up
 		float const table_height(0.3*floor_spacing);
@@ -1114,7 +1115,7 @@ bool building_t::add_vending_machine_type(rand_gen_t &rgen, room_t const &room, 
 		table.z2() = zval + table_height;
 		vm.translate_dim(2, table_height);
 		table.expand_by_xy(0.02*vm.get_width()); // slightly larger; hopefully won't intersect anything
-		interior->room_geom->objs.emplace_back(table, TYPE_TABLE, room_id, vm.dim, vm.dir, RO_FLAG_ADJ_TOP, tot_light_amt);
+		objs.emplace_back(table, TYPE_TABLE, room_id, vm.dim, vm.dir, RO_FLAG_ADJ_TOP, tot_light_amt);
 	}
 	return 1;
 }
@@ -1133,7 +1134,7 @@ bool building_t::add_wall_tv(rand_gen_t &rgen, room_t const &room, float zval, u
 
 bool building_t::check_valid_closet_placement(cube_t const &c, room_t const &room, unsigned objs_start, unsigned bed_ix, float min_bed_space) const {
 	if (min_bed_space > 0.0 && bed_ix > 0) { // don't place too close to bed, if there is a bed
-		room_object_t const &bed(interior->room_geom->get_room_object_by_index(bed_ix));
+		room_object_t const &bed(get_room_object_by_index(bed_ix));
 		assert(bed.type == TYPE_BED);
 		cube_t bed_exp(bed);
 		bed_exp.expand_by_xy(min_bed_space);
@@ -2462,7 +2463,7 @@ void building_t::add_shelves(cube_t const &c, bool dim, bool dir, unsigned room_
 	vect_room_object_t &objs(interior->room_geom->objs);
 	objs.emplace_back(c, TYPE_SHELVES, room_id, dim, dir, flags, tot_light_amt, SHAPE_CUBE, WHITE, item_flags);
 	set_obj_id(objs);
-	if (objs.back().is_nonempty()) {add_poi_dim_dir(c, room_id, dim, !dir);}
+	if (objs.back().is_nonempty()) {add_poi_dim_dir(c, room_id, dim, !dir);} // opposite dir
 	unsigned const objs_start(objs.size());
 	interior->room_geom->expand_shelves(objs.back(), 1); // add_models_mode=1
 
@@ -3644,7 +3645,7 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, rand_gen_t room_rgen, room_t
 					wf.d[dim][ dir] = wall_pos;
 					wf.d[dim][!dir] = wall_pos - (dir ? 1.0 : -1.0)*depth;
 					objs.emplace_back(wf, TYPE_WFOUNTAIN, room_id, dim, dir, 0, tot_light_amt, SHAPE_CUBE);
-					add_poi_dim_dir(wf, room_id, dim, !dir, 0.5); // dscale=0.5
+					add_poi_dim_dir(wf, room_id, dim, !dir, 0.5); // dscale=0.5; opposite dir
 					break;
 				}
 			} // for n
@@ -3718,7 +3719,7 @@ bool building_t::add_reception_desk(rand_gen_t &rgen, cube_t const &desk, bool d
 	}
 	unsigned const rdesk_ix(objs.size());
 	objs.emplace_back(desk, TYPE_RDESK, room_id, dim, dir, 0, tot_light_amt, SHAPE_CUBE);
-	add_poi_dim_dir(desk, room_id, dim, dir);
+	add_poi_object(rdesk_ix);
 
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_PHONE) && rgen.rand_float() < 0.75) { // add phone 75% of the time
 		unsigned sel_ix(0);

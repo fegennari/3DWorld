@@ -3364,7 +3364,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	}
 	if (has_room_geom()) { // check for punching bag collisions
 		for (auto &pb : interior->room_geom->punching_bags) {
-			room_object_t const &pb_obj(interior->room_geom->get_room_object_by_index(pb.obj_ix));
+			room_object_t const &pb_obj(get_room_object_by_index(pb.obj_ix));
 			if (pb.collision(pb_obj, person.pos, new_pos, coll_dist, person.get_eye_dz(), nullptr)) {interior->update_dynamic_draw_data();}
 		}
 	}
@@ -3493,6 +3493,11 @@ void building_t::add_poi_dim_dir(cube_t const &c, unsigned room_id, bool dim, bo
 	cube_t act_area(c);
 	act_area.d[dim][dir] += (dir ? 1.0 : -1.0)*max(dscale*get_poi_act_dist(), 0.5f*get_min_front_clearance_inc_people());
 	add_poi(c, act_area, room_id);
+}
+void building_t::add_poi_object(unsigned obj_id, float dscale) {
+	assert(has_room_geom());
+	room_object_t const &obj(get_room_object_by_index(obj_id));
+	add_poi_dim_dir(obj, obj.room_id, obj.dim, obj.dir, dscale);
 }
 bool building_t::room_has_poi(unsigned room_id) const {
 	return (has_room_geom() && !interior->room_geom->pois.empty() && get_room(room_id).get_has_pois());

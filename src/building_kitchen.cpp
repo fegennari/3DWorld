@@ -147,16 +147,15 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float &zv
 	if (place_model_along_wall(OBJ_MODEL_FRIDGE, TYPE_FRIDGE, room, 0.75, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.2, 4, 0, WHITE, 1)) { // not at window
 		if (is_house) {add_fridge_sticky_notes(rgen, fridge_obj_ix, zval, room_id, tot_light_amt);}
 		room_object_t const &fridge(objs[fridge_obj_ix]);
-		add_poi_dim_dir(fridge, room_id, fridge.dim, fridge.dir);
+		add_poi_object(fridge_obj_ix);
 		placed_obj = 1;
 	}
 	if (residential) { // try to place a stove
-		unsigned const stove_ix(objs.size()); // can't use objs.back() because there's a blocker
+		unsigned const stove_obj_ix(objs.size()); // can't use objs.back() because there's a blocker
 		
 		if (place_model_along_wall(OBJ_MODEL_STOVE, TYPE_STOVE, room, 0.46, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0)) {
-			assert(stove_ix < objs.size());
-			room_object_t const &stove(objs[stove_ix]);
-			add_poi_dim_dir(stove, room_id, stove.dim, stove.dir, 0.75); // dscale=0.75
+			room_object_t const &stove(objs[stove_obj_ix]);
+			add_poi_object(stove_obj_ix, 0.75); // dscale=0.75
 
 			if (building_obj_model_loader.is_model_valid(OBJ_MODEL_HOOD)) { // add hood above the stove
 				vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_HOOD)); // D, W, H
@@ -180,7 +179,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float &zv
 				}
 			}
 			if (!rgen.rand_bool()) { // maybe add a pan on one of the stove burners
-				room_object_t const &stove(objs[stove_ix]);
+				room_object_t const &stove(objs[stove_obj_ix]);
 				float const stove_height(stove.dz()), delta_z(0.018*stove_height);
 				float const pan_radius(rgen.rand_uniform(0.075, 0.09)*stove_height), pan_height(rgen.rand_uniform(0.035, 0.045)*stove_height);
 				point locs[4];
@@ -266,7 +265,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float &zv
 			}
 			unsigned const cabinet_id(objs.size());
 			objs.emplace_back(c, (is_sink ? TYPE_KSINK : TYPE_COUNTER), room_id, dim, !dir, 0, tot_light_amt);
-			add_poi_dim_dir(c, room_id, dim, !dir, 0.75); // dscale=0.75
+			add_poi_object(cabinet_id, 0.75); // dscale=0.75
 			set_obj_id(objs);
 			had_counter = 1;
 			

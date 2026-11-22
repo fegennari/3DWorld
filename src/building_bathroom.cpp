@@ -91,10 +91,11 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 					c2.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.8*length; // extra padding in front of toilet, to avoid placing other objects there (sink and tub)
 					c2.expand_in_dim(!dim, 0.4*width); // more padding on the sides
 					if (overlaps_other_room_obj(c2, objs_start) || is_cube_close_to_doorway(c2, room, 0.0, 1)) continue; // bad placement
+					unsigned const toilet_obj_id(objs.size());
 					objs.emplace_back(c,  TYPE_TOILET,  room_id, dim, !dir, 0, tot_light_amt);
 					add_bathroom_plumbing(objs.back());
 					objs.emplace_back(c2, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS); // add blocker cube to ensure no other object overlaps this space
-					add_poi_dim_dir(c, room_id, dim, !dir, 0.5); // dscale=0.5
+					add_poi_object(toilet_obj_id, 0.5); // dscale=0.5
 					placed_obj = placed_toilet = 1; // done
 					added_bathroom_objs_mask  |= PLACED_TOILET;
 
@@ -121,7 +122,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 			if (placed_toilet) { // if toilet was placed, try to place a roll of toilet paper on the same wall as the toilet
 				room_object_t const &toilet(objs[toilet_obj_id]); // okay if this is the blocker
 				assert(toilet.type == TYPE_TOILET);
-				add_poi_dim_dir(toilet, room_id, toilet.dim, toilet.dir, 0.5); // dscale=0.5
+				add_poi_object(toilet_obj_id, 0.5); // dscale=0.5
 				
 				// Note: not calling is_val_inside_window() here because I don't have a test case for that and it may not even be possible to get here when the toilet is next to a window
 				if (is_basement || !has_int_windows() || classify_room_wall(room, zval, toilet.dim, !toilet.dir, 0) != ROOM_WALL_EXT) { // check for possible windows
@@ -286,7 +287,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t &room, float &zval, u
 			bathroom_objs_mask |= PLACED_SINK;
 			assert(sink_obj_ix < objs.size());
 			room_object_t const sink(objs[sink_obj_ix]); // sink, not blocker; deep copy to avoid invalidating the reference
-			add_poi_dim_dir(sink, room_id, sink.dim, sink.dir, 0.5); // dscale=0.5
+			add_poi_object(sink_obj_ix, 0.5); // dscale=0.5
 			bool const not_on_wall_with_window(is_basement || !has_int_windows() || classify_room_wall(room, zval, sink.dim, !sink.dir, 0) != ROOM_WALL_EXT);
 			float const wall_pos(room_bounds.d[sink.dim][!sink.dir]);
 		
@@ -413,7 +414,7 @@ bool building_t::add_vanity_to_room(rand_gen_t &rgen, room_t &room, float &zval,
 		unsigned const vanity_obj_ix(objs.size());
 		objs.emplace_back(vanity,  TYPE_VANITY,  room_id, dim, !dir, flags, tot_light_amt);
 		objs.emplace_back(blocker, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS); // add blocker in front
-		add_poi_dim_dir(vanity, room_id, dim, !dir, 0.75); // dscale=0.75
+		add_poi_object(vanity_obj_ix, 0.75); // dscale=0.75; should we restrict the stand area to in front of the sink?
 		// add a mirror/medicine cabinet above the sink; shouldn't need to check for overlaps since vanity is placed first
 		cube_t mirror(vanity); // start with the sink left and right position
 		mirror.z1() = vanity.z2() + 0.14*floor_spacing;
@@ -807,7 +808,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 					}
 				}
 				objs.emplace_back(urinal, TYPE_URINAL, room_id, br_dim, dir, 0, tot_light_amt);
-				add_poi_dim_dir(urinal, room_id, br_dim, dir, 0.5); // dscale=0.5
+				add_poi_object(objs.size()-1, 0.5); // dscale=0.5
 				add_bathroom_plumbing(objs.back());
 				last_added_urinal = 1;
 			} // for n

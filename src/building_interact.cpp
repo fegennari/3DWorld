@@ -667,7 +667,7 @@ void obj_dynamic_to_static(room_object_t &obj, building_interior_t &interior) {
 }
 
 bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, point const &query_ray_end, vector3d const &int_dir) {
-	auto &obj(interior->room_geom->get_room_object_by_index(obj_ix));
+	auto &obj(get_room_object_by_index(obj_ix));
 	point const sound_origin(get_cube_center_zval(obj, int_pos.z)), local_center(local_to_camera_space(sound_origin)); // generate sound from the player height
 	room_object const type(obj.type);
 	float sound_scale(0.0); // for building sound level
@@ -706,7 +706,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 				interior->room_geom->invalidate_static_geom();
 
 				if (type == TYPE_TUB && obj_ix+2 < interior->room_geom->objs.size() ) { // move rubber duck with the water level
-					room_object_t &duck(interior->room_geom->get_room_object_by_index(obj_ix + 2)); // should be {tub, blocker, [duck], [soap]}
+					room_object_t &duck(get_room_object_by_index(obj_ix + 2)); // should be {tub, blocker, [duck], [soap]}
 					if (duck.type == TYPE_RUB_DUCK) {duck.translate_dim(2, (get_tub_water_zval(obj) - (duck.z1() + 0.25*duck.dz())));} // 25% below water
 				}
 			}
@@ -795,7 +795,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 			if (player_has_room_key() & (1 << LOCKER_KEY_IX)) { // unlock with a locker key
 				print_text_onscreen("Unlocked", GREEN, 1.0, 1.5*TICKS_PER_SECOND, 0);
 				assert(obj_ix > 0);
-				auto& padlock(interior->room_geom->get_room_object_by_index(obj_ix - 1)); // padlock should be the previous object
+				auto& padlock(get_room_object_by_index(obj_ix - 1)); // padlock should be the previous object
 				obj    .flags &= ~RO_FLAG_NONEMPTY ; // locker is unlocked
 				padlock.flags &= ~RO_FLAG_IS_ACTIVE; // no longer attached
 				padlock.translate_dim(2, (obj.z1() - padlock.z1())); // move to the floor at the base of the door
@@ -867,7 +867,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 		}
 	}
 	else if (type == TYPE_TV_REMOTE) { // remote interacts with the associated TV
-		room_object_t const &tv(interior->room_geom->get_room_object_by_index(obj.item_flags));
+		room_object_t const &tv(get_room_object_by_index(obj.item_flags));
 		if (tv.type == TYPE_TV) {return interact_with_object(obj.item_flags, int_pos, query_ray_end, int_dir);}
 	}
 	else if (type == TYPE_BUTTON) { // Note: currently, buttons are only used for elevators and mall store gates
@@ -1091,7 +1091,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 }
 
 bool building_t::adjust_blinds_state(unsigned obj_ix) {
-	auto &obj(interior->room_geom->get_room_object_by_index(obj_ix));
+	auto &obj(get_room_object_by_index(obj_ix));
 
 	if (obj.is_hanging()) { // hanging horizontal blinds
 		float const floor_spacing(get_window_vspace()), window_v_border(0.94*get_window_v_border()); // border_mult=0.94 to account for the frame
@@ -1115,7 +1115,7 @@ bool building_t::adjust_blinds_state(unsigned obj_ix) {
 			assert(obj_ix > 0);
 			other_blinds_ix = obj_ix - 1;
 		}
-		auto &other_blinds(interior->room_geom->get_room_object_by_index(other_blinds_ix));
+		auto &other_blinds(get_room_object_by_index(other_blinds_ix));
 		if (other_blinds.type != TYPE_BLINDS) {assert(0); return 0;} // was taken, etc.
 		float const fixed_end(obj.d[!obj.dim][!move_dir]), width(obj.get_width());
 		float const window_center(0.5f*(fixed_end + other_blinds.d[!obj.dim][move_dir])); // center of the span of the pair of left/right blinds
@@ -1178,8 +1178,7 @@ void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_buildin
 void building_t::notify_door_fully_closed_state(door_t const &door) {
 	if (door.obj_ix < 0)  return; // no associated object
 	if (!has_room_geom()) return; // error?
-	assert((unsigned)door.obj_ix < interior->room_geom->objs.size());
-	room_object_t &obj(interior->room_geom->objs[door.obj_ix]);
+	room_object_t &obj(get_room_object_by_index(door.obj_ix));
 	
 	if (obj.type == TYPE_CLOSET) { // this was a closet door
 		if (door.open) {obj.flags |= RO_FLAG_OPEN;} else {obj.flags &= ~RO_FLAG_OPEN;}
@@ -1404,8 +1403,7 @@ void building_t::run_dynamic_obj_update(vect_room_object_t::iterator obj_it, poi
 	vector3d &velocity(dstate.velocity);
 
 	if (obj.type == TYPE_POOL_BALL && was_dynamic) {
-		assert(obj.state_flags < interior->room_geom->objs.size());
-		room_object_t const &pool_table(interior->room_geom->objs[obj.state_flags]);
+		room_object_t const &pool_table(get_room_object_by_index(obj.state_flags));
 
 		if (pool_table.type == TYPE_POOL_TABLE && pool_table.contains_pt(cube_bot_center(obj))) { // ball on pool table
 			if (velocity.x == 0.0 && velocity.y == 0.0) {velocity.z = 0.0;} // if not moving in XY, set v.z to zero (for balls dropped onto the table)
@@ -1536,7 +1534,7 @@ void building_t::run_dynamic_obj_update(vect_room_object_t::iterator obj_it, poi
 		apply_object_bounce_with_sound(*this, velocity, cnorm, new_center, hardness, on_floor);
 
 		if (obj_ix >= 0) { // collided with a room object
-			auto &obj(interior->room_geom->get_room_object_by_index(obj_ix));
+			auto &obj(get_room_object_by_index(obj_ix));
 			bool handled(0);
 
 			// break the glass if not already broken; should windows get broken as well?
@@ -1629,7 +1627,7 @@ bool building_t::maybe_break_room_object(room_object_t &obj, point const &hit_po
 	// only dresser mirrors leave broken glass; TV and monitor screens have an outer film that holds in the glass;
 	// medicine cabinet mirrors and office bathroom mirrors have sinks below them rather than a flat surface for the glass to rest on
 	if (obj.type == TYPE_DRESS_MIR && obj_ix >= 2) { // create broken glass
-		room_object_t const &dresser(interior->room_geom->get_room_object_by_index(obj_ix - 2)); // should be dresser, blocker, mirror
+		room_object_t const &dresser(get_room_object_by_index(obj_ix - 2)); // should be dresser, blocker, mirror
 
 		if (dresser.type == TYPE_DRESSER) { // should always be true
 			static rand_gen_t rgen;

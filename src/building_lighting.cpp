@@ -1737,8 +1737,7 @@ void building_t::get_all_windows(vect_cube_with_ix_t &windows) const { // Note: 
 bool building_t::register_indir_lighting_state_change(unsigned light_ix, bool is_door_change, bool is_obj_move, bool remove_only) const {
 	if (!enable_building_indir_lighting()) return 0; // no update needed
 	assert(has_room_geom());
-	assert(light_ix < interior->room_geom->objs.size());
-	room_object_t const &obj(interior->room_geom->objs[light_ix]);
+	room_object_t const &obj(get_room_object_by_index(light_ix));
 	assert(obj.is_light_type());
 	bool const light_is_on(obj.is_light_on());
 	if ((is_door_change || is_obj_move) && !light_is_on) return 0; // light off, no state change
