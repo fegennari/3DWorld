@@ -774,7 +774,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, poi
 	else if (type == TYPE_VENDING) {
 		if (obj.is_powered()) {
 			if (!use_vending_machine(obj)) return 0;
-			gen_sound_thread_safe(SOUND_BEEP, local_center, 0.25, 0.75);
+			gen_sound_thread_safe(SOUND_BEEP, local_center, 0.25, 0.85);
 			sound_scale = 0.6;
 		}
 	}

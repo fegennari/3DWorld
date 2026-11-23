@@ -203,8 +203,8 @@ point_of_interest_t const *building_t::maybe_interact_with_poi(person_t &person,
 			if (on_player_floor) {gen_sound_thread_safe(SOUND_CLICK, local_center, 0.75);}
 		}
 	}
-	else if (obj.type == TYPE_VENDING || obj.type == TYPE_CHECKOUT) { // beep
-		if (arrived && on_player_floor) {gen_sound_thread_safe(SOUND_BEEP, local_to_camera_space(obj.get_cube_center()), 0.25, 0.75);}
+	else if (obj.type == TYPE_VENDING || obj.type == TYPE_CHECKOUT || obj.type == TYPE_CASHREG) { // beep
+		if (arrived && on_player_floor) {gen_sound_thread_safe(SOUND_BEEP, local_to_camera_space(obj.get_cube_center()), 0.25, 0.85);}
 	}
 	return next_poi;
 }
