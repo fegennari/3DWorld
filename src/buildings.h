@@ -1108,6 +1108,8 @@ struct building_room_geom_t {
 	bool open_nearest_drawer(building_t &building, point const &at_pos, vector3d const &in_dir, float range, bool pickup_item, bool check_only);
 	void replace_with_hanging_wires(room_object_t &obj, room_object_t const &old_obj, float wire_radius, bool vertical, float shorten_amt=0.1);
 	void remove_object(unsigned obj_id, point const &at_pos, building_t &building);
+	void remove_obj_update_poi(unsigned obj_id);
+	void move_obj_update_poi(unsigned obj_id, vector3d const &delta);
 	bool player_pickup_object(building_t &building, point const &at_pos, vector3d const &in_dir);
 	void set_factory_machine_seed(unsigned rseed1, unsigned rseed2);
 	void set_factory_machine_seed_from_obj(room_object_t const &obj) {set_factory_machine_seed(obj.item_flags, obj.obj_id);}

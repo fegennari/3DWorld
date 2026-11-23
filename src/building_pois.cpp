@@ -209,6 +209,20 @@ point_of_interest_t const *building_t::maybe_interact_with_poi(person_t &person,
 	return next_poi;
 }
 
+void building_room_geom_t::remove_obj_update_poi(unsigned obj_id) {
+	for (auto i = pois.begin(); i != pois.end(); ++i) {
+		if (i->obj_id == (int)obj_id) {pois.erase(i); break;}
+	}
+}
+void building_room_geom_t::move_obj_update_poi(unsigned obj_id, vector3d const &delta) { // should be XY only
+	for (point_of_interest_t &p : pois) {
+		if (p.obj_id != (int)obj_id) continue;
+		p.look_area += delta;
+		p.act_area  += delta;
+		break;
+	}
+}
+
 // does this go here? It's similar to points of interest
 void building_t::place_stationary_people(float radius, unsigned max_people, rand_gen_t &rgen) const {
 	assert(has_room_geom());

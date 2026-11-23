@@ -2513,6 +2513,7 @@ void building_room_geom_t::remove_object(unsigned obj_id, point const &at_pos, b
 		replace_with_hanging_wires(to_replace, old_obj, 0.5*building.get_trim_thickness(), !(old_obj.flags & RO_FLAG_ADJ_HI));
 		invalidate_lights_geom();
 	}
+	remove_obj_update_poi(obj_id); // remove even if taken level was decremented and obj still exists; POIs shouldn't have taken levels anyway
 	update_draw_state_for_room_object(old_obj, building, 1); // was_taken=1
 	register_reflection_update();
 	building.check_for_water_splash(cube_bot_center(old_obj), 0.8);
@@ -2707,6 +2708,7 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 				if (!i->get_for_closet()) {interior->door_state_updated = 1;} // trigger AI update if this is a door between rooms
 			} // for i
 			// update this object
+			interior->room_geom->move_obj_update_poi(closest_obj_id, move_vector);
 			if (!keep_in_room) {assign_correct_room_to_object(moved_obj);}
 			update_room_object_and_update_indir_lighting(obj, moved_obj); // keep this placement
 			if (!obj.was_moved()) {interior->room_geom->moved_obj_ids.push_back(closest_obj_id);} // add to moved_obj_ids on first movement
