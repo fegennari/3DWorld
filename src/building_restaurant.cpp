@@ -382,11 +382,6 @@ cube_t building_t::add_restaurant_counter(cube_t const &wall, bool dim, bool dir
 	counter.expand_in_dim(dim, 2.5*wall_thickness);
 	unsigned const skip_faces(draw_ends ? 0 : get_skip_mask_for_xy(!dim)); // skip ends if no gaps
 	objs.emplace_back(counter, TYPE_METAL_BAR, room_id, dim, 0, RO_FLAG_NOCOLL, light_amt, SHAPE_CUBE, LT_GRAY, skip_faces);
-	// create POI for the counter; mall restaurant counter POI may be in the mall concourse rather than the restaurant
-	unsigned const poi_room_id((in_mall && get_mall_concourse().intersects(counter)) ? (unsigned)interior->ext_basement_hallway_room_id : room_id);
-	cube_t poi(counter);
-	poi.z1() = wall.z1(); // extend to the floor
-	add_poi_dim_dir(poi, poi_room_id, dim, dir);
 	// add a collider + blocker around the counter and the windows/entrance
 	cube_t blocker(counter);
 	blocker.z1() = wall.z1();
@@ -396,6 +391,9 @@ cube_t building_t::add_restaurant_counter(cube_t const &wall, bool dim, bool dir
 	cube_t place_area(counter);
 	place_area.expand_in_dim(!dim, -wall_thickness); // skip ends, which may be inside the wall trim
 	float const counter_len(place_area.get_sz_dim(!dim));
+	unsigned const poi_room_id((in_mall && get_mall_concourse().intersects(counter)) ? (unsigned)interior->ext_basement_hallway_room_id : room_id);
+	cube_t poi(counter);
+	poi.z1() = wall.z1(); // extend to the floor
 	vect_cube_t avoid;
 	
 	if (add_cash_registers && building_obj_model_loader.is_model_valid(OBJ_MODEL_CASHREG)) {
@@ -436,11 +434,18 @@ cube_t building_t::add_restaurant_counter(cube_t const &wall, bool dim, bool dir
 
 					for (cube_t const &c : cregs) {
 						pos[!dim] = c.get_center_dim(!dim);
-						interior->room_geom->people_place.emplace_back(pos, vector_from_dim_dir(dim, dir));
+						interior->room_geom->people_place.emplace_back(pos, vector_from_dim_dir(dim, dir)); // Note: doesn't guarantee a person is placed here
 					}
+				}
+				for (cube_t const &c : cregs) { // add POI for every cash register that's manned, or all of them if there are no workers
+					copy_dim(poi, c, !dim); // limit to width of cash register
+					add_poi_dim_dir(poi, poi_room_id, dim, dir, 1.0, objs.size()-1);
 				}
 			}
 		}
+	}
+	else if (!store_is_closed) { // no cache registers but store is open
+		add_poi_dim_dir(poi, poi_room_id, dim, dir); // create POI for entire counter; mall restaurant counter POI may be in mall concourse rather than restaurant
 	}
 	// add a phone if there are also cash registers
 	if (add_cash_registers && place_phone_on_obj(rgen, place_area, room_id, light_amt, dim, !dir)) {
