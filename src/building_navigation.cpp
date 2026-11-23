@@ -1620,7 +1620,7 @@ int building_t::choose_dest_room(person_t &person, rand_gen_t &rgen, point_of_in
 			room_type const rtype(room.get_room_type_for_zval(person.target_pos.z, floor_spacing));
 			if (rtype == (person.is_female ? RTYPE_MENS : RTYPE_WOMENS)) continue; // wrong gender
 
-			if (rtype == RTYPE_BATH) { // private bathroom; don't go there if someone is already there or heading there
+			if (rtype == RTYPE_BATH && n < 50) { // private bathroom; don't go there if someone is already there or heading there or if there are no other options
 				bool is_bad_room(0);
 
 				for (person_t const &p : interior->people) {
