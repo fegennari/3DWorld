@@ -2192,6 +2192,7 @@ public:
 	bool room_has_poi(unsigned room_id) const;
 	void get_poi_stand_areas_for_room(unsigned room_id, float radius, float zval, vect_cube_t &stand_areas) const;
 	bool select_person_poi(unsigned room_id, float radius, point &pos, rand_gen_t &rgen) const;
+	bool select_poi_dest(point_of_interest_t const &poi, float radius, point &pos, rand_gen_t &rgen) const;
 	// animals
 	template<typename T> void add_animals_on_floor(T &animals, unsigned building_ix, unsigned num_min, unsigned num_max, float sz_min, float sz_max) const;
 	void update_animals      (point const &camera_bs, unsigned building_ix);

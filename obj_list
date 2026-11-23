@@ -141,6 +141,7 @@ building_bathroom.o
 building_kitchen.o
 building_restaurant.o
 building_datacenter.o
+building_pois.o
 simplifier.o
 city_model.o
 city_building_params.o
