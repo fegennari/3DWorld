@@ -464,7 +464,7 @@ cube_t building_t::add_restaurant_counter(cube_t const &wall, bool dim, bool dir
 			for (unsigned N = 0; N < 10; ++N) {
 				set_wall_width(vm, rgen.rand_uniform(place_area.d[!dim][0]+edge_space, place_area.d[!dim][1]-edge_space), hwidth, !dim);
 				if (has_bcube_int(vm, avoid)) continue; // blocked
-				objs.emplace_back(vm, TYPE_VENDING, room_id, dim, dir, 0, light_amt, SHAPE_CUBE, vtype.color, VEND_COFFEE);
+				objs.emplace_back(vm, TYPE_VENDING, room_id, dim, dir, 0, light_amt, SHAPE_CUBE, vtype.color, VEND_COFFEE); // add POI?
 				avoid.push_back(vm);
 				break; // success
 			} // for N
