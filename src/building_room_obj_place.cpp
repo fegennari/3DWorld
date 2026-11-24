@@ -2869,6 +2869,7 @@ bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zva
 			room_object const type(wd ? TYPE_DRYER : TYPE_WASHER);
 			float const height(wd ? 0.38 : 0.42);
 			if (!place_model_along_wall(model_id, type, room, height, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.8)) continue;
+			add_poi_object(obj_ix);
 			// try to place more objects of this type along the same wall
 			room_object_t const obj(objs[obj_ix]); // deep copy
 			float const shift_amt(rgen.rand_uniform(1.25, 2.0)*obj.get_width()), clearance(0.8*obj.get_depth());
@@ -2887,12 +2888,18 @@ bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zva
 					blocker.d[obj.dim][obj.dir] += (obj.dir ? 1.0 : -1.0)*clearance; // add front clearance
 					if (overlaps_obj_or_placement_blocked(blocker, room, objs_start)) continue;
 					objs.push_back(obj2);
+					add_poi_object(objs.size()-1);
 					objs.emplace_back(blocker, TYPE_BLOCKER, room_id, obj.dim, obj.dir, RO_FLAG_INVIS);
 					++num_place;
 				} // for n
 			} // for dir
 			if (num_place == 1) { // if no extra objects were placed, try a different wall/pos
-				if (place_model_along_wall(model_id, type, room, height, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.8)) {++num_place;}
+				unsigned const obj_ix2(objs.size());
+
+				if (place_model_along_wall(model_id, type, room, height, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.8)) {
+					add_poi_object(obj_ix2);
+					++num_place;
+				}
 			}
 			tot_num_place += num_place;
 		} // for wed
@@ -2908,11 +2915,18 @@ bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zva
 			unsigned const washer_ix(objs.size());
 			bool const placed_washer(place_model_along_wall(OBJ_MODEL_WASHER, TYPE_WASHER, room, 0.42, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.8));
 			unsigned pref_orient(4); // if washer was placed, prefer to place dryer along the same wall
-			if (placed_washer) {pref_orient = objs[washer_ix].get_orient();}
+			
+			if (placed_washer) {
+				add_poi_object(washer_ix);
+				pref_orient = objs[washer_ix].get_orient();
+			}
 			unsigned const dryer_ix(objs.size());
 			bool const placed_dryer(place_model_along_wall(OBJ_MODEL_DRYER, TYPE_DRYER, room, 0.38, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.8, pref_orient));
-			if (placed_dryer) {objs[dryer_ix].obj_id = (uint16_t)objs.size();} // set dryer obj_id; will determine whether this is gas or electric
-
+			
+			if (placed_dryer) {
+				add_poi_object(dryer_ix);
+				objs[dryer_ix].obj_id = (uint16_t)objs.size(); // set dryer obj_id; will determine whether this is gas or electric
+			}
 			if (placed_washer && placed_dryer && objs[dryer_ix].get_orient() == pref_orient) {success = 1;} // placed both washer and dryer along the same wall
 			else if (n+1 == 10) { // last attempt
 				if (!(placed_washer || placed_dryer)) return 0; // placed neither washer nor dryer, failed
@@ -2927,9 +2941,11 @@ bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zva
 		} // for n
 	}
 	if (!success) return 0; // failed
-
 	// if we've placed at least washer and/or dryer and made this into a laundry room, try to place a sink as well; should this use a different sink model from bathrooms?
+	unsigned const sink_obj_ix(objs.size());
+
 	if (place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.6)) {
+		add_poi_object(sink_obj_ix);
 		added_bathroom_objs_mask |= PLACED_SINK;
 	}
 	add_laundry_basket(rgen, room, zval, room_id, tot_light_amt, objs_start, place_area); // try to place a laundry basket
