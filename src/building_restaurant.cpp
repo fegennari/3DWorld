@@ -439,7 +439,7 @@ cube_t building_t::add_restaurant_counter(cube_t const &wall, bool dim, bool dir
 				}
 				for (cube_t const &c : cregs) { // add POI for every cash register that's manned, or all of them if there are no workers
 					copy_dim(poi, c, !dim); // limit to width of cash register
-					add_poi_dim_dir(poi, poi_room_id, dim, dir, 1.0, objs.size()-1);
+					add_poi_dim_dir(poi, poi_room_id, dim, dir, 0.75, objs.size()-1);
 				}
 			}
 		}
@@ -468,7 +468,7 @@ cube_t building_t::add_restaurant_counter(cube_t const &wall, bool dim, bool dir
 				cube_t coffee_area(counter);
 				coffee_area.z1() = wall.z1(); // extend down to the floor
 				copy_dim(coffee_area, vm, !dim);
-				add_poi_dim_dir(coffee_area, room_id, dim, dir, 1.0, objs.size()-1);
+				add_poi_dim_dir(coffee_area, room_id, dim, dir, 0.5, objs.size()-1);
 				avoid.push_back(vm);
 				break; // success
 			} // for N
