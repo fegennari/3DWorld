@@ -152,9 +152,16 @@ point_of_interest_t const *building_t::maybe_interact_with_poi(person_t &person,
 
 	// Note: a removed object (TYPE_BLOCKER or TYPE_DRAIN) won't match any of the cases below and will be ignored; maybe the POI should be removed?
 	if (obj.is_sink_type()) {
-		if (on_player_floor) {
-			if (arrived) {obj.flags |=  RO_FLAG_IS_ACTIVE;} // turn on  water
-			else         {obj.flags &= ~RO_FLAG_IS_ACTIVE;} // turn off water
+		bool use_sink_action(on_player_floor);
+
+		if (use_sink_action && obj.type == TYPE_KSINK) { // kitchen sink is only part of the counter
+			cube_t const sink(get_sink_cube(obj));
+			float const val(person.pos[!obj.dim]);
+			if (val < sink.d[!obj.dim][0] || val > sink.d[!obj.dim][1]) {use_sink_action = 0;} // not in front of the sink
+		}
+		if (use_sink_action) {
+			if (arrived) {obj.flags |=  RO_FLAG_IS_ACTIVE;} // turn water on; water doesn't accumulate in the sink, this only happens for player activate
+			else         {obj.flags &= ~RO_FLAG_IS_ACTIVE;} // turn water off
 		}
 	}
 	else if (obj.type == TYPE_TOILET || obj.type == TYPE_URINAL) { // flush toilet/urinal when departing
