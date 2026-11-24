@@ -770,7 +770,7 @@ struct punching_bag_t {
 struct building_room_geom_t {
 
 	bool has_pictures=0, has_garage_car=0, modified_by_player=0, have_clock=0, have_conv_belt=0, glass_floor_split=0, mall_geom_drawn=0, has_locker=0;
-	uint8_t num_pic_tids=0, invalidate_mats_mask=0;
+	uint8_t num_pic_tids=0, invalidate_mats_mask=0, num_whiteboard_pois=0;
 	uint8_t mens_count=0, womens_count=0; // bathrooms and locker rooms
 	int8_t prev_open_door_ix=-1; // for tracking when exterior door handles need to be updated
 	float obj_scale=1.0;

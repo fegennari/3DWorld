@@ -1466,6 +1466,7 @@ bool building_t::add_closet_to_room(rand_gen_t &rgen, room_t const &room, float 
 			objs.emplace_back(c, TYPE_CLOSET, room_id, dim, !dir, flags, tot_light_amt, SHAPE_CUBE, (is_freezer ? WHITE : wall_color), room_type);
 			set_obj_id(objs);
 			if (flags & RO_FLAG_OPEN) {interior->room_geom->expand_object(objs.back(), *this);} // expand opened closets immediately
+			//add_poi(c, c, room_id, objs.size()-1); // act_area is the entire closet; no, people can't enter closets (or commercial freezers, or kitchen pantries)
 			// add a light inside the closet
 			room_object_t const closet(objs.back()); // deep copy so that we can invalidate the reference
 			bool const small_closet(closet.is_small_closet());
@@ -4334,6 +4335,11 @@ bool building_t::hang_pictures_whiteboard_chalkboard_in_room(rand_gen_t rgen, ro
 				if (use_blackboards && rgen.rand_float() < 0.25) {wboard.item_flags = 1;} // flag as having math writing
 				objs.push_back(wboard);
 
+				if (interior->room_geom->num_whiteboard_pois < 100 && (rgen.rand() & 3) == 0) { // only add 25% of the time, and at most 100
+					add_poi_object(objs.size()-1);
+					interior->room_geom->pois.back().act_area.z1() = zval; // extend down to the floor
+					++interior->room_geom->num_whiteboard_pois;
+				}
 				if (rgen.rand_float() < 0.8) { // add marker/chalk and maybe eraser
 					float const marker_hlen(0.5*0.06*floor_height), marker_radius(0.005*floor_height);
 					cube_t const ledge(get_whiteboard_marker_ledge(wboard));
