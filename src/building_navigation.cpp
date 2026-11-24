@@ -2939,7 +2939,8 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 					move_person_to_not_collide(person, *p, person.pos, rsum, coll_dist); // if we get here, we have to actively move out of the way
 					was_bumped = 1;
 				} // for p
-				if (was_bumped) {wait_time  = 0.0;} // stop waiting so that we can react; may skip POI interaction
+				if (was_bumped) {next_poi   = maybe_interact_with_poi(person, 0);} // arrived=0 (departed)
+				if (was_bumped) {wait_time  = 0.0;} // stop waiting so that we can react
 				else            {wait_time -= fticks;}
 			}
 			person.anim_time = 0.0; // reset just in case (though should already be at 0.0)
