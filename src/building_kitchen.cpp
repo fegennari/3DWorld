@@ -551,6 +551,7 @@ void move_lights_to_not_intersect(vect_room_object_t &objs, unsigned objs_start,
 void building_t::add_commercial_kitchen_app_post(unsigned obj_ix, unsigned app_type, cube_t &hood, unsigned cclass_counts[3], rand_gen_t &rgen, bool is_kitchen) {
 	vect_room_object_t &objs(interior->room_geom->objs);
 	assert(obj_ix < objs.size());
+	add_poi_object(obj_ix);
 	room_object_t const app(objs[obj_ix]); // deep copy
 	bool const dim(app.dim), dir(app.dir);
 	float const height(app.dz());
@@ -769,7 +770,8 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 			room_object_t const app(objs[obj_ix]); // deep copy to avoid reference invalidation
 			bool const adim(app.dim), adir(app.dir);
 			
-			if (!add_fridge) {
+			if (add_fridge) {add_poi_object(obj_ix);}
+			else { // non-fridge appliance
 				assert(app.item_flags == app_model.app_type);
 				app_model.post_add();
 				add_commercial_kitchen_app_post(obj_ix, app_model.app_type, hood, cclass_counts, rgen);
@@ -790,7 +792,7 @@ bool building_t::add_commercial_kitchen_objs(rand_gen_t rgen, room_t const &room
 					cube_t tc(app2);
 					tc.d[adim][adir] = front + (adir ? 1.0 : -1.0)*clearance; // extend in front
 					if (!app_area.contains_cube_xy(tc) || is_obj_placement_blocked(tc, room, 1) || overlaps_other_room_obj(tc, objs_start)) break;
-					if (!use_pa2 && check_if_against_window (tc, room, adim, !adir)) break;
+					if (!use_pa2 && check_if_against_window(tc, room, adim, !adir)) break;
 					app2.type = TYPE_KITCH_APP; // in case app was a fridge
 					app2.item_flags = app_model.app_type;
 					objs.push_back(app2);
