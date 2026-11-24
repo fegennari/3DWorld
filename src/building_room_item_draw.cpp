@@ -1427,13 +1427,13 @@ public:
 
 	void add_water_for_sink(room_object_t const &obj) {
 		if (!obj.is_active()) return;
-		bool const is_cube(obj.type == TYPE_KSINK || obj.type == TYPE_BRSINK || obj.type == TYPE_VANITY);
+		bool const is_cube(obj.type == TYPE_KSINK || obj.type == TYPE_BRSINK || obj.type == TYPE_VANITY), is_comm_ks(obj.type == TYPE_KITCH_APP);
 		float const dz(obj.dz());
 		cube_t c;
 		point pos(obj.get_cube_center());
-		pos[obj.dim] += (obj.dir ? -1.0 : 1.0)*(is_cube ? 0.25 : 0.095)*obj.get_length(); // move toward the back of the sink
-		c.set_from_sphere(pos, (is_cube ? 0.02 : 0.0055)*dz);
-		set_cube_zvals(c, (obj.z1() + (is_cube ? 0.7 : 0.6)*dz), (obj.z1() + (is_cube ? 1.3 : 0.925)*dz));
+		pos[obj.dim] += (obj.dir ? -1.0 : 1.0)*(is_cube ? 0.25 : (is_comm_ks ? 0.061 : 0.095))*obj.get_length(); // move toward the back of the sink
+		c.set_from_sphere(pos, (is_cube ? 0.02 : (is_comm_ks ? 0.012 : 0.0055))*dz);
+		set_cube_zvals(c, (obj.z1() + (is_cube ? 0.7 : (is_comm_ks ? 0.45 : 0.6))*dz), (obj.z1() + (is_cube ? 1.3 : (is_comm_ks ? 0.85 : 0.925))*dz));
 		unsigned const verts_start(foam_mat.itri_verts.size());
 		foam_mat.add_vcylin_to_verts(c, colorRGBA(WHITE, 0.5), 0, 0, 0, 0, 1.0, 1.0, 0.2);
 		apply_vert_texture(foam_mat, verts_start, 1.2, 1.0);
@@ -2352,7 +2352,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		point pts[4];
 
 		for (auto i = objs.begin(); i != objs_end; ++i) {
-			if (i->type == TYPE_KSINK || i->type == TYPE_BRSINK || i->type == TYPE_VANITY) { // TYPE_SINK is handled above
+			if (i->is_sink_type() && i->type != TYPE_SINK) { // TYPE_SINK is handled above
 				if (i->room_id == camera_room) {water_sound_manager.register_running_water(*i, building);}
 				if (!i->is_active()) continue; // not turned on
 				if (!(is_rotated ? building.is_rot_cube_visible(*i, xlate) : camera_pdu.cube_visible(*i + xlate))) continue; // VFC

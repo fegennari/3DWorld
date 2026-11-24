@@ -225,7 +225,7 @@ struct room_object_t : public oriented_cube_t { // size=68
 	bool is_on_srack() const {return (was_expanded() && (flags & RO_FLAG_ON_SRACK));} // Note: RO_FLAG_ON_SRACK is aliased with other flags, so also check was_expanded
 	bool is_floor_clutter() const {return ((is_a_drink() || type == TYPE_TRASH) && is_on_floor());}
 	bool is_light_type() const {return (type == TYPE_LIGHT || (type == TYPE_LAMP && !was_expanded() && !in_attic()));} // light, or lamp not in closet
-	bool is_sink_type () const {return (type == TYPE_SINK || type == TYPE_KSINK || type == TYPE_BRSINK || type == TYPE_VANITY);}
+	bool is_sink_type () const {return (type == TYPE_SINK || type == TYPE_KSINK || type == TYPE_BRSINK || type == TYPE_VANITY || (type == TYPE_KITCH_APP && item_flags == KCA_SINK));}
 	bool is_obj_model_type() const {return (type >= TYPE_TOILET && type < NUM_ROBJ_TYPES);}
 	bool is_small_closet() const {return (type == TYPE_CLOSET && (item_flags == RTYPE_KITCHEN || get_width() < 1.2*dz()));} // includes pantry
 	bool is_bottle_empty() const {return ((obj_id & BOTTLE_EMPTY_MASK) == BOTTLE_EMPTY_MASK);} // also applies to drink cans
