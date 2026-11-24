@@ -765,7 +765,7 @@ void building_t::add_mall_stairs() { // connecting to the entrance door
 
 // returns: 0=not on mall entrance stairs, 1=on stairs but zval not updated, 2=on stairs and zval updated
 int building_t::adjust_zval_for_mall_stairs(point const &pos, float &zval) const {
-	if (!has_mall_ent_stairs() || zval > ground_floor_z1) return 0;
+	if (!has_mall_ent_stairs() || !has_room_geom() || zval > ground_floor_z1) return 0;
 	stairwell_t const &s(interior->mall_info->ent_stairs);
 	if (!s.contains_pt_xy(pos) || zval < s.z1() || zval >= s.z2()) return 0;
 	vect_room_object_t &objs(interior->room_geom->objs);

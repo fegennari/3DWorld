@@ -3010,7 +3010,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	if (run_ai_tunnel_logic(person, speed_mult)) {person.no_wait_at_dest = 1;}
 	build_nav_graph();
 
-	if (zombie_attack_mode && player_is_hiding && person.saw_player_hide && global_building_params.ai_opens_doors && global_building_params.ai_sees_player_hide >= 2 &&
+	if (has_rgeom && zombie_attack_mode && player_is_hiding && person.saw_player_hide && global_building_params.ai_opens_doors && global_building_params.ai_sees_player_hide >= 2 &&
 		player_hiding_obj.type != TYPE_NONE && same_room_and_floor_as_player(person) && cur_player_building_loc.building_ix == person.cur_bldg && has_rgeom)
 	{
 		// open the closet, stall, or shower door (closet door should already be open)
@@ -3363,7 +3363,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 			} // for d
 		}
 	}
-	if (has_room_geom()) { // check for punching bag collisions
+	if (has_rgeom) { // check for punching bag collisions
 		for (auto &pb : interior->room_geom->punching_bags) {
 			room_object_t const &pb_obj(get_room_object_by_index(pb.obj_ix));
 			if (pb.collision(pb_obj, person.pos, new_pos, coll_dist, person.get_eye_dz(), nullptr)) {interior->update_dynamic_draw_data();}
@@ -3424,7 +3424,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	if (player_in_this_building || enable_bl_update) {person.cur_room = get_room_containing_pt(person.pos);}
 
 	// check for steam damage; only zombies should get here
-	if (in_ext_basement && has_room_geom() && interior->room_geom->particle_manager.get_closest_particle(new_pos, coll_dist, pz1, pz2, PART_EFFECT_STEAM)) {
+	if (in_ext_basement && has_rgeom && interior->room_geom->particle_manager.get_closest_particle(new_pos, coll_dist, pz1, pz2, PART_EFFECT_STEAM)) {
 		building_person_hurt_sound(person_ix, 1); // is_steam=1
 	}
 	// create splashes if just fell in the pool, or if head is above the water
