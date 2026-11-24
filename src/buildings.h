@@ -2189,7 +2189,8 @@ private:
 	void add_poi_dim    (cube_t const &c, unsigned room_id, bool dim, int obj_id=-1);
 	void add_poi_dim_dir(cube_t const &c, unsigned room_id, bool dim, bool dir, float dscale=1.0, int obj_id=-1);
 	void add_poi_object(unsigned obj_id, float dscale=1.0);
-	point_of_interest_t const *maybe_interact_with_poi(person_t &person, bool arrived);
+	point_of_interest_t const *maybe_interact_with_poi(person_t &person, rand_gen_t &rgen, bool arrived);
+	point_of_interest_t const *find_next_poi(point_of_interest_t const &poi, room_object obj_type) const;
 public:
 	bool room_has_poi(unsigned room_id) const;
 	void get_poi_stand_areas_for_room(unsigned room_id, float radius, float zval, vect_cube_t &stand_areas) const;

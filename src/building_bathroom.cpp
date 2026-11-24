@@ -903,6 +903,8 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 					hd = hd2; // valid step
 				} // for n
 				objs.emplace_back(hd, TYPE_HAND_DRYER, room_id, hd_dim, hd_dir, 0, tot_light_amt);
+				add_poi_object(objs.size()-1, 0.5); // dscale=0.5; only if !is_restroom()?
+				interior->room_geom->pois.back().act_area.z1() = zval; // extend down to the floor
 				cube_t hd_blocker(hd); // add a blocker under the hand dryer to avoid placing a trashcan there
 				set_cube_zvals(hd_blocker, hd_z1-height, hd_z1);
 				objs.emplace_back(hd_blocker, TYPE_BLOCKER, room_id, hd_dim, hd_dir, 0, tot_light_amt);

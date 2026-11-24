@@ -69,7 +69,8 @@ void building_t::get_poi_stand_areas_for_room(unsigned room_id, float radius, fl
 	cube_t sa[4];
 
 	for (point_of_interest_t const &p : interior->room_geom->pois) {
-		if (p.room_id != room_id || p.act_area.z1() > zval || p.act_area.z2() < zval) continue;
+		if (p.room_id != room_id || p.act_area.z1() > zval || p.act_area.z2() < zval)    continue;
+		if (p.obj_id >= 0 && get_room_object_by_index(p.obj_id).type == TYPE_HAND_DRYER) continue; // not a primary POI
 		//if (p.obj_id < 0 || get_room_object_by_index(p.obj_id).type != TYPE_TOILET) continue; // TESTING
 		unsigned const num(p.get_stand_areas(room_area, sa, radius));
 		for (unsigned n = 0; n < num; ++n) {stand_areas.push_back(sa[n]);} // should we be weighting based on p.use_count here?
@@ -119,7 +120,7 @@ bool building_t::select_poi_dest(point_of_interest_t const &poi, float radius, p
 	return 1;
 }
 
-point_of_interest_t const *building_t::maybe_interact_with_poi(person_t &person, bool arrived) { // and set look dir
+point_of_interest_t const *building_t::maybe_interact_with_poi(person_t &person, rand_gen_t &rgen, bool arrived) { // and set look dir
 	if (!arrived) { // departed
 		if (!person.at_poi) return nullptr; // not at a POI, done
 		person.at_poi = 0; // no longer at a POI
@@ -163,6 +164,8 @@ point_of_interest_t const *building_t::maybe_interact_with_poi(person_t &person,
 			if (arrived) {obj.flags |=  RO_FLAG_IS_ACTIVE;} // turn water on; water doesn't accumulate in the sink, this only happens for player activate
 			else         {obj.flags &= ~RO_FLAG_IS_ACTIVE;} // turn water off
 		}
+		// find hand dryer in the same room 50% of the time; should use paper towel dispenser the other 50%, but it's often doesn't have space to stand in front of
+		if (!arrived && rgen.rand_bool()) {next_poi = find_next_poi(*poi, TYPE_HAND_DRYER);}
 	}
 	else if (obj.type == TYPE_TOILET || obj.type == TYPE_URINAL) { // flush toilet/urinal when departing
 		if (arrived) { // close bathroom door if close; should be done earlier
@@ -188,14 +191,7 @@ point_of_interest_t const *building_t::maybe_interact_with_poi(person_t &person,
 		}
 		else { // departing
 			if (on_player_floor) {play_flush_sound(obj);}
-
-			// find sinks in the same room; they could be placed before or after this POI, so search from the beginning
-			for (point_of_interest_t const &p : interior->room_geom->pois) {
-				if (p.room_id != poi->room_id || p.obj_id < 0 || fabs(p.act_area.z1() - poi->act_area.z1()) > 0.5*floor_spacing) continue;
-				room_object_t &obj2(get_room_object_by_index(p.obj_id));
-				if (!obj2.is_sink_type()) continue;
-				if (!next_poi || p.use_count < next_poi->use_count) {next_poi = &p;}
-			}
+			next_poi = find_next_poi(*poi, TYPE_SINK); // find sink in the same room
 		}
 	}
 	else if (obj.type == TYPE_STOVE) {
@@ -213,6 +209,24 @@ point_of_interest_t const *building_t::maybe_interact_with_poi(person_t &person,
 	else if (obj.type == TYPE_VENDING || obj.type == TYPE_CHECKOUT || obj.type == TYPE_CASHREG) { // beep
 		if (arrived && on_player_floor) {gen_sound_thread_safe(SOUND_BEEP, local_to_camera_space(obj.get_cube_center()), 0.25, 0.85);}
 	}
+	else if (obj.type == TYPE_HAND_DRYER) {
+		if (arrived && on_player_floor) {gen_sound_thread_safe(SOUND_HAND_DRYER, local_to_camera_space(obj.get_cube_center()), 1.0, 1.0, 1.0, 1);} // skip_if_already_playing=1
+	}
+	return next_poi;
+}
+
+point_of_interest_t const *building_t::find_next_poi(point_of_interest_t const &poi, room_object obj_type) const {
+	// find POIs of the correct type in the same room; they could be placed before or after this POI, so search from the beginning
+	float const floor_spacing(get_window_vspace());
+	point_of_interest_t const *next_poi(nullptr);
+
+	for (point_of_interest_t const &p : interior->room_geom->pois) {
+		if (p.room_id != poi.room_id || p.obj_id < 0 || fabs(p.act_area.z1() - poi.act_area.z1()) > 0.5*floor_spacing) continue;
+		room_object_t const &obj(get_room_object_by_index(p.obj_id));
+		if (obj_type == TYPE_SINK) {if (!obj.is_sink_type()) continue;}
+		else if (obj.type != obj_type) continue;
+		if (!next_poi || p.use_count < next_poi->use_count) {next_poi = &p;}
+	} // for p
 	return next_poi;
 }
 

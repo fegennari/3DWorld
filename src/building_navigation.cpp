@@ -2939,7 +2939,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 					move_person_to_not_collide(person, *p, person.pos, rsum, coll_dist); // if we get here, we have to actively move out of the way
 					was_bumped = 1;
 				} // for p
-				if (was_bumped) {next_poi   = maybe_interact_with_poi(person, 0);} // arrived=0 (departed)
+				if (was_bumped) {next_poi   = maybe_interact_with_poi(person, rgen, 0);} // arrived=0 (departed)
 				if (was_bumped) {wait_time  = 0.0;} // stop waiting so that we can react
 				else            {wait_time -= fticks;}
 			}
@@ -2965,7 +2965,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 			wait_time = 0.0;
 			person.abort_dest(); // force choose_dest=1 below
 			person.ai_state = AI_WAITING; // waiting, but no longer for an elevator
-			next_poi = maybe_interact_with_poi(person, 0); // arrived=0 (departed)
+			next_poi = maybe_interact_with_poi(person, rgen, 0); // arrived=0 (departed)
 		}
 	}
 	if (!point_in_building_or_basement_bcube(person.pos)) { // person must be inside the building
@@ -3185,7 +3185,7 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 			// don't wait if we can follow the player or if we're on mall entrance stairs
 			else if (!(global_building_params.ai_target_player && (can_target_player(person) || has_nearby_sound(person, floor_spacing))) && !person.in_tunnel) {
 				person.wait_for(rgen.rand_uniform(1.0, (can_ai_follow_player(person) ? 2.0 : 10.0))); // stop for 1-10s, 1-2s if player is in this building in gameplay mode
-				maybe_interact_with_poi(person, 1); // arrived=1
+				maybe_interact_with_poi(person, rgen, 1); // arrived=1
 			}
 			person.on_new_path_seg    = 1; // allow player following AI update logic to rerun this frame
 			person.last_used_elevator = 0;
