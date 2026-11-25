@@ -13,6 +13,7 @@
 
 bool  const ALLOW_AI_IN_MALLS   = 1;
 bool  const USE_MALL_ENT_STAIRS = 1;
+bool  const ALLOW_CLOSET_DEST   = 1;
 float const COLL_RADIUS_SCALE   = 0.75; // somewhat smaller than radius, but larger than PED_WIDTH_SCALE
 
 int player_hiding_frame(0);
@@ -1745,7 +1746,7 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 		if (bc.z1() > z2 || bc.z2() < obj_z1) continue;
 		if (c->type == TYPE_RAMP && bc.z2() < z1 + floor_thickness) continue; // ramp top is exactly at the floor; add floor_thickness to prevent coll when walking above
 		
-		if (global_building_params.ai_sees_player_hide >= 2 && c->is_open()) { // open hiding spot that we can enter
+		if ((ALLOW_CLOSET_DEST || global_building_params.ai_sees_player_hide >= 2) && c->is_open()) { // open hiding spot that we can enter, or POI in the closet
 			// in the unlikely event the player closes the door on a zombie, I guess they're stuck in here; good job to the player
 			if (c->type == TYPE_CLOSET) {
 				cube_t cubes[5]; // front left, left side, front right, right side, [door]
@@ -3014,21 +3015,11 @@ int building_t::ai_room_update(person_t &person, float delta_dir, unsigned perso
 	if (has_rgeom && zombie_attack_mode && player_is_hiding && person.saw_player_hide && global_building_params.ai_opens_doors && global_building_params.ai_sees_player_hide >= 2 &&
 		player_hiding_obj.type != TYPE_NONE && same_room_and_floor_as_player(person) && cur_player_building_loc.building_ix == person.cur_bldg && has_rgeom)
 	{
-		// open the closet, stall, or shower door (closet door should already be open)
-		// it may not be safe to use an object iterator or even an index since we're in a different thread, so do a linear search for the target object
-		auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
-		cube_t coll_cube(person.get_bcube());
-		coll_cube.expand_by_xy(1.5*radius);
-
-		for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
-			if (*i != player_hiding_obj)   continue;
-			if (i->is_open())              break; // already open
-			if (!i->intersects(coll_cube)) break; // too far away (uses full object, not door, but should be close enough)
-			i->flags |= RO_FLAG_OPEN; // open the door
-			play_open_close_sound(*i, person.pos);
-			interior->room_geom->update_draw_state_for_room_object(*i, *this, 0);
-			break; // done
-		} // for i
+		ai_open_closet_stall_shower(person, 1); // only_hiding=1
+	}
+	else if (ALLOW_CLOSET_DEST && has_rgeom && cur_player_building_loc.building_ix == person.cur_bldg && !in_building_gameplay_mode()) {
+		// people, but not zombies; only when in the player building as an optimization; only if dest in closet?
+		ai_open_closet_stall_shower(person, 0); // only_hiding=0
 	}
 	bool choose_dest(!person.target_valid());
 	bool const update_path(!person.in_pool && !person.in_tunnel && need_to_update_ai_path(person));
@@ -3460,6 +3451,25 @@ void building_room_geom_t::get_path_nodes_for_pt_and_room(cube_t const &path_are
 		if (!pn_bc.contains_pt(pn)) continue;
 		cand_nodes.emplace_back(pn.x, pn.y, zval); // keep same zval
 	}
+}
+
+void building_t::ai_open_closet_stall_shower(person_t const &person, bool only_hiding) {
+	if (!has_room_geom()) return;
+	// open the closet, stall, or shower door (closet door should already be open)
+	// it may not be safe to use an object iterator or even an index since we're in a different thread, so do a linear search for the target object
+	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
+	cube_t coll_cube(person.get_bcube());
+	coll_cube.expand_by_xy(1.5*person.radius);
+
+	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
+		if (only_hiding && *i != player_hiding_obj) continue;
+		if (i->is_open())              break; // already open
+		if (!i->intersects(coll_cube)) break; // too far away (uses full object, not door, but should be close enough)
+		i->flags |= RO_FLAG_OPEN; // open the door
+		play_open_close_sound(*i, person.pos);
+		interior->room_geom->update_draw_state_for_room_object(*i, *this, 0);
+		break; // done
+	} // for i
 }
 
 void building_t::ai_room_lights_update(person_t const &person) {

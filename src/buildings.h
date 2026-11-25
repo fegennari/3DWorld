@@ -2177,6 +2177,7 @@ private:
 	bool can_use_mall_entrance_stairs(point const &p1, point const &p2) const;
 	void find_nearest_stairs_ramp_esc(point const &p1, point const &p2, vector<unsigned> &nearest_stairs, int part_ix=-1) const;
 	int find_nearest_elevator_this_floor(point const &pos) const;
+	void ai_open_closet_stall_shower(person_t const &person, bool only_hiding);
 	void ai_room_lights_update(person_t const &person);
 	void move_person_to_not_collide(person_t &person, person_t const &other, point const &new_pos, float rsum, float coll_dist) const;
 	void register_player_hiding(room_object_t const &hiding_obj) const;

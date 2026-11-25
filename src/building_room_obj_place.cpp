@@ -1466,7 +1466,7 @@ bool building_t::add_closet_to_room(rand_gen_t &rgen, room_t const &room, float 
 			objs.emplace_back(c, TYPE_CLOSET, room_id, dim, !dir, flags, tot_light_amt, SHAPE_CUBE, (is_freezer ? WHITE : wall_color), room_type);
 			set_obj_id(objs);
 			if (flags & RO_FLAG_OPEN) {interior->room_geom->expand_object(objs.back(), *this);} // expand opened closets immediately
-			//add_poi(c, c, room_id, objs.size()-1); // act_area is the entire closet; no, people can't enter closets (or commercial freezers, or kitchen pantries)
+			//add_poi(c, c, room_id, objs.size()-1); // act_area is the entire closet
 			// add a light inside the closet
 			room_object_t const closet(objs.back()); // deep copy so that we can invalidate the reference
 			bool const small_closet(closet.is_small_closet());
