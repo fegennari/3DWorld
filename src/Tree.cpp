@@ -2213,6 +2213,10 @@ void tree_placer_t::clear_city() {
 	}
 }
 
+void rseed_from_xy(rand_gen_t &rgen, int x, int y) {
+	rgen.rseed1 = 805306457*(y + yoff2) + 12582917*(x + xoff2) + 100663319*rand_gen_index;
+	rgen.rseed2 = 6291469  *(x + xoff2) + 3145739 *(y + yoff2) + 1572869  *rand_gen_index;
+}
 void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, point const &center, float radius, bool is_square,
 	float mesh_dz, tile_t const *const cur_tile, float vegetation_, bool use_density)
 {
@@ -2220,7 +2224,6 @@ void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, poi
 	bool const NONUNIFORM_TREE_DEN = 1; // based on world_mode?
 	unsigned const mod_num_trees(num_trees/(NONUNIFORM_TREE_DEN ? sqrt(tree_density_thresh) : 1.0));
 	float const min_tree_h(water_plane_z + 0.01*zmax_est), max_tree_h(1.8*zmax_est);
-	rand_gen_t rgen;
 	generated = 1;
 
 	if (tree_placer.have_decid_trees()) { // now add pre-placed trees within the city (TT mode)
@@ -2231,6 +2234,8 @@ void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, poi
 		if (bounds.intersects_xy(tree_placer.bcube + xlate)) { // test full bcube
 			for (auto b = tree_placer.blocks.begin(); b != tree_placer.blocks.end(); ++b) {
 				if (!bounds.intersects_xy(b->bcube + xlate)) continue;
+				rand_gen_t rgen;
+				rseed_from_xy(rgen, get_xpos(b->bcube.x1()), get_ypos(b->bcube.y1()));
 
 				for (auto t = b->trees.begin(); t != b->trees.end(); ++t) {
 					point const pos(t->pos + xlate);
@@ -2273,8 +2278,8 @@ void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, poi
 				int const ox(j + dx_scroll), oy(i + dy_scroll); // positions in original coordinate system
 				if (ox >= x1 && ox <= x2 && oy >= y1 && oy <= y2) continue; // use orignal tree from last position
 			}
-			rgen.rseed1 = 805306457*(i + yoff2) + 12582917*(j + xoff2) + 100663319*rand_gen_index;
-			rgen.rseed2 = 6291469  *(j + xoff2) + 3145739 *(i + yoff2) + 1572869  *rand_gen_index;
+			rand_gen_t rgen;
+			rseed_from_xy(rgen, j, i);
 			rgen.rand_mix();
 			unsigned const val(((unsigned)rgen.rand_seed_mix())%smod);
 			if (val <= 100)         continue; // scenery
