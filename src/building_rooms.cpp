@@ -1755,8 +1755,7 @@ void building_t::add_balconies(rand_gen_t &rgen, vect_cube_t &balconies) { // an
 						}
 					}
 				}
-				// maybe add plants to balconies; note that they won't be properly lit since plants use indoor lighting,
-				// and the plants won't be drawn when the player is outside the building; this should be okay because an empty pot works on a balcony as well
+				// maybe add plants to balconies
 				unsigned const num_plants(rgen.rand() % 3); // 0-2
 
 				if (num_plants > 0) { // place plants
@@ -1768,7 +1767,10 @@ void building_t::add_balconies(rand_gen_t &rgen, vect_cube_t &balconies) { // an
 					floor_inner.expand_by_xy(-wall_width);
 
 					for (unsigned n = 0; n < num_plants; ++n) {
-						if (place_plant_on_obj(rgen, floor_inner, room_id, 1.0, 1.2, plant_avoid)) {plant_avoid.push_back(objs.back());} // tot_light_amt=1.0, sz_scale=1.2
+						if (place_plant_on_obj(rgen, floor_inner, room_id, 1.0, 1.2, plant_avoid)) { // tot_light_amt=1.0, sz_scale=1.2
+							objs.back().flags |= RO_FLAG_EXTERIOR; // flag as exterior so that they get sun/moon light (if models), though they don't cast shadows
+							plant_avoid.push_back(objs.back());
+						}
 					}
 				}
 				// else place table and chairs?
