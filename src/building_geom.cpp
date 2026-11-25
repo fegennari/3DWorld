@@ -2459,6 +2459,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 
 		for (auto p = parts.begin(); p != parts.end(); ++p) {
 			bool const at_top(p->z2() == interior_z2);
+			if (p->z2() <= ground_floor_z1)             continue; // skip basement part
 			if (at_top && (!add_walls || is_rectangle)) continue; // skip top floor if not flat or has a rectangular top (added later)
 			if (!at_top && has_complex_floorplan)       continue; // lower floor walls look wrong
 			add_roof_walls(*p, wall_width, 1, temp); // overlap_corners=1 so that clipping works correctly
