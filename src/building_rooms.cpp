@@ -1965,8 +1965,8 @@ void building_t::add_rooftop_items(rand_gen_t rgen) {
 	if (roofs.empty()) return; // common case
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_PICNIC)) return;
 	float const floor_spacing(get_window_vspace()), clearance(get_min_front_clearance_inc_people()), edge_spacing(1.2*clearance), pt_spacing(1.25*clearance);
-	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_PICNIC)); // W, D, H
-	float const pt_height(0.4*floor_spacing), pt_hwidth(0.5*pt_height*sz.x/sz.z), pt_hdepth(0.5*pt_height*sz.y/sz.z);
+	vector3d const tsz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_PICNIC)); // W, D, H
+	float const pt_height(0.4*floor_spacing), pt_hwidth(0.5*pt_height*tsz.x/tsz.z), pt_hdepth(0.5*pt_height*tsz.y/tsz.z);
 	auto &objs(interior->room_geom->objs);
 	// find the best roof to place tables; prefer larger area and rectangles with access stairs
 	cube_t best_roof;
@@ -1975,6 +1975,14 @@ void building_t::add_rooftop_items(rand_gen_t rgen) {
 	for (cube_t const &r : roofs) {
 		float const score(r.get_area_xy()*(has_bcube_int_no_adj(r, interior->stairwells) ? 4 : 1));
 		if (score > best_score) {best_roof = r; best_score = score;}
+	}
+	bool const add_umbrellas(building_obj_model_loader.is_model_valid(OBJ_MODEL_BIG_UMBRELLA));
+	float const umbrella_radius(min(pt_hwidth, pt_hdepth) + 0.6*pt_spacing);
+	float umbrella_height(0.0);
+
+	if (add_umbrellas) {
+		vector3d const usz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_BIG_UMBRELLA)); // W, D, H
+		umbrella_height = umbrella_radius*usz.z/(0.25*(usz.x + usz.y));
 	}
 	unsigned const num_tables(4 + (rgen.rand() % 7)); // 4-10
 	cube_t place_area(best_roof);
@@ -1994,6 +2002,13 @@ void building_t::add_rooftop_items(rand_gen_t rgen) {
 			int const room_id(get_room_containing_pt(point(table.xc(), table.yc(), (best_roof.z1() - 0.5*floor_spacing)))); // use the room under the roof
 			objs.emplace_back(table, TYPE_PICNIC, max(room_id, 0), dim, 0, RO_FLAG_EXTERIOR, 1.0); // Note: doesn't cast an exterior shadow
 			details.emplace_back(table, DETAIL_OBJ_COLLIDER); // for player collision
+
+			if (add_umbrellas) { // add an umbrella
+				cube_t umbrella(cube_bot_center(table));
+				umbrella.expand_by_xy(umbrella_radius);
+				umbrella.z2() += umbrella_height;
+				objs.emplace_back(umbrella, TYPE_UMBRELLA, max(room_id, 0), 0, 0, RO_FLAG_EXTERIOR, 1.0); // Note: doesn't cast an exterior shadow
+			}
 			// restrict placement area around the cluster of tables
 			cube_t restrict_area(table);
 			restrict_area.expand_by_xy(5.0*(2.0*max(pt_hwidth, pt_hdepth) + pt_spacing));

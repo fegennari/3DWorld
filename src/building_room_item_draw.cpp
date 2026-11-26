@@ -1590,6 +1590,7 @@ unsigned room_object_t::get_model_id() const { // Note: first 8 bits is model ID
 	if (type == TYPE_XFORMER)    return OBJ_MODEL_SUBSTATION; // same model as city substation
 	if (type == TYPE_US_FLAG)    return OBJ_MODEL_FLAG      ; // same model as city flag
 	if (type == TYPE_PICNIC)     return OBJ_MODEL_PICNIC    ; // same model as city picnic table
+	if (type == TYPE_UMBRELLA)   return OBJ_MODEL_BIG_UMBRELLA; // same model as city beach umbrella
 	if (type == TYPE_BLDG_FOUNT) return OBJ_MODEL_FOUNTAIN + pack_sub_model_id(item_flags); // same models as city fountains; select a sub_model_id
 	unsigned id((unsigned)type + OBJ_MODEL_TOILET - TYPE_TOILET);
 	// choose a sub_model_id for these types using bits 8-15
