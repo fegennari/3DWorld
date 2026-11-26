@@ -1967,7 +1967,7 @@ bool building_t::add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir,
 	// if it's an office building with two doors already added, make this third door a back metal door
 	bool const is_back_door(doors.size() == 2 && !courtyard && !for_walkway);
 	unsigned type(0); // TYPE_ODOOR_IN
-	if (for_office_building)  {type = (is_back_door ? (unsigned)tquad_with_ix_t::TYPE_BDOOR2 : (unsigned)tquad_with_ix_t::TYPE_BDOOR);}
+	if  (for_office_building) {type = (is_back_door ? (unsigned)tquad_with_ix_t::TYPE_BDOOR2 : (unsigned)tquad_with_ix_t::TYPE_BDOOR);}
 	else if (is_restroom  ()) {type = (unsigned)tquad_with_ix_t::TYPE_ODOOR;}
 	else if (is_restaurant()) {type = (unsigned)tquad_with_ix_t::TYPE_BDOOR;}
 	else if (use_modern_door) {type = (unsigned)tquad_with_ix_t::TYPE_MDOOR;} // residential/house modern door
@@ -2654,6 +2654,38 @@ cube_t building_t::get_helipad_bcube() const {
 	}
 	assert(0); // if has_helipad was set, a helipad must be found
 	return cube_t(); // never gets here
+}
+
+void building_t::get_mid_level_accessible_roofs(vect_cube_with_ix_t &roofs) const {
+	if (has_house_floorplan() || has_complex_floorplan || !is_cube() || !interior) return; // not supported
+	float const floor_spacing(get_window_vspace()), fc_thick(get_fc_thickness());
+	vect_cube_t roof_parts;
+
+	for (auto p = parts.begin(); p != parts.end(); ++p) {
+		if (p->z2() <= ground_floor_z1 || p->z2() == interior_z2) continue; // skip basement and top
+		// determine if there are stairs or a door to this roof area
+		cube_t roof(*p);
+		set_cube_zvals(roof, p->z2(), (p->z2() + floor_spacing));
+		bool has_roof_access(0);
+
+		for (stairwell_t const &s : interior->stairwells) { // check stairs leading to this roof
+			if (s.roof_access && s.intersects_no_adj(roof) && s.z2() >= roof.z1() && s.z2() < roof.z2()+fc_thick) {has_roof_access = 1; break;}
+		}
+		if (!has_roof_access && have_walkway_ext_door) { // check for exterior doors; TODO: need new flag for this
+			for (tquad_with_ix_t const &d : doors) {
+				if (d.is_building_door() && d.get_bcube().intersects_no_adj(roof)) {has_roof_access = 1; break;}
+			}
+		}
+		if (!has_roof_access) continue;
+		roof_parts.push_back(roof); // (-30, 17)
+
+		for (auto p2 = parts.begin(); p2 != parts.end(); ++p2) { // remove any interior wall sections that overlap another part
+			if (p2 == p || p2->z2() < p->z2()) continue; // skip self and non-top/higher floors
+			subtract_cube_from_cubes(*p2, roof_parts);
+		}
+		for (cube_t const &r : roof_parts) {roofs.emplace_back(r, (p - parts.begin()));} // store part_ix in index field
+		roof_parts.clear();
+	} // for p
 }
 
 void building_t::maybe_add_special_roof(rand_gen_t &rgen) {

@@ -2014,6 +2014,7 @@ struct building_t : public building_geom_t {
 	void add_exterior_door_items(rand_gen_t &rgen);
 	unsigned get_street_house_number() const;
 	void gen_building_doors_if_needed(rand_gen_t &rgen);
+	void get_mid_level_accessible_roofs(vect_cube_with_ix_t &roofs) const;
 	void maybe_add_special_roof(rand_gen_t &rgen);
 	void gen_sloped_roof(rand_gen_t &rgen, cube_t const &top);
 	void add_roof_to_bcube();
@@ -2689,6 +2690,7 @@ private:
 	void add_house_skylight(rand_gen_t rgen);
 	float subtract_skylight_from_roof_tquads(cube_t const &skylight);
 	void add_exterior_ac_pipes(rand_gen_t rgen);
+	void add_rooftop_items    (rand_gen_t rgen);
 	void add_tunnel_objects   (rand_gen_t rgen);
 	void add_interior_window_objects();
 	void add_padlocks(rand_gen_t rgen);

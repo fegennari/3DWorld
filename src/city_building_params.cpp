@@ -18,7 +18,7 @@ string const model_opt_names[NUM_OBJ_MODELS] =
 "hospital_bed_model", "hospital_curtain_model", "forklift_model", "wheelchair_model", "operating_table_model", "hospital_trolley_model", "stretcher_model", "apple_model", "ex_machine_model", "vis_phone_model",
 "jumpsuit_model", "handgun_model", "shop_cart_model", "cash_register_model", "fish_model", "ck_appliance_model", "milk_carton_model", "radiator_model", "engine_fan_model", "surgical_tools_model",
 "towel_dispenser_model", "soap_dispenser_model", "hand_dryer_model", "easel_model", "generator_model", "wet_floor_sign_model", "floor_lamp_model", "rubber_duck_model", "unicorn_model",
-""/*gbike*/, ""/*xfmr*/, ""/*flag*/, ""/*fountain*/,
+""/*gbike*/, ""/*xfmr*/, ""/*flag*/, ""/*fountain*/, ""/*picnic table*/,
 /*animal models*/ "rat_model", "roach_model",
 /*building non-room objects*/ "door_handle_model",
 /*city models*/ "fire_hydrant_model", "substation_model", "mailbox_model", "umbrella_model", "pigeon_model", "fountain_model", "bird_animated_model", "flag_model",

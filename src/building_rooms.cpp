@@ -1447,6 +1447,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 	add_balconies          (rgen, balconies);
 	add_gutter_downspouts  (balconies);
 	add_exterior_door_items(rgen);
+	add_rooftop_items      (rgen);
 	if (data_center) {add_datacenter_outdoor_objs(rgen, 1);} // is_room_geom_pass=1
 	if (has_chimney) {add_chimney_cap(rgen);}
 	if (!is_rotated()) {add_ext_door_steps(ext_objs_start);} // must be after adding balconies and fire escape
@@ -1956,6 +1957,50 @@ void building_t::add_exterior_ac_pipes(rand_gen_t rgen) {
 			break; // done - there should only be one part
 		} // for p
 	} // for i
+}
+
+void building_t::add_rooftop_items(rand_gen_t rgen) {
+	vect_cube_with_ix_t roofs;
+	get_mid_level_accessible_roofs(roofs);
+	if (roofs.empty()) return; // common case
+	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_PICNIC)) return;
+	float const floor_spacing(get_window_vspace()), clearance(get_min_front_clearance_inc_people()), edge_spacing(1.2*clearance), pt_spacing(1.25*clearance);
+	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_PICNIC)); // W, D, H
+	float const pt_height(0.4*floor_spacing), pt_hwidth(0.5*pt_height*sz.x/sz.z), pt_hdepth(0.5*pt_height*sz.y/sz.z);
+	auto &objs(interior->room_geom->objs);
+	// find the best roof to place tables; prefer larger area and rectangles with access stairs
+	cube_t best_roof;
+	float best_score(0.0);
+
+	for (cube_t const &r : roofs) {
+		float const score(r.get_area_xy()*(has_bcube_int_no_adj(r, interior->stairwells) ? 4 : 1));
+		if (score > best_score) {best_roof = r; best_score = score;}
+	}
+	unsigned const num_tables(4 + (rgen.rand() % 7)); // 4-10
+	cube_t place_area(best_roof);
+	place_area.expand_by_xy(-edge_spacing);
+	if (min(place_area.dx(), place_area.dy()) < 2.5*max(pt_hwidth, pt_hdepth)) return; // too small
+	bool const dim(rgen.rand_bool()); // consistent per table
+	vector3d pt_sz(pt_hwidth, pt_hdepth, pt_height);
+	if (dim) {swap(pt_sz.x, pt_sz.y);}
+
+	for (unsigned n = 0; n < num_tables; ++n) {
+		for (unsigned N = 0; N < 10; ++N) { // 10 placement tries
+			cube_t table;
+			gen_xy_pos_for_cube_obj(table, place_area, pt_sz, pt_height, rgen, 1); // place_at_z1=1
+			cube_t table_exp(table);
+			table_exp.expand_by_xy(pt_spacing);
+			if (has_bcube_int(table_exp, details) || interior->is_blocked_by_stairs_or_elevator(table_exp)) continue; // check roof objects (inc other tables) and stairs
+			int const room_id(get_room_containing_pt(point(table.xc(), table.yc(), (best_roof.z1() - 0.5*floor_spacing)))); // use the room under the roof
+			objs.emplace_back(table, TYPE_PICNIC, max(room_id, 0), dim, 0, RO_FLAG_EXTERIOR, 1.0); // Note: doesn't cast an exterior shadow
+			details.emplace_back(table, DETAIL_OBJ_COLLIDER); // for player collision
+			// restrict placement area around the cluster of tables
+			cube_t restrict_area(table);
+			restrict_area.expand_by_xy(5.0*(2.0*max(pt_hwidth, pt_hdepth) + pt_spacing));
+			place_area.intersect_with_cube_xy(restrict_area);
+			break; // success/done
+		} // for N
+	} // for n
 }
 
 void building_t::add_interior_window_objects() {
