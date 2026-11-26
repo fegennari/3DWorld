@@ -2723,6 +2723,12 @@ template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer,
 template void building_t::add_door_verts(cube_t const &D, building_room_geom_t &drawer, door_rotation_t &drot, uint8_t door_type, bool dim,
 	bool dir, float open_amt, bool opens_out, bool exterior, bool on_stairs, bool hinge_side, bool open_min_amt, bool draw_top_edge) const;
 
+unsigned count_cubes_at_z1(vect_cube_t const &cubes, float z1) {
+	unsigned num(0);
+	for (cube_t const &c : cubes) {num += (c.z1() == z1);}
+	return num;
+}
+
 // Note: this is actually the geometry of walls that have windows, not the windows themselves
 void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass, float offset_scale,
 	point const *only_cont_pt_in, bool no_skylights, bool draw_int_windows, bool for_gen_not_draw) const
@@ -2868,9 +2874,11 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 
 			if (only_cont_pt_in && *i != cont_part && !i->contains_pt(only_cont_pt)) { // not the part containing the point
 				float const z_exp(get_fc_thickness()); // allow a bit of extra Z overlap, which helps when the player is on the stairs
+				bool const contained_xy(i->contains_pt_xy(only_cont_pt));
 
-				if (i->contains_pt_xy(only_cont_pt) && only_cont_pt.z > i->z1()-z_exp && only_cont_pt.z < i->z2()+z_exp) {} // okay, can draw unsplit in this case
-				else if (room_with_stairs && are_parts_stacked(*i, cont_part)) { // windows may be visible through stairs in rooms with stacked parts
+				if (contained_xy && only_cont_pt.z > i->z1()-z_exp && only_cont_pt.z < i->z2()+z_exp) {} // okay, can draw unsplit in this case
+				// windows may be visible through stairs in rooms with stacked parts; only include stacked parts above only_cont_pt or levels with a single part
+				else if (room_with_stairs && are_parts_stacked(*i, cont_part) && (contained_xy || count_cubes_at_z1(parts, i->z1()) == 1)) {
 					draw_part  = cont_part;
 					draw_part.intersect_with_cube_xy(part);
 					clamp_cube = &draw_part;
