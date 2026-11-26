@@ -2091,9 +2091,9 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		if (i == model_to_cull) continue;
 		if (skip_interior_objs && i->int_vis_only) continue; // interior, not visible
 		room_object_t &obj(get_room_object_by_index(i->obj_id));
-		bool const in_attic(obj.in_attic());
-		if ((int)obj.room_id == cull_room_ix && !in_attic)    continue; // cull all objects in this room
-		if (check_clip_cube && !clip_cube_bs.intersects(obj)) continue; // shadow map clip cube test: fast and high rejection ratio, do this first
+		bool const in_attic(obj.in_attic()), exterior(obj.is_exterior());
+		if ((int)obj.room_id == cull_room_ix && !in_attic && !exterior) continue; // cull all objects in this room
+		if (check_clip_cube && !clip_cube_bs.intersects(obj))           continue; // shadow map clip cube test: fast and high rejection ratio, do this first
 		// optimization: only draw models in the same room as the mirror for malls; applies to furniture stores, clothing stores, and bathrooms
 		if (reflection_pass && player_in_mall && cur_room_mirror.room_id > 0 && obj.room_id != cur_room_mirror.room_id) continue;
 		bool const in_camera_room(in_attic ? player_in_attic : ((int)obj.room_id == camera_room));
@@ -2101,7 +2101,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 
 		if (shadow_only) {
 			if (type == TYPE_CEIL_FAN) continue; // not shadow casting; would shadow its own light
-			if (obj.is_exterior())     continue; // outdoors; no indoor shadow
+			if (exterior)              continue; // outdoors; no indoor shadow
 			if (player_in_mall && type == TYPE_HANGER) continue; // too small to cast a shadow for lights high above
 			if (player_in_mall && type == TYPE_CLOTHES && !in_camera_room) continue; // optimization for expensive clothing
 			if (type == TYPE_KEY || type == TYPE_SILVER || type == TYPE_FOLD_SHIRT || type == TYPE_SURG_TOOLS) continue; // small and flat
@@ -2118,7 +2118,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		else if ((type == TYPE_SILVER || type == TYPE_SURG_TOOLS /*|| type == TYPE_FOLD_SHIRT*/) && camera_bs.z < obj.z1()) continue; // not visible from below (except on glass table?)
 		point obj_center(obj.get_cube_center());
 
-		if (!shadow_only && !building.is_house && !has_windows && !building.point_in_mall(obj_center)) { // windowless building or parking structure
+		if (!shadow_only && !building.is_house && !has_windows && !exterior && !building.point_in_mall(obj_center)) { // windowless building or parking structure
 			if (obj.z1() > one_floor_above || obj.z2() < two_floors_below) continue; // more than one floor of difference
 		}
 		if (is_rotated) {building.do_xy_rotate(building_center, obj_center);}
@@ -2152,7 +2152,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		assert(obj.room_id < building.interior->rooms.size());
 		room_t const &room(building.get_room(obj.room_id)); // incorrect but mostly unused for in_attic==1
 
-		if (player_in_building && !in_attic && obj.room_id != last_culled_room_ix && !obj.is_exterior()) { // new room; apply room-based VFC + occlusion culling
+		if (player_in_building && !in_attic && !exterior && obj.room_id != last_culled_room_ix && !exterior) { // new room; apply room-based VFC + occlusion culling
 			last_culled_room_ix = obj.room_id;
 
 			if (!in_camera_room) { // camera not in this room
@@ -2210,7 +2210,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 		}
 		if (!shadow_only && !reflection_pass) {apply_room_obj_rotate(obj, *i, objs);} // Note: may modify obj by clearing flags and inst by updating dir
 		
-		if (bbd_in && !shadow_only && !is_rotated && (type == TYPE_WALL_LAMP || obj.is_exterior())) { // draw exterior objects later; not for rotated buildings
+		if (bbd_in && !shadow_only && !is_rotated && (type == TYPE_WALL_LAMP || exterior)) { // draw exterior objects later; not for rotated buildings
 			// wall lamp has transparent glass and must be drawn last; fire escape and wall lamp use outdoor lighting
 			bbd_in->models_to_draw.emplace_back(*i, obj);
 		}
