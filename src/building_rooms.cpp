@@ -728,7 +728,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			bool const is_ground_floor(is_ground_floor_part && (floor_mask & floor_ext_door_mask)); // really this is a check for doors on this floor
 			bool const is_entry_floor(is_ground_floor || (is_ground_floor_part && multi_family)); // for placing entry level rooms/objs (fireplace, living, dining, kitchen, etc.)
 			unsigned const objs_start(wall_light ? objs_start_inc_lights : objs.size()); // wall light counts as an object since it must be avoided
-			bool has_walkway(0);
 			rgen.rand_mix();
 			blockers.clear(); // clear for this new room
 
@@ -745,8 +744,17 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				// these could be added as walls or added for the bottom floor and extend through all levels, though that would require more changes
 				add_office_pillars(rgen, *r, room_center.z, room_id, f, valid_lights, blockers);
 			}
-			if (!walkways.empty()) {
-				has_walkway = maybe_add_walkway_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, light_ix_assign);
+			bool const has_walkway(!walkways.empty() && maybe_add_walkway_room_objs(rgen, *r, room_center.z, room_id, tot_light_amt, light_ix_assign));
+			bool has_ext_door(has_walkway);
+			
+			if (!has_ext_door && have_rooftop_door) {
+				cube_t room_exp(*r);
+				room_exp.expand_by_xy(wall_thickness);
+
+				for (tquad_with_ix_t const &d : doors) {
+					cube_t const bc(d.get_bcube());
+					if (bc.z1() <= room_center.z && bc.z2() > room_center.z && bc.intersects(room_exp)) {has_ext_door = 1; break;}
+				}
 			}
 			if (r->has_no_geom() || is_garage_or_shed || is_swim_pool_room) {
 				if (is_garage_or_shed) {
@@ -802,7 +810,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 			unsigned num_chairs(0), pref_hang_orient(4); // no pref orient=4
 
 			// place room objects
-			bool const added_living(added_living_mask & floor_mask), is_office_bathroom(!has_walkway && maybe_office_bathroom);
+			bool const added_living(added_living_mask & floor_mask), is_office_bathroom(!has_ext_door && maybe_office_bathroom);
 			bool const allow_br(!is_house || must_be_bathroom || f > 0 || num_floors == 1 || multi_family ||
 				(rgen.rand_float() < 0.33f*(added_living + (added_kitchen_mask&1) + 1))); // bed/bath
 			bool has_fireplace(0);
@@ -860,11 +868,11 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					if (added_obj) {no_trashcan = 1;} // trashcan shadow flickers when camera is floating, do disable trashcans
 				}
 			}
-			// check if this room is adjacent to an exterior/walkway door, and if so, make it a lounge
-			if (is_apt_or_hotel_room || r->is_office || (has_walkway && r->get_room_type(f) == RTYPE_NOTSET)) {
+			// check if this room is adjacent to an exterior walkway or roof access door, and if so, make it a lounge
+			if (is_apt_or_hotel_room || r->is_office || (has_ext_door && r->get_room_type(f) == RTYPE_NOTSET)) {
 				bool make_public(0);
 
-				if (has_walkway && is_room_adjacent_to_ext_door(*r, room_center.z)) { // connected to walkway door
+				if (has_ext_door && is_room_adjacent_to_ext_door(*r, room_center.z)) { // connected to walkway or roof access door
 					// make this a lounge; but if this is a sub-room of an apartment or hotel room, then shouldn't we remove the walls and make the entire unit a lounge?
 					add_lounge_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, 0); // is_lobby=0
 					r->assign_to(RTYPE_LOUNGE, f);
@@ -875,7 +883,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 					for (auto r2 = r+1; r2 != rooms.end() && r2->unit_id == r->unit_id; ++r2) {unit_bounds.union_with_cube(*r2);}
 					set_cube_zvals(unit_bounds, z, (z + floor_height));
 					
-					if (!walkways.empty() && is_room_adjacent_to_ext_door(unit_bounds)) {make_public = 1;}
+					if (have_uppper_floor_door() && is_room_adjacent_to_ext_door(unit_bounds)) {make_public = 1;}
 					else { // check for stairs in this room
 						unit_bounds.expand_in_z (-fc_thick); // floor to ceiling
 						unit_bounds.expand_by_xy(-wall_thickness); // subtract off walls to avoid including stairs in adjacent rooms
@@ -996,7 +1004,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				added_bathroom |= is_bathroom;
 			}
 			// bedroom or bathroom case; need to check first floor even if must_be_bathroom;
-			if (!added_obj && allow_br && !is_tall_room && !has_walkway && !floor_will_alias && !data_center && can_be_bedroom_or_bathroom(*r, f)) {
+			if (!added_obj && allow_br && !is_tall_room && !has_ext_door && !floor_will_alias && !data_center && can_be_bedroom_or_bathroom(*r, f)) {
 				// Note: num_bedrooms is summed across all floors, while num_bathrooms is per-floor
 				// Note: min_br is applied to bedrooms, but could be applied to bathrooms in the same way
 				bool const pref_sec_bath(is_house && num_bathroom_rooms == 1 && num_bedrooms > min_br && !(multi_family && !(bed_floor_mask & floor_mask)) &&
@@ -2159,11 +2167,11 @@ void building_t::add_extra_obj_slots() {
 void building_t::add_wall_and_door_trim_if_needed() {
 	if (!has_room_geom() || interior->rooms.empty()) return; // no interior or rooms
 	if (!interior->room_geom->trim_objs.empty())     return; // trim already generated
-	add_wall_and_door_trim();
+	add_wall_and_door_trim(); // and window trim
 	interior->room_geom->trim_objs.shrink_to_fit();
 }
 bool building_t::maybe_has_ext_door_this_floor(float part_z1, unsigned floor_ix) const {
-	if (have_walkway_ext_door) { // walkway doors can be added to stack parts and ranges of floors
+	if (have_uppper_floor_door()) { // walkway doors can be added to stack parts and ranges of floors; roof doors can be added to stacked parts
 		float const floor_spacing(get_window_vspace()), fz1(part_z1 + floor_ix*floor_spacing), fz2(fz1 + floor_spacing);
 
 		for (tquad_with_ix_t const &d : doors) {
@@ -2873,8 +2881,8 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 				bool at_walkway(0);
 				cube_t exclude;
 				
-				// check for windows over walkway doors; these aren't clipped from the exterior window verts, and we don't want to add their frames
-				if (!walkways.empty()) {
+				// check for windows over walkway or roof access doors; these aren't clipped from the exterior window verts, and we don't want to add their frames
+				if (have_uppper_floor_door()) {
 					cube_t window_exp(window);
 					window_exp.expand_by_xy(window_trim_width);
 
@@ -2886,7 +2894,7 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 						exclude    = door_bc;
 						exclude.expand_in_dim(dim, wall_thickness); // make sure it clips the trim
 						break;
-					}
+					} // for d
 					if (add_trim) { // add extra vertical trim to cover the ends of walkway walls
 						for (building_walkway_t const &w : walkways) {
 							if (w.dim != dim || !w.bcube.intersects(window_exp)) continue;

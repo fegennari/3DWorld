@@ -759,6 +759,7 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 }
 
 bool building_t::check_walkway_door_clearance(cube_t const &c, bool dim) const {
+	assert(interior);
 	if (interior->is_blocked_by_stairs_or_elevator(c, 0.0, 0, 2)) return 0; // dmin=0.0, elevators_only=0, no_check_enter_exit=2
 
 	// check wall ends; shouldn't need to check the other dim because rooms should be at least a doorway width wide
@@ -1917,7 +1918,7 @@ tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool d
 					}
 					if (int_other_door) continue;
 
-					if (have_walkway_ext_door) { // check if too close to a walkway exit door or its exit sign
+					if (have_uppper_floor_door()) { // check if too close to a walkway exit door or its exit sign, or a rooftop door
 						bool close_to_exit(0);
 
 						for (tquad_with_ix_t const &d : doors) {
@@ -2671,7 +2672,7 @@ void building_t::get_mid_level_accessible_roofs(vect_cube_with_ix_t &roofs) cons
 		for (stairwell_t const &s : interior->stairwells) { // check stairs leading to this roof
 			if (s.roof_access && s.intersects_no_adj(roof) && s.z2() >= roof.z1() && s.z2() < roof.z2()+fc_thick) {has_roof_access = 1; break;}
 		}
-		if (!has_roof_access && have_walkway_ext_door) { // check for exterior doors; TODO: need new flag for this
+		if (!has_roof_access && have_rooftop_door) { // check for exterior doors
 			for (tquad_with_ix_t const &d : doors) {
 				if (d.is_building_door() && d.get_bcube().intersects_no_adj(roof)) {has_roof_access = 1; break;}
 			}

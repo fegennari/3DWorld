@@ -1727,7 +1727,7 @@ struct building_t : public building_geom_t {
 	mutable bool has_attic_window=0; // make mutable so that drawing code can update/cache this value
 	bool multi_family=0; // apartments, multi-family house, duplex, etc. - split by floor
 	bool has_int_fplace=0, has_parking_garage=0, has_small_part=0, has_basement_door=0, has_basement_pipes=0, parts_generated=0, is_in_city=0, has_skylight_light=0;
-	bool pri_hall_stairs_to_pg=0, have_walkway_ext_door=0, have_hall_side_stairs=0, have_part_overhang=0, parts_0_1_connected=0;
+	bool pri_hall_stairs_to_pg=0, have_walkway_ext_door=0, have_rooftop_door=0, have_hall_side_stairs=0, have_part_overhang=0, parts_0_1_connected=0;
 	mutable bool has_missing_stairs=0; // only used for printing a warning
 	mutable bool player_visited=0; // for stats tracking
 	uint8_t num_attic_lights=0; // 0-2
@@ -1811,6 +1811,7 @@ struct building_t : public building_geom_t {
 	bool is_pos_in_basement(point const &pos) const {return ((has_basement() && parts[basement_part_ix].contains_pt(pos)) || point_in_extended_basement(pos));}
 	bool room_inc_half_walls(room_t const &room) const;
 	bool maybe_has_ext_door_this_floor(float part_z1, unsigned floor_ix) const;
+	bool have_uppper_floor_door() const {return (have_walkway_ext_door || have_rooftop_door);}
 	bool is_attic_window(cube_t const &window) const {return (has_attic() && window.z1() >= get_attic_part().z2());}
 	void get_garage_dim_dir(cube_t const &garage, bool &dim, bool &dir) const;
 	bool get_street_dim () const {return (street_dir ? ((street_dir-1) >> 1) : 0);}

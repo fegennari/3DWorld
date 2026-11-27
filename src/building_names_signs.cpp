@@ -422,8 +422,9 @@ void building_t::add_exterior_door_items(rand_gen_t &rgen) { // mostly signs; ad
 
 		for (auto d = doors.begin(); d != doors.end(); ++d) {
 			if (int(d - doors.begin()) == courtyard_door_ix) break; // courtyard door is not an exit
-			if (!d->is_building_door())       continue; // roof door, etc.
-			if (d->get_bcube().z1() > z1_max) continue; // not ground floor door
+			if (!d->is_building_door()) continue; // roof door, etc.
+			cube_t const door_bc(d->get_bcube());
+			if (door_bc.z1() > z1_max && !has_bcube_int_obj(door_bc, walkways)) continue; // not ground floor door
 			unsigned const sign_obj_ix(objs.size());
 			if (!add_sign_by_door(*d, 0, "Exit", exit_color, 1)) continue; // inside exit sign, emissive
 

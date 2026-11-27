@@ -44,8 +44,8 @@ bool building_t::player_can_see_outside() const {
 
 	if (!has_int_windows() || (is_restroom() && !point_near_ext_door(camera_bs))) { // no windows looking out, or restroom with block windows
 		if (building_has_open_ext_door && !doors.empty()) { // maybe can see out a door
-			// maybe can see out open door on first floor or a walkway
-			if (have_walkway_ext_door || (camera_pos.z < (ground_floor_z1 + floor_spacing) && !in_basement)) {
+			// maybe can see out open door on first floor or a walkway or rooftop door
+			if (have_uppper_floor_door() || (camera_pos.z < (ground_floor_z1 + floor_spacing) && !in_basement)) {
 				for (auto const &door : doors) {
 					cube_t const &bc(door.get_bcube());
 					if (bc.z1() < camera_bs.z && bc.z2() > camera_bs.z && camera_pdu.cube_visible(bc + xlate)) return 1;
@@ -375,21 +375,26 @@ bool building_t::check_sphere_coll_inner(point &pos, point const &p_last, vector
 		if (zval < bcube.z1() && zval+camera_zh > bcube.z1() && bcube.contains_pt_xy(pos2 - xlate) && p_last == p_last2) {zval = bcube.z1();}
 		point const pos2_bs(pos2 - xlate), query_pt(pos2_bs.x, pos2_bs.y, zval);
 
-		// first check uses min of the two zvals to reject the basement, which is actually under the mesh
+		// first check uses min of the two zvals to reject the basement, which is actually under the terrain mesh
 		if ((min(pos2.z, p_last2.z) + radius) > ground_floor_z1) {
 			unsigned const floor_ix((zval - ground_floor_z1)/get_window_vspace());
 
-			if (have_walkway_ext_door || (floor_ext_door_mask & (1 << floor_ix))) { // check for exterior doors on this floor
+			if (have_uppper_floor_door() || (floor_ext_door_mask & (1 << floor_ix))) { // check for exterior doors on this floor
 				for (auto d = doors.begin(); d != doors.end(); ++d) { // exterior doors
 					if (d->type == tquad_with_ix_t::TYPE_RDOOR) continue; // doesn't apply to roof door
 					cube_t bc(d->get_bcube());
 					if (zval < bc.z1() || zval > bc.z2()) continue; // no Z overlap
+					float const bc_z1(bc.z1());
 					bool const door_dim(bc.dy() < bc.dx());
 					bc.expand_in_dim( door_dim, 1.1*radius); // expand by radius plus some tolerance in door dim
 					bc.expand_in_dim(!door_dim, -0.5*xy_radius); // shrink slightly in the other dim to prevent the player from clipping through the wall next to the door
 					bc.z1() -= max(radius, (float)camera_zh); // account for player on steep slope up to door - require player head above door frame bottom
 					if (!bc.contains_pt(point(pos2_bs.x, pos2_bs.y, zval))) continue; // check if door can be used
-					//if (floor_ix == 0) return 0; // ground floor, disable collsion to allow the player to walk through
+					
+					if (have_rooftop_door && !has_bcube_int_obj(bc, walkways)) { // rooftop door
+						max_eq(pos.z, (bc_z1 + radius)); // don't fall through the doorway
+						return 1; // have to return here; assume there is nothing else blocking the door
+					}
 					allow_outside_building = 1; // allow the player to exit, but for now still in the building
 				} // for d
 			}
@@ -1589,7 +1594,7 @@ bool building_t::check_pos_in_unlit_room_recur(point const &pos, set<unsigned> &
 		}
 		if (has_stairs_without_closed_door) return 0;
 	}
-	if (pos.z > ground_floor_z1 && (pos.z < ground_floor_z1 + floor_spacing || !walkways.empty())) { // on the ground floor or have walkways
+	if (pos.z > ground_floor_z1 && (pos.z < ground_floor_z1 + floor_spacing || have_uppper_floor_door())) { // on the ground floor or have walkway/roof access doors
 		// handle windowless office building open exterior doors; we don't really have a floor zval to pass into the first query
 		if (is_room_adjacent_to_ext_door(room) && point_near_ext_door(pos)) return 0;
 	}

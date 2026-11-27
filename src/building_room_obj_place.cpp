@@ -3774,7 +3774,7 @@ void building_t::add_cameras_to_room(rand_gen_t &rgen, room_t const &room, float
 		float pos(room.get_center_dim(!long_dim));
 		bool apply_offset(is_ground_floor_hall);
 		
-		if (!walkways.empty() && !apply_offset) { // check for walkway doors
+		if (have_uppper_floor_door() && !apply_offset) { // check for walkway and roof access doors
 			float const check_radius(width + get_wall_thickness());
 			point test_pt;
 			test_pt[ long_dim] = wall_pos;
@@ -4575,7 +4575,7 @@ void building_t::add_light_switches_to_room(rand_gen_t rgen, room_t const &room,
 	vect_door_stack_t ext_doors; // not really door stacks, but we can fill in the data to treat them as such
 	unsigned garage_door_mask(0);
 
-	if (is_ground_floor || (!walkways.empty() && !DRAW_CITY_INT_WINDOWS)) { // handle exterior doors on the ground floor, and walkway doors if there are no windows
+	if (is_ground_floor || (have_uppper_floor_door() && !DRAW_CITY_INT_WINDOWS)) { // handle exterior doors on the ground floor, and walkway/roof access doors if there are no windows
 		cube_t room_exp(room);
 		room_exp.expand_by(wall_thickness, wall_thickness, -wall_thickness); // expand in XY and shrink in Z
 		set_cube_zvals(room_exp, zval, ceil_zval); // limit to this floor of the room
@@ -4754,7 +4754,7 @@ void building_t::add_outlets_to_room(rand_gen_t rgen, room_t const &room, float 
 				if (overlaps_or_adj_int_window(c_exp))                 continue; // check interior windows
 				bool bad_place(0);
 
-				if (is_ground_floor || !walkways.empty()) { // handle exterior doors
+				if (is_ground_floor || have_uppper_floor_door()) { // handle exterior doors
 					for (auto d = doors.begin(); d != doors.end(); ++d) {
 						if (!d->is_ext_not_roof_door()) continue;
 						cube_t bc(d->get_bcube());
