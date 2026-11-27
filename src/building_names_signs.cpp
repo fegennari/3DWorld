@@ -433,7 +433,7 @@ void building_t::add_exterior_door_items(rand_gen_t &rgen) { // mostly signs; ad
 				if (interior->ind_info && has_bcube_int(sign, interior->ind_info->sub_rooms)) continue; // inside a sub-room with a low ceiling, no bracket needed
 				cube_t bracket(sign);
 				set_cube_zvals(bracket, sign.z2(), sign.z2() + 0.5*sign.get_depth());
-				bracket.d[sign.dim][!sign.dir] = d->get_bcube().d[sign.dim][sign.dir]; // extend to the wall
+				bracket.d[sign.dim][!sign.dir] = door_bc.d[sign.dim][sign.dir]; // extend to the wall
 				unsigned const skip_faces(~get_face_mask(sign.dim, !sign.dir)); // skip face against the wall
 				objs.emplace_back(bracket, TYPE_METAL_BAR, sign.room_id, 0, 0, RO_FLAG_NOCOLL, sign.light_amt, SHAPE_CUBE, LT_GRAY, skip_faces);
 			}
