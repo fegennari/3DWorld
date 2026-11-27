@@ -4021,7 +4021,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	} // for i
 }
 
-int building_t::get_ext_door_dir(cube_t const &door_bcube, bool dim) const { // erturn value of 2 means 'not found'
+int building_t::get_ext_door_dir(cube_t const &door_bcube, bool dim) const { // return value of 2 means 'not found'
 	float const width(door_bcube.get_sz_dim(!dim));
 
 	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // find part containing this door so that we can get the correct dir

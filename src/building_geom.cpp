@@ -777,8 +777,7 @@ bool building_t::add_walkway_door(building_walkway_geom_t &walkway, bool dir, un
 	float const center(wbc.get_center_dim(!dim));
 	cube_t door;
 	set_wall_width(door, center, 0.5*door_width, !dim);
-	door.d[dim][!dir] = wbc .d[dim][!dir] + (dir ? 1.0 : -1.0)*door_shift; // move away from the building to prevent z-fighting
-	door.d[dim][ dir] = door.d[dim][!dir]; // make zero size in this dim
+	door.d[dim][dir] = door.d[dim][!dir] = wbc.d[dim][!dir] + (dir ? 1.0 : -1.0)*door_shift; // move away from the building to prevent z-fighting and make zero size in this dim
 	float zval(wbc.z1() + get_fc_thickness()); // bottom of lowest level door
 
 	if (interior) { // check for clearance; should this be done per-floor?
@@ -2468,7 +2467,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 			float const z2(cubes[0].z2());
 
 			for (auto p2 = parts.begin(); p2 != parts.end(); ++p2) { // remove any interior wall sections that overlap another top part
-				if (p2 == p || p2->z2() < p->z2()) continue; // skip self and non-top/higher floors
+				if (p2 == p || p2->z1() > p->z2() || p2->z2() < p->z2()) continue; // skip self and non-top/higher floors
 
 				for (unsigned d = 0; d < 2; ++d) {
 					cube_t clip_cube(*p2);
@@ -2662,10 +2661,11 @@ void building_t::get_mid_level_accessible_roofs(vect_cube_with_ix_t &roofs) cons
 	vect_cube_t roof_parts;
 
 	for (auto p = parts.begin(); p != parts.end(); ++p) {
-		if (p->z2() <= ground_floor_z1 || p->z2() == interior_z2) continue; // skip basement and top
+		float const zval(p->z2());
+		if (zval <= ground_floor_z1 || zval == interior_z2) continue; // skip basement and top
 		// determine if there are stairs or a door to this roof area
 		cube_t roof(*p);
-		set_cube_zvals(roof, p->z2(), (p->z2() + floor_spacing));
+		set_cube_zvals(roof, zval, (zval + floor_spacing));
 		bool has_roof_access(0);
 
 		for (stairwell_t const &s : interior->stairwells) { // check stairs leading to this roof
@@ -2677,10 +2677,10 @@ void building_t::get_mid_level_accessible_roofs(vect_cube_with_ix_t &roofs) cons
 			}
 		}
 		if (!has_roof_access) continue;
-		roof_parts.push_back(roof); // (-30, 17)
+		roof_parts.push_back(roof);
 
 		for (auto p2 = parts.begin(); p2 != parts.end(); ++p2) { // remove any interior wall sections that overlap another part
-			if (p2 == p || p2->z2() < p->z2()) continue; // skip self and non-top/higher floors
+			if (p2 == p || p2->z1() > zval || p2->z2() < zval) continue; // skip self and non-top/higher floors
 			subtract_cube_from_cubes(*p2, roof_parts);
 		}
 		for (cube_t const &r : roof_parts) {roofs.emplace_back(r, (p - parts.begin()));} // store part_ix in index field
