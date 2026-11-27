@@ -574,6 +574,7 @@ void building_t::finish_gen_geometry(rand_gen_t &rgen, bool has_overlapping_cube
 	if (interior) {interior->assign_door_conn_rooms();} // must be after adding extended basement and before adding room geom
 	if (interior) {interior->finalize();}
 	gen_building_doors_if_needed(rgen);
+	add_roof_access_doors       (rgen);
 	if (is_datacenter()) {add_datacenter_outdoor_objs(rgen, 0);} // is_room_geom_pass=0
 }
 
@@ -2686,6 +2687,60 @@ void building_t::get_mid_level_accessible_roofs(vect_cube_with_ix_t &roofs) cons
 		}
 		for (cube_t const &r : roof_parts) {roofs.emplace_back(r, (p - parts.begin()));} // store part_ix in index field
 		roof_parts.clear();
+	} // for p
+}
+
+void building_t::add_roof_access_doors(rand_gen_t &rgen) {
+	if (has_house_floorplan() || has_complex_floorplan || !is_cube() || !interior) return; // not supported
+	float const door_width(get_office_ext_doorway_width()), door_shift(get_door_shift_dist()), door_height(get_floor_ceil_gap()); // full floor height
+	float const front_clearance(max(0.5f*door_width, get_min_front_clearance_inc_people())); // open outward and split in half
+	vect_cube_with_ix_t cand_walls; // ix is 4*part_ix + 2*dim + dir
+
+	for (auto p = parts.begin(); p != parts.end(); ++p) {
+		float const zval(p->z2());
+		if (zval <= ground_floor_z1 || zval == interior_z2) continue; // skip basement and top
+		cand_walls.clear();
+
+		for (auto p2 = parts.begin(); p2 != parts.end(); ++p2) { // remove any interior wall sections that overlap another part
+			if (p2 == p || p2->z1() > zval || p2->z2() < zval) continue; // skip self and non-top/higher floors
+			unsigned const part_ix(p2 - parts.begin());
+			
+			for (unsigned dim = 0; dim < 2; ++dim) {
+				if (get_num_windows_on_side(*p2, !dim) & 1) continue; // odd number of windows, will place door inside a window, skip this dim
+
+				for (unsigned dir = 0; dir < 2; ++dir) {
+					float const wall_edge(p2->d[dim][dir]);
+					cube_t test(*p2);
+					test.d[dim][!dir] = wall_edge;
+					test.d[dim][ dir] = wall_edge + (dir ? 1.0 : -1.0)*2.0*front_clearance; // 2x clearance
+					if (!p->contains_cube_xy(test)) continue; // not fully over roof
+					bool int_other_part(0);
+
+					for (auto p3 = parts.begin(); p3 != parts.end(); ++p3) {
+						if (p3 != p && p3 != p2 && p3->intersects_no_adj(test)) {int_other_part = 1; break;} // not exterior wall of this stack
+					}
+					if (!int_other_part) {cand_walls.emplace_back(*p2, (4*part_ix + 2*dim + dir));}
+				} // for dir
+			} // for dim
+		} // for p2
+		if (cand_walls.empty()) continue;
+		vector_random_shuffle(cand_walls, rgen);
+		cube_t door;
+		float const door_z1(zval + get_fc_thickness());
+		set_cube_zvals(door, door_z1, (door_z1 + door_height)); // full floor height
+
+		for (cube_with_ix_t const &wall : cand_walls) {
+			bool const dim(wall.ix & 2), dir(wall.ix & 1);
+			float const center(wall.get_center_dim(!dim)); // random pos?
+			set_wall_width(door, center, 0.5*door_width, !dim);
+			door.d[dim][dir] = door.d[dim][!dir] = wall.d[dim][dir] + (dir ? 1.0 : -1.0)*door_shift; // move away from the building to prevent z-fighting and make zero size
+			cube_t door_exp(door);
+			door_exp.d[dim][!dir] -= (dir ? 1.0 : -1.0)*front_clearance;
+			if (!check_walkway_door_clearance(door_exp, dim)) continue;
+			add_door(door, (wall.ix >> 2), dim, dir, 1, 0, 0, 1); // for_office_building=1, roof_access=0, courtyard=0, for_walkway=1
+			have_rooftop_door = 1;
+			return; // only need one door for one part at one level
+		} // for wall
 	} // for p
 }
 

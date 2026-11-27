@@ -2016,6 +2016,7 @@ struct building_t : public building_geom_t {
 	unsigned get_street_house_number() const;
 	void gen_building_doors_if_needed(rand_gen_t &rgen);
 	void get_mid_level_accessible_roofs(vect_cube_with_ix_t &roofs) const;
+	void add_roof_access_doors (rand_gen_t &rgen);
 	void maybe_add_special_roof(rand_gen_t &rgen);
 	void gen_sloped_roof(rand_gen_t &rgen, cube_t const &top);
 	void add_roof_to_bcube();
