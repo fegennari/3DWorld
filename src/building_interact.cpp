@@ -1341,7 +1341,7 @@ void building_t::play_open_close_sound(room_object_t const &obj, point const &so
 	else if (obj.type == TYPE_SHOWER   ) {gen_sound_thread_safe_at_player((obj.is_open() ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_METAL_DOOR));}
 	else if (obj.type == TYPE_MED_CAB  ) {play_door_open_close_sound(sound_origin, obj.is_open(), 0.4, 1.6);} // medicine cabinet
 	else if (obj.type == TYPE_BRK_PANEL) {play_door_open_close_sound(sound_origin, obj.is_open(), 0.6, 1.8);} // breaker panel
-	else {assert(0);} // not implemented
+	else {cout << "Invalid object type: " << int(obj.type) << endl; assert(0);} // not implemented
 }
 
 // dynamic objects: elevators and balls

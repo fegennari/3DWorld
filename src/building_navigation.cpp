@@ -1325,7 +1325,7 @@ bool building_t::choose_dest_goal(person_t &person, rand_gen_t &rgen) const { //
 		if (!contained && !closest_part.is_all_zeros()) {closest_part.clamp_pt(person.target_pos);} // clamp to closest part
 		vect_cube_t &avoid(reused_avoid_cubes[0]);
 		float const z1(person.target_pos.z - person.radius), z2(person.target_pos.z + z2_add), fc_gap(get_floor_ceil_gap());
-		interior->get_avoid_cubes(avoid, z1, z2, 0.5*person.radius, get_floor_thickness(), fc_gap, 1, 1); // same_as_player=1, skip_stairs=1
+		interior->get_avoid_cubes(avoid, person.target_pos, z1, z2, 0.5*person.radius, get_floor_thickness(), fc_gap, 1, 1); // same_as_player=1, skip_stairs=1
 		
 		if (has_courtyard && has_room_geom() && z1 >= ground_floor_z1 && z1 < (ground_floor_z1 + fc_gap)) {
 			avoid.push_back(interior->room_geom->courtyard); // don't clip through the courtyard door trying to follow the player
@@ -1361,7 +1361,7 @@ bool building_t::select_person_dest_in_room(person_t &person, rand_gen_t &rgen, 
 	}
 	point dest_pos(get_cube_center_zval(valid_area, person.target_pos.z));
 	vect_cube_t &avoid(reused_avoid_cubes[0]);
-	get_avoid_cubes(person.target_pos.z, height, radius, avoid, 0); // following_player=0
+	get_avoid_cubes(person.target_pos, height, radius, avoid, 0); // following_player=0
 	add_sub_rooms_to_avoid_if_needed(room_id, avoid); // must avoid sub-rooms
 	bool const no_use_init(room.is_single_large_room_or_store()); // don't use the room center for a parking garage, backrooms, retail area, mall, store, or restaurant
 	if (!interior->nav_graph->find_valid_pt_in_room(avoid, *this, radius, valid_area, room_id, rgen, dest_pos, no_use_init)) return 0;
@@ -1475,7 +1475,7 @@ int building_t::maybe_use_escalator(person_t &person, building_loc_t const &loc,
 				float const zval(dest_floor.z2() + person.radius), height(person.get_height()), radius(COLL_RADIUS_SCALE*person.radius);
 				person.target_pos.assign(dest_floor.xc(), dest_floor.yc(), zval); // init dest is center
 				vect_cube_t &avoid(reused_avoid_cubes[0]);
-				get_avoid_cubes(person.target_pos.z, height, radius, avoid, 0); // following_player=0
+				get_avoid_cubes(person.target_pos, height, radius, avoid, 0); // following_player=0
 				if (!interior->nav_graph->find_valid_pt_in_room(avoid, *this, radius, dest_floor, loc.room_ix, rgen, person.target_pos, 1)) continue; // no_use_init=1
 			}
 			//assert(person.target_pos.z > person.pos.z);
@@ -1665,7 +1665,7 @@ template<typename T> void add_bcube_if_overlaps_zval(vector<T> const &cubes, vec
 
 // for AI collision detection
 // same_as_player allows the AI to follow the player, but can result in it getting stuck when turning gameplay mode off
-void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2, float r_shrink_if_low, float floor_thickness,
+void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, point const &start_pos, float z1, float z2, float r_shrink_if_low, float floor_thickness,
 	float floor_ceil_gap, bool same_as_player, bool skip_stairs, cube_t const *const fires_select_cube) const
 {
 	avoid.clear();
@@ -1746,7 +1746,8 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 		if (bc.z1() > z2 || bc.z2() < obj_z1) continue;
 		if (c->type == TYPE_RAMP && bc.z2() < z1 + floor_thickness) continue; // ramp top is exactly at the floor; add floor_thickness to prevent coll when walking above
 		
-		if ((ALLOW_CLOSET_DEST || global_building_params.ai_sees_player_hide >= 2) && c->is_open()) { // open hiding spot that we can enter, or POI in the closet
+		if ((ALLOW_CLOSET_DEST || global_building_params.ai_sees_player_hide >= 2) && (c->is_open() || (c->contains_pt(start_pos) && !in_building_gameplay_mode()))) {
+			// hiding spot that we can enter, or POI in the closet; either open or we're already inside it and not a zombie
 			// in the unlikely event the player closes the door on a zombie, I guess they're stuck in here; good job to the player
 			if (c->type == TYPE_CLOSET) {
 				cube_t cubes[5]; // front left, left side, front right, right side, [door]
@@ -1952,10 +1953,10 @@ void remove_escalator_from_avoid_cubes(person_t const &person, float radius, vec
 	}
 }
 
-void building_t::get_avoid_cubes(float zval, float height, float radius, vect_cube_t &avoid, bool following_player, cube_t const *const fires_select_cube) const {
+void building_t::get_avoid_cubes(point const &start_pos, float height, float radius, vect_cube_t &avoid, bool following_player, cube_t const *const fires_select_cube) const {
 	assert(interior);
-	float const z1(zval - radius/COLL_RADIUS_SCALE); // radius is coll_radius, but we want person.radius
-	interior->get_avoid_cubes(avoid, z1, (z1 + height), 0.5*radius, get_floor_thickness(), get_floor_ceil_gap(), following_player, 0, fires_select_cube); // skip_stairs=0
+	float const z1(start_pos.z - radius/COLL_RADIUS_SCALE); // radius is coll_radius, but we want person.radius
+	interior->get_avoid_cubes(avoid, start_pos, z1, (z1 + height), 0.5*radius, get_floor_thickness(), get_floor_ceil_gap(), following_player, 0, fires_select_cube); // skip_stairs=0
 }
 void building_t::add_sub_rooms_to_avoid_if_needed(unsigned room_id, vect_cube_t &avoid) const {
 	room_t const &room(get_room(room_id));
@@ -1985,7 +1986,7 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 		add_escalator_points(person, epath);
 		assert(epath.size() == 4);
 		point const &eenter(epath.back()), &eexit(epath.front()); // entrance and exit point of escalator
-		get_avoid_cubes(to.z, height, radius, avoid, following_player);
+		get_avoid_cubes(to, height, radius, avoid, following_player);
 		// upper path should be constrained to glass floor rather than room; assumes glass floors create a full rectangle
 		cube_t const clamp_area(get_bcubes_union(interior->room_geom->glass_floors));
 		assert(clamp_area.is_strictly_normalized()); // glass floors must be nonempty
@@ -1993,13 +1994,13 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 		if (!interior->nav_graph->complete_path_within_room(eexit, to, loc1.room_ix, person.ssn, radius, person.cur_rseed,
 			is_first_path, following_player, 1, (going_up ? clamp_area : cube_t()), avoid, *this, path)) return 0; // escalator to target; allow_nearby_to=1
 		path.add(epath); // add escalator segment
-		get_avoid_cubes(from.z, height, radius, avoid, following_player);
+		get_avoid_cubes(from, height, radius, avoid, following_player);
 		remove_escalator_from_avoid_cubes(person, radius, interior->escalators, avoid); // check if already intersecting the escalator; if so, remove it from avoid
 		return interior->nav_graph->complete_path_within_room(from, eenter, loc1.room_ix, person.ssn, radius, person.cur_rseed,
 			is_first_path, following_player, 0, (going_up ? cube_t() : clamp_area), avoid, *this, path); // person to escalator; allow_nearby_to=0
 	}
 	room_t const &start_room(get_room(loc1.room_ix));
-	get_avoid_cubes(from.z, height, radius, avoid, following_player, &start_room); // include fires in the current room
+	get_avoid_cubes(from, height, radius, avoid, following_player, &start_room); // include fires in the current room
 
 	if (loc1.same_room_floor(loc2)) { // same room/floor (not checking stairs_ix)
 		assert(from.z == to.z);
@@ -2081,7 +2082,7 @@ bool building_t::find_route_to_point(person_t &person, float radius, bool is_fir
 			}
 			// new floor, new zval, new avoid cubes
 			vect_cube_t &avoid2(reused_avoid_cubes[1]);
-			get_avoid_cubes(seg2_start.z, height, radius, avoid2, following_player); // no fires_select_cube
+			get_avoid_cubes(seg2_start, height, radius, avoid2, following_player); // no fires_select_cube
 			
 			// stairs/ramp/escalator => to
 			if (is_escalator && (int)sre_room_ix == loc2.room_ix) {
@@ -3460,15 +3461,19 @@ void building_t::ai_open_closet_stall_shower(person_t const &person, bool only_h
 	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip buttons/stairs/elevators
 	cube_t coll_cube(person.get_bcube());
 	coll_cube.expand_by_xy(1.5*person.radius);
+	bool done(0);
 
-	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
-		if (only_hiding && *i != player_hiding_obj) continue;
-		if (i->is_open())              break; // already open
-		if (!i->intersects(coll_cube)) break; // too far away (uses full object, not door, but should be close enough)
+	for (auto i = interior->room_geom->objs.begin(); i != objs_end && !done; ++i) {
+		if (only_hiding) {
+			if (*i != player_hiding_obj) continue;
+			done = 1; // this is the object we want; loop is done whether or not a door is opened
+		}
+		if (i->type != TYPE_CLOSET && i->type != TYPE_STALL && i->type != TYPE_SHOWER) continue;
+		if (i->is_open())              continue; // already open
+		if (!i->intersects(coll_cube)) continue; // too far away (uses full object, not door, but should be close enough)
 		i->flags |= RO_FLAG_OPEN; // open the door
 		play_open_close_sound(*i, person.pos);
 		interior->room_geom->update_draw_state_for_room_object(*i, *this, 0);
-		break; // done
 	} // for i
 }
 
