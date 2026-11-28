@@ -540,7 +540,7 @@ void building_t::add_industrial_sprinkler_pipes(rand_gen_t &rgen, room_t const &
 	vector<float> avoid_vals; // light row locations in !edim
 	float light_radius(0.0);
 
-	for (tquad_with_ix_t const &door : doors) {
+	for (ext_door_t const &door : doors) {
 		obstacles.push_back(door.get_bcube());
 		obstacles.back().expand_by_xy(doorway_width); // don't block an exterior door
 	}

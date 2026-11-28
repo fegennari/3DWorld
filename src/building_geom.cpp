@@ -81,7 +81,7 @@ float building_t::get_roof_peak_z2() const {
 	return z2;
 }
 
-void building_t::move_door_to_other_side_of_wall(tquad_with_ix_t &door, float dist_mult, bool invert_normal) const {
+void building_t::move_door_to_other_side_of_wall(ext_door_t &door, float dist_mult, bool invert_normal) const {
 	cube_t const c(door.get_bcube());
 	bool const dim(c.dy() < c.dx()), dir(door.get_norm()[dim] > 0.0); // closest cube side dir
 	float door_shift(0.0);
@@ -125,7 +125,7 @@ void building_t::move_door_to_other_side_of_wall(tquad_with_ix_t &door, float di
 	for (unsigned n = 0; n < door.npts; ++n) {door.pts[n][dim] += door_shift;} // move to opposite side of wall
 }
 
-void building_t::clip_door_to_interior(tquad_with_ix_t &door) const {
+void building_t::clip_door_to_interior(ext_door_t &door) const {
 	cube_t clip_cube(door.get_bcube());
 	float const dz(clip_cube.dz());
 	float xy_border(0.0), z_border(0.0);
@@ -811,7 +811,7 @@ bool building_t::add_walkway_door(building_walkway_geom_t &walkway, bool dir, un
 	}
 	for (unsigned f = 0; f < num_floors; ++f, zval += floor_spacing) {
 		set_cube_zvals(door, zval, zval+door_height);
-		add_door(door, part_ix, dim, dir, 1, 0, 0, 1); // for_office_building=1, roof_access=0, courtyard=0, for_walkway=1
+		add_door(door, part_ix, dim, dir, 1, 0, 0, 1); // for_office_building=1, roof_access=0, to_courtyard=0, to_walkway=1
 	}
 	for (unsigned d = 0; d < 2; ++d) {walkway.door_bounds[!dir][d] = door.d[!dim][d];} // dir is relative to building and opposite walkway, so must be swapped
 	have_walkway_ext_door = 1;
@@ -1530,13 +1530,12 @@ bool building_t::maybe_add_city_driveway(cube_t const &plot, unsigned building_i
 	}
 	bool dim(0), dir(0);
 	get_closest_dim_dir_xy(bcube, plot, dim, dir); // must use larger plot, not sub_plot
-	float const floor_spacing(get_window_vspace()), min_door_z1(ground_floor_z1 + 0.5*floor_spacing);
 
 	// first look for exterior doors facing the road to add walkways
-	for (tquad_with_ix_t const &d : doors) {
+	for (ext_door_t const &d : doors) {
 		if (!d.is_house_ext_door())   continue; // skip garage doors
+		if (!d.is_ground_floor())     continue; // skip upper level doors
 		cube_t const c(d.get_bcube());
-		if (c.z1() > min_door_z1)     continue; // skip upper level doors
 		if ((c.dy() < c.dx()) != dim) continue; // wrong door dim
 		if ((bcube.get_center_dim(dim) < c.d[dim][0]) != dir) continue; // wrong door dir
 		float const door_width(c.get_sz_dim(!dim));
@@ -1560,7 +1559,7 @@ bool building_t::maybe_add_city_driveway(cube_t const &plot, unsigned building_i
 	rand_gen_t rgen;
 	rgen.set_state(building_ix+1, building_ix+111);
 	rgen.rand_mix();
-	float const hwidth(0.8*floor_spacing*rgen.rand_uniform(0.9, 1.1));
+	float const hwidth(0.8*get_window_vspace()*rgen.rand_uniform(0.9, 1.1));
 	avoid = fences;
 	if (has_porch()) {avoid.push_back(porch);}
 	if (has_chimney == 2) {avoid.push_back(get_fireplace());} // avoid placing the driveway across from the chimney/fireplace
@@ -1922,7 +1921,8 @@ tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool d
 					if (have_uppper_floor_door()) { // check if too close to a walkway exit door or its exit sign, or a rooftop door
 						bool close_to_exit(0);
 
-						for (tquad_with_ix_t const &d : doors) {
+						for (ext_door_t const &d : doors) {
+							if (d.is_ground_floor()) continue;
 							cube_t c(d.get_bcube());
 							c.expand_in_dim((c.dy() < c.dx()), doorway_width);
 							if (c.intersects(test_bcube)) {close_to_exit = 1; break;}
@@ -1958,7 +1958,8 @@ cube_t building_t::get_door_bounding_cube(door_t const &door) const {
 	return door_bcube;
 }
 
-bool building_t::add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_office_building, bool roof_access, bool courtyard, bool for_walkway) { // exterior door
+// exterior door
+bool building_t::add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_office_building, bool roof_access, bool to_courtyard, bool to_walkway, bool to_roof) {
 
 	vector3d const sz(c.get_size());
 	if (sz.x == 0.0 && sz.y == 0.0) return 0; // failed to place door
@@ -1966,7 +1967,7 @@ bool building_t::add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir,
 	assert(sz[!dim] >  0.0);
 	assert(sz.z     >  0.0);
 	// if it's an office building with two doors already added, make this third door a back metal door
-	bool const is_back_door(doors.size() == 2 && !courtyard && !for_walkway);
+	bool const is_back_door(doors.size() == 2 && !to_courtyard && !to_walkway && !to_roof);
 	unsigned type(0); // TYPE_ODOOR_IN
 	if  (for_office_building) {type = (is_back_door ? (unsigned)tquad_with_ix_t::TYPE_BDOOR2 : (unsigned)tquad_with_ix_t::TYPE_BDOOR);}
 	else if (is_restroom  ()) {type = (unsigned)tquad_with_ix_t::TYPE_ODOOR;}
@@ -1975,11 +1976,15 @@ bool building_t::add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir,
 	else                      {type = (unsigned)tquad_with_ix_t::TYPE_HDOOR;} // residential/house
 	door_rotation_t drot; // return value is unused
 	// exterior=1, open_amt=0.0, opens_out=opens_up=swap_sides=open_min_amt=0
-	doors.push_back(set_door_from_cube(c, dim, dir, type, 1.5*get_door_shift_dist(), 1, 0.0, 0, 0, 0, 0, drot));
+	ext_door_t door(set_door_from_cube(c, dim, dir, type, 1.5*get_door_shift_dist(), 1, 0.0, 0, 0, 0, 0, drot));
 	if (!roof_access && part_ix < 4) {door_sides[part_ix] |= 1 << (2*dim + dir);}
-	if (roof_access) {doors.back().type = tquad_with_ix_t::TYPE_RDOOR;}
+	if (roof_access) {door.type = tquad_with_ix_t::TYPE_RDOOR;}
+	door.to_courtyard = to_courtyard;
+	door.to_walkway   = to_walkway;
+	door.to_roof      = to_roof;
+	doors.push_back(door);
 
-	if (for_office_building && !roof_access && !courtyard && !for_walkway && has_ind_info()) { // flag ext wall occluder as having a door
+	if (for_office_building && !roof_access && !to_courtyard && !to_walkway && !to_roof && has_ind_info()) { // flag ext wall occluder as having a door
 		unsigned const orient(2*dim + dir);
 		cube_with_ix_t *nww(interior->ind_info->non_window_walls);
 
@@ -2296,7 +2301,7 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 				bool const dim(n>>1), dir(n&1);
 				if (part.d[dim][dir] == parts_bcube.d[dim][dir] || part.d[dim][!dir] != parts_bcube.d[dim][!dir]) continue; // find a side on the interior
 				unsigned const door_ix(doors.size());
-				placed = add_door(place_door(part, dim, dir, door_height, 0.0, 0.0, 0.0, wscale, 1, 0, rgen, 0, 1), part_ix, dim, dir, 1, 0, 1); // centered, courtyard
+				placed = add_door(place_door(part, dim, dir, door_height, 0.0, 0.0, 0.0, wscale, 1, 0, rgen, 0, 1), part_ix, dim, dir, 1, 0, 1); // centered, to_courtyard=1
 				if (placed) {courtyard_door_ix = int8_t(door_ix);}
 			}
 		} // for b
@@ -2675,8 +2680,8 @@ void building_t::get_mid_level_accessible_roofs(vect_cube_with_ix_t &roofs) cons
 			if (s.roof_access && s.intersects_no_adj(roof) && s.z2() >= roof.z1() && s.z2() < roof.z2()+fc_thick) {has_roof_access = 1; break;}
 		}
 		if (!has_roof_access && have_rooftop_door) { // check for exterior doors
-			for (tquad_with_ix_t const &d : doors) {
-				if (d.is_building_door() && d.get_bcube().intersects_no_adj(roof)) {has_roof_access = 1; break;}
+			for (ext_door_t const &d : doors) {
+				if (d.to_roof && d.get_bcube().intersects_no_adj(roof)) {has_roof_access = 1; break;}
 			}
 		}
 		if (!has_roof_access) continue;
@@ -2738,7 +2743,7 @@ void building_t::add_roof_access_doors(rand_gen_t &rgen) {
 			cube_t door_exp(door);
 			door_exp.d[dim][!dir] -= (dir ? 1.0 : -1.0)*front_clearance;
 			if (!check_walkway_door_clearance(door_exp, dim)) continue;
-			add_door(door, (wall.ix >> 2), dim, dir, 1, 0, 0, 1); // for_office_building=1, roof_access=0, courtyard=0, for_walkway=1
+			add_door(door, (wall.ix >> 2), dim, dir, 1, 0, 0, 0, 1); // for_office_building=1, roof_access=0, to_courtyard=0, to_walkway=0, to_roof=1
 			have_rooftop_door = 1;
 			return; // only need one door for one part at one level
 		} // for wall

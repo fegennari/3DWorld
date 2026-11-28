@@ -324,7 +324,7 @@ void building_t::add_exterior_door_items(rand_gen_t &rgen) { // mostly signs; ad
 	// but we want to generate these dynamically rather than statically because each sign text character is a separate quad
 	if (is_house) { // maybe add welcome sign and add doorbell
 		if (doors.empty()) return; // shouldn't happen
-		tquad_with_ix_t const &front_door(doors.front());
+		ext_door_t const &front_door(doors.front());
 		add_doorbell_lamp_and_porch_items(front_door, rgen);
 
 		if ((rgen.rand() & 3) == 0) { // add a welcome sign to 25% of houses
@@ -339,7 +339,7 @@ void building_t::add_exterior_door_items(rand_gen_t &rgen) { // mostly signs; ad
 	}
 	else if (is_restaurant()) { // neither a house nor an office building
 		if (doors.empty()) return; // shouldn't happen
-		tquad_with_ix_t const &front_door(doors.front());
+		ext_door_t const &front_door(doors.front());
 		add_sign_by_door(front_door, 1, name, choose_sign_color(rgen), 0); // front door only, outside
 	}
 	else if (is_restroom()) {} // no sign
@@ -352,11 +352,10 @@ void building_t::add_exterior_door_items(rand_gen_t &rgen) { // mostly signs; ad
 			colorRGBA const &sign_color(choose_sign_color(rgen));
 			float const z1_max(ground_floor_z1 + 0.5*floor_spacing);
 
-			for (auto d = doors.begin(); d != doors.end(); ++d) {
-				if (int(d - doors.begin()) == courtyard_door_ix) break; // courtyard door is not an exit
-				if (d->type != tquad_with_ix_t::TYPE_BDOOR) continue; // office front doors only (not back door, roof, etc.)
-				if (d->get_bcube().z1() > z1_max)           continue; // skip elevated walkway doors
-				add_sign_by_door(*d, 1, name, sign_color, 0); // outside name plate sign, not emissive
+			for (ext_door_t const &d : doors) {
+				if (d.to_courtyard || !d.is_ground_floor()) break; // courtyard/walkway/roof door is not an exit, and neither are any doors placed after this
+				if (d.type != tquad_with_ix_t::TYPE_BDOOR) continue; // office front doors only (not back door, roof, etc.)
+				add_sign_by_door(d, 1, name, sign_color, 0); // outside name plate sign, not emissive
 			}
 			if (has_mall() && interior->mall_info->city_elevator_ix >= 0) { // add sign above the exterior elevator entrance
 				float const mall_floor_spacing(get_mall_floor_spacing());
@@ -420,13 +419,12 @@ void building_t::add_exterior_door_items(rand_gen_t &rgen) { // mostly signs; ad
 		float const z1_max(ground_floor_z1 + 0.5*floor_spacing);
 		colorRGBA const exit_color(rgen.rand_bool() ? RED : GREEN);
 
-		for (auto d = doors.begin(); d != doors.end(); ++d) {
-			if (int(d - doors.begin()) == courtyard_door_ix) break; // courtyard door is not an exit
-			if (!d->is_building_door()) continue; // roof door, etc.
-			cube_t const door_bc(d->get_bcube());
-			if (door_bc.z1() > z1_max && !has_bcube_int_obj(door_bc, walkways)) continue; // not ground floor door
+		for (ext_door_t const &d : doors) {
+			if (d.to_courtyard || d.to_roof) continue; // courtyard/roof door is not an exit
+			if (!d.is_building_door())       continue; // roof door, etc.
+			cube_t const door_bc(d.get_bcube());
 			unsigned const sign_obj_ix(objs.size());
-			if (!add_sign_by_door(*d, 0, "Exit", exit_color, 1)) continue; // inside exit sign, emissive
+			if (!add_sign_by_door(d, 0, "Exit", exit_color, 1)) continue; // inside exit sign, emissive
 
 			if (tall_room) { // maybe add horizontal bracket holding sign
 				assert(sign_obj_ix < objs.size());
@@ -473,17 +471,15 @@ void building_t::add_signs(vector<sign_t> &signs) const { // added as exterior c
 		return;
 	}
 	if (is_hospital()) { // add hospital signs at front entrance(s)
-		float const z1_thresh(ground_floor_z1 + get_floor_thickness());
 		bool added_emergency(0);
 
-		for (auto d = doors.begin(); d != doors.end(); ++d) {
-			if (int(d - doors.begin()) == courtyard_door_ix) break; // courtyard door is not an exit
-			if (d->type != tquad_with_ix_t::TYPE_BDOOR) continue; // roof or back door
-			cube_t const bc(d->get_bcube());
-			if (bc.z1() > z1_thresh) continue; // walkway door
+		for (ext_door_t const &d : doors) {
+			if (d.to_courtyard || !d.is_ground_floor()) break; // courtyard/walkway/roof door is not an exit, and neither are any doors placed after this
+			if (d.type != tquad_with_ix_t::TYPE_BDOOR) continue; // roof or back door
+			cube_t const bc(d.get_bcube());
 			bool const dim(bc.dy() < bc.dx()), pref_dir((mat_ix + doors.size()) & 1); // initial/primary dir
 			float const door_height(bc.dz()), sign_height(1.25*door_height), sign_width(0.5*sign_height), sign_thick(0.1*sign_width);
-			vector3d const normal(d->get_norm()); // points away from the building
+			vector3d const normal(d.get_norm()); // points away from the building
 			cube_t sign;
 			set_cube_zvals(sign, (ground_floor_z1 + 0.25*sign_height), (ground_floor_z1 + sign_height));
 			set_wall_width(sign, (bc.get_center_dim(dim) + 1.5*door_height*normal[dim]), 0.5*sign_width, dim);
@@ -658,7 +654,7 @@ void building_t::add_company_sign(rand_gen_t &rgen) {
 }
 
 // interior (exit) or exterior signs
-bool building_t::add_sign_by_door(tquad_with_ix_t const &door, bool outside, std::string const &text, colorRGBA const &color, bool emissive) {
+bool building_t::add_sign_by_door(ext_door_t const &door, bool outside, std::string const &text, colorRGBA const &color, bool emissive) {
 	assert(!text.empty());
 	cube_t const door_bcube(door.get_bcube());
 	bool const dim(door_bcube.dy() < door_bcube.dx()), is_lg(is_restaurant());

@@ -284,8 +284,9 @@ void building_t::get_all_door_centers_for_room(room_t const &room, unsigned room
 		cube_t room_exp(room);
 		room_exp.expand_by_xy(get_wall_thickness());
 
-		for (tquad_with_ix_t const &door : doors) {
-			cube_t door_bcube(door.get_bcube());
+		for (ext_door_t const &door : doors) {
+			if (!door.is_ground_floor()) continue;
+			cube_t const door_bcube(door.get_bcube());
 			if (door_bcube.intersects(room_exp)) {door_centers.emplace_back(get_cube_center_zval(door_bcube, zval));}
 		}
 	}
@@ -2961,7 +2962,7 @@ void building_t::add_entryway_objs(rand_gen_t rgen, room_t const &room, float zv
 	}
 }
 
-bool building_t::get_door_path_and_place_area(tquad_with_ix_t const &door, room_t const &room, cube_t &door_path, cube_t &place_area) {
+bool building_t::get_door_path_and_place_area(ext_door_t const &door, room_t const &room, cube_t &door_path, cube_t &place_area) {
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	cube_t dbc(door.get_bcube());
 	bool const dim(dbc.dy() < dbc.dx()); // door dim
@@ -2977,7 +2978,7 @@ bool building_t::get_door_path_and_place_area(tquad_with_ix_t const &door, room_
 }
 void building_t::add_shoes_by_door(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_SHOE)) return;
-	tquad_with_ix_t door;
+	ext_door_t door;
 	if (!is_room_adjacent_to_ext_door(room, zval, 0, &door)) return; // no door; front_door_only=0
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SHOE)); // L, W, H
 	float const length(0.2*get_window_vspace()*rgen.rand_uniform(0.75, 1.0)), width(length*sz.y/sz.x), height(length*sz.z/sz.x), hlen(0.5*length), pair_hw(width);
@@ -3002,7 +3003,7 @@ void building_t::add_shoes_by_door(rand_gen_t &rgen, room_t const &room, float z
 	} // for n
 }
 void building_t::add_coatrack_by_door(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	tquad_with_ix_t door;
+	ext_door_t door;
 	if (!is_room_adjacent_to_ext_door(room, zval, 0, &door)) return; // no door; front_door_only=0
 	float const floor_spacing(get_window_vspace()), height(0.7*floor_spacing), radius(0.1*floor_spacing);
 	cube_t door_path, place_area;

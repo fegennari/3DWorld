@@ -1881,7 +1881,7 @@ colorRGBA building_t::get_int_wall_tex_and_color(bool in_basement, bool in_ext_b
 	return color;
 }
 
-void draw_building_ext_door(building_draw_t &bdraw, tquad_with_ix_t const &door, building_t const &b) {
+void draw_building_ext_door(building_draw_t &bdraw, ext_door_t const &door, building_t const &b) {
 	bool const hinge_side(b.get_ext_door_hinge_side(door));
 	colorRGBA const &dcolor((door.type == tquad_with_ix_t::TYPE_GDOOR) ? WHITE : b.door_color); // garage doors are always white
 	bdraw.add_tquad(b, door, b.bcube, tid_nm_pair_t(get_building_door_tid(door.type), -1, 1.0, 1.0), dcolor, !hinge_side);
@@ -2250,7 +2250,7 @@ void building_t::get_all_drawn_exterior_verts(building_draw_t &bdraw) { // exter
 			if (is_rotated()) {rotate_verts_range(*this, text_verts, text_verts_start);}
 		}
 	} // for i
-	for (tquad_with_ix_t const &d : doors) {draw_building_ext_door(bdraw, d, *this);} // draw exterior doors
+	for (ext_door_t const &d : doors) {draw_building_ext_door(bdraw, d, *this);} // draw exterior doors
 	for (cube_t const &f : fences) {bdraw.add_fence(*this, f, tid_nm_pair_t(WOOD_TEX, 0.4f/min(f.dx(), f.dy())), WHITE, (fences.size() > 1));}
 	for (cube_with_ix_t const &l : roof_lights) {bdraw.add_rooftop_light(*this, l);}
 	bool const skip_bottom(is_in_city); // skip_bottom=0, since it may be visible when extended over the terrain; okay to skip bottom for city driveways
@@ -2830,7 +2830,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 				unsigned nparts(1);
 				cube_t rp[2] = {room, cube_t()}; // room parts
 
-				for (tquad_with_ix_t const &door : doors) {
+				for (ext_door_t const &door : doors) {
 					cube_t dbc(door.get_bcube());
 					dbc.expand_by_xy(wall_thickness);
 					if (!dbc.intersects(room)) continue;
@@ -2991,7 +2991,7 @@ void building_t::cut_holes_for_ext_doors(building_draw_t &bdraw, point const &co
 	for (auto d = doors.begin(); d != doors.end(); ++d) { // cut a hole for each door
 		if (d->type == tquad_with_ix_t::TYPE_RDOOR)           continue; // not needed and not correct for rooftop doors
 		if (!camera_pdu.cube_visible(d->get_bcube() + xlate)) continue; // VFC
-		tquad_with_ix_t door(*d);
+		ext_door_t door(*d);
 		move_door_to_other_side_of_wall(door, 0.3, 0); // move a bit in front of the normal interior door (0.3 vs. 0.2)
 		cube_t const door_bcube(door.get_bcube());
 		float const door_z2(door_bcube.z1() + floor_spacing);
@@ -3032,7 +3032,7 @@ void building_t::cut_holes_for_ext_doors(building_draw_t &bdraw, point const &co
 }
 
 bool building_t::get_nearby_ext_door_verts(building_draw_t *bdraw, shader_t &s, point const &pos, vector3d const &view_dir, float dist, bool only_open) {
-	tquad_with_ix_t door;
+	ext_door_t door;
 	int const door_ix(find_ext_door_close_to_point(door, pos, dist));
 	if (door_ix < 0) return 0; // no nearby door
 	move_door_to_other_side_of_wall(door, -1.01, 0); // move a bit further away from the outside of the building to make it in front of the orig door
@@ -3058,7 +3058,7 @@ void building_t::get_ext_door_verts(building_draw_t &bdraw, point const &viewer,
 		vector3d const normal2(d->get_norm());
 		if (dot_product_ptv(normal2, viewer, d->pts[0]) > 0.0) continue; // facing exterior of door rather than interior, skip
 		if (view_dir != zero_vector && dot_product(view_dir, normal2) < 0.0) continue; // not visible
-		tquad_with_ix_t door_rev(*d);
+		ext_door_t door_rev(*d);
 		std::swap(door_rev.pts[0], door_rev.pts[1]); // reverse winding order
 		std::swap(door_rev.pts[2], door_rev.pts[3]);
 		draw_building_ext_door(bdraw, door_rev, *this);
@@ -3181,7 +3181,8 @@ void building_t::get_walkway_end_verts(building_draw_t &bdraw, point const &pos)
 			if (b && w.conn_bldg == nullptr) continue; // no connected building
 			if (!(b ? w.conn_bldg->bcube : bcube).intersects(wall_cube_exp)) continue; // wrong building
 
-			for (tquad_with_ix_t const &door : (b ? w.conn_bldg->doors : doors)) { // check for open door
+			for (ext_door_t const &door : (b ? w.conn_bldg->doors : doors)) { // check for open door
+				if (!door.to_walkway) continue;
 				cube_t const door_bc(door.get_bcube());
 				if (door_bc.z2() < pos.z || door_bc.z1() > pos.z) continue; // wrong floor
 				if (!door_bc.intersects(wall_cube_exp)) continue; // wrong door

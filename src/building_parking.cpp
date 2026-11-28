@@ -118,14 +118,14 @@ bool building_t::add_parking_structure_bathroom(rand_gen_t rgen) {
 	return 0;
 }
 
-void get_door_cuts(vect_tquad_with_ix_t const &doors, float wall_thick, vect_cube_t &door_cuts) {
-	for (tquad_with_ix_t const &d : doors) { // find all doors on the ground floor
+void get_door_cuts(vect_ext_door_t const &doors, float wall_thick, vect_cube_t &door_cuts) {
+	for (ext_door_t const &d : doors) { // find all doors on the ground floor
 		if (d.type == tquad_with_ix_t::TYPE_RDOOR) continue; // roof access door - skip
 		cube_t dbc(d.get_bcube());
 		bool const dim(dbc.dy() < dbc.dx());
 		dbc.expand_in_dim(dim, 2.0*wall_thick);
 		door_cuts.push_back(dbc);
-	}
+	} // for d
 }
 
 // index bits: enable dims: 1=x, 2=y, 4=z | disable cube faces: 8=x1, 16=x2, 32=y1, 64=y2, 128=z1, 256=z2

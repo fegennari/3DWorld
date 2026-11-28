@@ -938,7 +938,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t &room, flo
 				expand_to_nonzero_area(tile, tile_thickness, dim);
 				vect_cube_t tiles{tile};
 
-				for (tquad_with_ix_t const &d : doors) { // subtract exterior doors
+				for (ext_door_t const &d : doors) { // subtract exterior doors
 					cube_t sub(d.get_bcube());
 					sub.expand_in_dim(dim, door_expand); // make nonzero thickness
 					if (sub.intersects(tile)) {subtract_cube_from_cubes(sub, tiles);}
@@ -1104,7 +1104,7 @@ void building_t::create_restroom_floorplan(unsigned part_id, rand_gen_t &rgen) {
 	}
 }
 
-bool building_t::get_ext_door_hinge_side(tquad_with_ix_t const &door) const {
+bool building_t::get_ext_door_hinge_side(ext_door_t const &door) const {
 	if (is_restroom() && street_side) { // restroom with doors in front; always open toward the ends
 		bool const dim(!get_street_dim()), dir(get_street_side()); // split dim
 		return ((door.pts[0][dim] < bcube.get_center_dim(dim)) ^ dim ^ dir);

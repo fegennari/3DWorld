@@ -114,7 +114,7 @@ void building_t::add_restaurant_objs(rand_gen_t rgen, room_t const &room, float 
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	bool added_desk(0);
 
-	for (tquad_with_ix_t const &door : doors) {
+	for (ext_door_t const &door : doors) {
 		cube_t bc(door.get_bcube());
 		bc.expand_by_xy(wall_thickness); // make nonzero area
 		if (!bc.intersects_no_adj(room)) continue; // not for this room

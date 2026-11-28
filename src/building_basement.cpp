@@ -442,8 +442,8 @@ void building_t::add_parking_garage_objs(rand_gen_t rgen, room_t const &room, fl
 		if (!interior->ps_bathroom.is_all_zeros()) { // check for and avoid parking structure bathroom
 			add_blocker(interior->ps_bathroom, obstacles, obstacles_exp, obstacles_ps, is_top_floor); // obstacles_only=is_top_floor
 		}
-		for (tquad_with_ix_t const &d : doors) { // find all doors on the ground floor
-			if (d.type == tquad_with_ix_t::TYPE_RDOOR) continue; // roof access door - skip
+		for (ext_door_t const &d : doors) { // find all doors on the ground floor
+			if (!d.is_ground_floor()) continue; // skip
 			cube_t blocker(d.get_bcube());
 			expand_door_blocker(blocker);
 			add_blocker(blocker, obstacles, obstacles_exp, obstacles_ps, is_top_floor); // obstacles_only=is_top_floor

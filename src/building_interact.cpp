@@ -359,7 +359,7 @@ void building_t::toggle_circuit_breaker(bool is_on, unsigned zone_id, unsigned n
 // doors and other interactive objects
 
 // used for drawing open doors
-int building_t::find_ext_door_close_to_point(tquad_with_ix_t &door, point const &pos, float dist) const {
+int building_t::find_ext_door_close_to_point(ext_door_t &door, point const &pos, float dist) const {
 	if (doors.empty()) return -1;
 	point const query_pt(get_inv_rot_pos(pos));
 	int const room_id(get_room_containing_pt(query_pt));
@@ -406,7 +406,7 @@ bool building_t::get_building_door_pos_closest_to(point const &target_pos, point
 }
 
 void building_t::register_open_ext_door_state(bool camera_near_building, point const &camera_bs, float door_open_dist) {
-	tquad_with_ix_t open_door; // unused
+	ext_door_t open_door; // unused
 	int const door_ix(camera_near_building ? find_ext_door_close_to_point(open_door, camera_bs, door_open_dist) : -1);
 	bool const is_open(door_ix >= 0), ring_doorbell(is_open && is_house && door_ix == 0 && city_action_key); // action key when front door of a house is open
 	if (door_ix == open_door_ix && !ring_doorbell) return; // no state change

@@ -1190,7 +1190,7 @@ void building_room_geom_t::update_exterior_door_vbos(building_t const &building)
 
 	for (unsigned dix = 0; dix < building.doors.size(); ++dix) { // add exterior door handles for house and restroom doors
 		// add_door_handle() takes a door_t, so we have to construct one from the exterior door tquad
-		tquad_with_ix_t const &d(building.doors[dix]);
+		ext_door_t const &d(building.doors[dix]);
 		bool const is_odoor(d.type == tquad_with_ix_t::TYPE_ODOOR);
 		if (!d.is_house_ext_door() && !is_odoor) continue; // skip garage doors
 		cube_t const dbc(d.get_bcube());

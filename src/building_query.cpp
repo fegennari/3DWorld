@@ -3454,13 +3454,13 @@ bool building_t::is_room_above_ramp(cube_t const &room, float zval) const {
 	if (!has_pg_ramp()) return 0;
 	return (interior->pg_ramp.intersects_xy(room) && zval >= interior->pg_ramp.z2() && (zval - interior->pg_ramp.z2()) <= get_window_vspace());
 }
-bool building_t::is_room_adjacent_to_ext_door(cube_t const &room, float zval, bool front_door_only, tquad_with_ix_t *ext_door) const {
+bool building_t::is_room_adjacent_to_ext_door(cube_t const &room, float zval, bool front_door_only, ext_door_t *ext_door) const {
 	cube_t room_exp(room);
 	room_exp.expand_by_xy(get_wall_thickness());
 	// if zval was specified as nonzero, use it as the floor of the room, and calculate the ceiling
 	if (zval != 0.0) {set_cube_zvals(room_exp, zval, zval+get_floor_ceil_gap());}
 
-	for (tquad_with_ix_t const &d : doors) { // exterior doors
+	for (ext_door_t const &d : doors) { // exterior doors
 		if (!d.is_ext_not_roof_door()) continue;
 		
 		if (room_exp.contains_pt(d.get_bcube().get_cube_center())) {
@@ -3472,7 +3472,7 @@ bool building_t::is_room_adjacent_to_ext_door(cube_t const &room, float zval, bo
 	return 0;
 }
 bool building_t::cube_int_ext_door(cube_t const &c) const {
-	for (tquad_with_ix_t const &d : doors) { // exterior doors
+	for (ext_door_t const &d : doors) { // exterior doors
 		if (d.is_ext_not_roof_door() && c.intersects(d.get_bcube())) return 1;
 	}
 	return 0;

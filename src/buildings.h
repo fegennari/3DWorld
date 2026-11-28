@@ -136,6 +136,14 @@ struct tquad_with_ix_t : public tquad_t {
 };
 typedef vector<tquad_with_ix_t> vect_tquad_with_ix_t;
 
+struct ext_door_t : public tquad_with_ix_t {
+	bool to_courtyard=0, to_walkway=0, to_roof=0; // Notes: to_walkway also applies to skyways; on_roof is for doors opening onto the roof not from stairs
+	ext_door_t() {}
+	ext_door_t(tquad_with_ix_t const &tq) : tquad_with_ix_t(tq) {}
+	bool is_ground_floor() const {return (type != TYPE_RDOOR && !to_walkway && !to_roof);}
+};
+typedef vector<ext_door_t> vect_ext_door_t;
+
 struct vertex_range_t { // size=12
 	int draw_ix; // -1 is unset
 	unsigned start, end;
@@ -1739,7 +1747,8 @@ struct building_t : public building_geom_t {
 	vect_cube_t parts, fences;
 	vect_cube_with_ix_t skylights, gutters, roof_lights;
 	vect_roof_obj_t details; // cubes on the roof - antennas, AC units, etc.
-	vect_tquad_with_ix_t roof_tquads, doors;
+	vect_tquad_with_ix_t roof_tquads;
+	vect_ext_door_t doors;
 	vector<colored_sphere_t> ext_lights;
 	vector<vect_point> per_part_ext_verts; // only used for non-cube buildings
 	vector<ext_step_t> ext_steps;
@@ -1816,7 +1825,7 @@ struct building_t : public building_geom_t {
 	void get_garage_dim_dir(cube_t const &garage, bool &dim, bool &dir) const;
 	bool get_street_dim () const {return (street_dir ? ((street_dir-1) >> 1) : 0);}
 	bool get_street_side() const {return (street_dir ? ((street_dir-1) &  1) : 0);}
-	bool get_ext_door_hinge_side(tquad_with_ix_t const &door) const;
+	bool get_ext_door_hinge_side(ext_door_t const &door) const;
 	unsigned get_attic_part_ix   () const;
 	room_t const &get_retail_room() const {assert(interior && !interior->rooms.empty()); assert(has_retail()); return interior->rooms.front();} // always the first room
 	cube_t const &get_first_part () const {assert(!parts.empty()); return parts.front();}
@@ -1956,7 +1965,7 @@ struct building_t : public building_geom_t {
 	void add_solar_panels(rand_gen_t &rgen);
 	void add_sat_dish    (rand_gen_t &rgen);
 	void add_tv_antenna  (rand_gen_t &rgen);
-	bool add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_office_building, bool roof_access=0, bool courtyard=0, bool for_walkway=0);
+	bool add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_office_building, bool roof_access=0, bool to_courtyard=0, bool to_walkway=0, bool to_roof=0);
 	float gen_peaked_roof(cube_t const &top_, float peak_height, bool dim, float extend_to, float max_dz, unsigned skip_side_tri);
 	float gen_hipped_roof(cube_t const &top_, float peak_height, float extend_to);
 	float gen_sloped_roof_for_stacked_parts(cube_t const &bot, cube_t const &top);
@@ -2010,8 +2019,8 @@ struct building_t : public building_geom_t {
 	cube_t get_init_elevator_car(elevator_t const &elevator) const;
 	void add_stairs_and_elevators(rand_gen_t &rgen);
 	int get_ext_door_dir(cube_t const &door_bcube, bool dim) const;
-	bool add_sign_by_door(tquad_with_ix_t const &door, bool outside, std::string const &text, colorRGBA const &color, bool emissive);
-	void add_doorbell_lamp_and_porch_items(tquad_with_ix_t const &door, rand_gen_t &rgen);
+	bool add_sign_by_door(ext_door_t const &door, bool outside, std::string const &text, colorRGBA const &color, bool emissive);
+	void add_doorbell_lamp_and_porch_items(ext_door_t const &door, rand_gen_t &rgen);
 	void add_exterior_door_items(rand_gen_t &rgen);
 	unsigned get_street_house_number() const;
 	void gen_building_doors_if_needed(rand_gen_t &rgen);
@@ -2051,7 +2060,7 @@ struct building_t : public building_geom_t {
 	bool add_parking_structure_bathroom(rand_gen_t rgen);
 	void get_parking_struct_ext_walls(vect_cube_with_ix_t &walls, bool exterior_surfaces) const;
 	void register_open_ext_door_state(bool camera_near_building, point const &camera_bs, float door_open_dist);
-	int find_ext_door_close_to_point(tquad_with_ix_t &door, point const &pos, float dist) const;
+	int find_ext_door_close_to_point(ext_door_t &door, point const &pos, float dist) const;
 	bool point_near_ext_door(point const &pos, float dist=0.0) const;
 	bool get_building_door_pos_closest_to(point const &target_pos, point &door_pos, bool inc_garage_door, int mf_pref=2) const;
 	cube_t register_deck_and_get_part_bounds(cube_t const &deck);
@@ -2124,7 +2133,7 @@ struct building_t : public building_geom_t {
 	void update_stats(building_stats_t &s) const;
 	bool are_rooms_connected_without_using_room_or_door(unsigned room1, unsigned room2, unsigned room_exclude, int door_exclude=-1, float door_ex_zval=0.0) const;
 	bool is_room_on_critical_path(unsigned room_id, float zval) const;
-	bool is_room_adjacent_to_ext_door(cube_t const &room, float zval=0.0, bool front_door_only=0, tquad_with_ix_t *ext_door=nullptr) const;
+	bool is_room_adjacent_to_ext_door(cube_t const &room, float zval=0.0, bool front_door_only=0, ext_door_t *ext_door=nullptr) const;
 	bool cube_int_ext_door(cube_t const &c) const;
 	room_t const &get_room(unsigned room_ix) const {assert(interior); return interior->get_room(room_ix);}
 	room_t       &get_room(unsigned room_ix)       {assert(interior); return interior->get_room(room_ix);}
@@ -2304,7 +2313,7 @@ public:
 	cube_t get_full_basement_bcube  () const;
 	cube_t get_ext_basement_entrance() const;
 	cube_t get_best_occluder(point const &camera_bs) const;
-	cube_t get_step_for_ext_door(tquad_with_ix_t const &door, bool short_step=0) const;
+	cube_t get_step_for_ext_door(ext_door_t const &door, bool short_step=0) const;
 	bool interior_visible_from_other_building_ext_basement(vector3d const &xlate, bool expand_for_light=0) const;
 	bool top_of_mall_elevator_visible(point const &camera_bs, vector3d const &xlate) const;
 	bool can_have_basement() const;
@@ -2435,8 +2444,8 @@ private:
 	bool is_cube_contained_in_parts(cube_t const &c) const;
 	void expand_ground_floor_cube(cube_t &cube, cube_t const &skip=cube_t()) const;
 	void get_exclude_cube(point const &pos, cube_t const &skip, cube_t &exclude, bool camera_in_building) const;
-	void move_door_to_other_side_of_wall(tquad_with_ix_t &door, float dist_mult, bool invert_normal) const;
-	void clip_door_to_interior(tquad_with_ix_t &door) const;
+	void move_door_to_other_side_of_wall(ext_door_t &door, float dist_mult, bool invert_normal) const;
+	void clip_door_to_interior(ext_door_t &door) const;
 	void cut_holes_for_ext_doors(building_draw_t &bdraw, point const &contain_pt, unsigned draw_parts_mask, vect_cube_t const &clamp_cubes=vect_cube_t()) const;
 	bool is_valid_door_pos(cube_t const &door, float door_width, bool dim) const;
 	bool is_cube_close_to_exterior_doorway(cube_t const &c, float dmin=0.0, bool inc_open=0) const;
@@ -2638,7 +2647,7 @@ private:
 	void add_entryway_objs   (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	void add_shoes_by_door   (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	void add_coatrack_by_door(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
-	bool get_door_path_and_place_area(tquad_with_ix_t const &door, room_t const &room, cube_t &door_path, cube_t &place_area);
+	bool get_door_path_and_place_area(ext_door_t const &door, room_t const &room, cube_t &door_path, cube_t &place_area);
 	void add_couches_to_room (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned const counts[4]);
 	bool add_pool_room_objs  (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	void add_room_wall_tile(cube_t const &room, unsigned room_id, float tot_light_amt, unsigned tile_type);

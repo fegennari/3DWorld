@@ -168,8 +168,8 @@ point building_t::gen_animal_floor_pos(float radius, bool place_in_attic, bool n
 			room_t const &room(interior->rooms[room_ix]);
 			bool near_door(0);
 			
-			for (tquad_with_ix_t const &door : doors) { // exterior doors
-				if (door.type == tquad_with_ix_t::TYPE_RDOOR) continue; // ignore roof access doors
+			for (ext_door_t const &door : doors) { // exterior doors
+				if (!door.is_ground_floor()) continue; // ground floor doors only
 				cube_t door_bcube(door.get_bcube());
 				door_bcube.expand_by_xy(wall_thickness); // make sure it overlaps the room
 				if (!door_bcube.intersects(room)) continue;
@@ -1420,7 +1420,7 @@ bool building_t::update_spider_pos_orient(spider_t &spider, point const &camera_
 							// check for open exterior doors
 							bool on_open_door(0);
 
-							for (tquad_with_ix_t const &door : doors) {
+							for (ext_door_t const &door : doors) {
 								cube_t door_bc(door.get_bcube());
 								if (!door_bc.contains_pt_exp(query_pt, door_open_dist)) continue; // not open
 								door_bc.expand_in_dim(dim, spider.radius);

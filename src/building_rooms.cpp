@@ -751,7 +751,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, unsigned building_ix) {
 				cube_t room_exp(*r);
 				room_exp.expand_by_xy(wall_thickness);
 
-				for (tquad_with_ix_t const &d : doors) {
+				for (ext_door_t const &d : doors) {
+					if (!d.to_roof) continue;
 					cube_t const bc(d.get_bcube());
 					if (bc.z1() <= room_center.z && bc.z2() > room_center.z && bc.intersects(room_exp)) {has_ext_door = 1; break;}
 				}
@@ -1868,7 +1869,7 @@ void building_t::add_gutter_downspouts(vect_cube_t const &balconies) {
 			ds_exp.expand_in_dim(!dim, 4.0*ds_width); // add extra padding to avoid doorbells and lamps
 			bool door_int(0);
 
-			for (tquad_with_ix_t const &door : doors) {
+			for (ext_door_t const &door : doors) {
 				if (door.get_bcube().intersects(ds_exp)) {door_int = 1; break;}
 			}
 			if (door_int) continue;
@@ -2174,16 +2175,16 @@ bool building_t::maybe_has_ext_door_this_floor(float part_z1, unsigned floor_ix)
 	if (have_uppper_floor_door()) { // walkway doors can be added to stack parts and ranges of floors; roof doors can be added to stacked parts
 		float const floor_spacing(get_window_vspace()), fz1(part_z1 + floor_ix*floor_spacing), fz2(fz1 + floor_spacing);
 
-		for (tquad_with_ix_t const &d : doors) {
-			if (d.pts[0].z > fz1 && d.pts[0].z < fz2) return 1; // door is on this floor
+		for (ext_door_t const &d : doors) {
+			if (d.pts[0].z > fz1 && d.pts[0].z < fz2) return 1; // door is on this floor; should this only include ground floor doors?
 		}
 	}
 	return (part_z1 == ground_floor_z1 && (1 << floor_ix) & floor_ext_door_mask);
 }
 
-void cut_trim_around_doors(vect_tquad_with_ix_t const &doors, vect_cube_t &trim_cubes, float door_expand, bool dim) {
-	for (auto d = doors.begin(); d != doors.end(); ++d) {
-		cube_t door(d->get_bcube());
+void cut_trim_around_doors(vect_ext_door_t const &doors, vect_cube_t &trim_cubes, float door_expand, bool dim) {
+	for (ext_door_t const &d : doors) {
+		cube_t door(d.get_bcube());
 		bool const door_dim(door.dy() < door.dx());
 		if (door_dim != bool(dim)) continue;
 		door.expand_in_dim(door_dim, door_expand); // expand to nonzero area; use a larger expand to account for distance door is offset away from ext wall
@@ -2886,8 +2887,8 @@ void building_t::add_window_trim_and_coverings(bool add_trim, bool add_coverings
 					cube_t window_exp(window);
 					window_exp.expand_by_xy(window_trim_width);
 
-					for (tquad_with_ix_t const &d : doors) { // exterior doors
-						if (!d.is_ext_not_roof_door()) continue;
+					for (ext_door_t const &d : doors) { // exterior doors
+						if (!d.to_walkway && !d.to_roof) continue;
 						cube_t const door_bc(d.get_bcube());
 						if (!window_exp.intersects(door_bc)) continue;
 						at_walkway = 1;
@@ -3078,7 +3079,7 @@ void building_t::add_pool_trim() { // add ledge around the pool as wall trim
 	} // for dim
 }
 
-cube_t building_t::get_step_for_ext_door(tquad_with_ix_t const &door, bool short_step) const {
+cube_t building_t::get_step_for_ext_door(ext_door_t const &door, bool short_step) const {
 	cube_t const c(door.get_bcube());
 	bool const dim(c.dy() < c.dx()), dir(door.get_norm()[dim] > 0.0);
 	float length(((door.type == tquad_with_ix_t::TYPE_GDOOR) ? 0.6 : 0.5)*c.dz());
@@ -4046,7 +4047,7 @@ int building_t::get_ext_door_dir(cube_t const &door_bcube, bool dim) const { // 
 	return 2; // not found
 }
 
-void building_t::add_doorbell_lamp_and_porch_items(tquad_with_ix_t const &door, rand_gen_t &rgen) { // and porch packages
+void building_t::add_doorbell_lamp_and_porch_items(ext_door_t const &door, rand_gen_t &rgen) { // and porch packages
 	cube_t const door_bcube(door.get_bcube());
 	bool const dim(door_bcube.dy() < door_bcube.dx());
 	int const dir_ret(get_ext_door_dir(door_bcube, dim));
