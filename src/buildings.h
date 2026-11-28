@@ -1976,6 +1976,7 @@ struct building_t : public building_geom_t {
 	void add_smokestacks(rand_gen_t &rgen);
 	void maybe_add_skylight(rand_gen_t &rgen);
 	void add_company_sign(rand_gen_t &rgen);
+	void get_roof_door_avoid(vect_cube_t &avoid) const;
 	cube_t get_helipad_bcube() const;
 	int get_num_windows_on_side(float xy1, float xy2) const;
 	int get_num_windows_on_side(cube_t const &c, bool dim) const {return get_num_windows_on_side(c.d[dim][0], c.d[dim][1]);}

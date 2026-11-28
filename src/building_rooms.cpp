@@ -2000,6 +2000,8 @@ void building_t::add_rooftop_items(rand_gen_t rgen) {
 	bool const dim(rgen.rand_bool()); // consistent per table
 	vector3d pt_sz(pt_hwidth, pt_hdepth, pt_height);
 	if (dim) {swap(pt_sz.x, pt_sz.y);}
+	vect_cube_t avoid;
+	get_roof_door_avoid(avoid);
 
 	for (unsigned n = 0; n < num_tables; ++n) {
 		for (unsigned N = 0; N < 10; ++N) { // 10 placement tries
@@ -2007,7 +2009,7 @@ void building_t::add_rooftop_items(rand_gen_t rgen) {
 			gen_xy_pos_for_cube_obj(table, place_area, pt_sz, pt_height, rgen, 1); // place_at_z1=1
 			cube_t table_exp(table);
 			table_exp.expand_by_xy(pt_spacing);
-			if (has_bcube_int(table_exp, details) || interior->is_blocked_by_stairs_or_elevator(table_exp)) continue; // check roof objects (inc other tables) and stairs
+			if (has_bcube_int(table_exp, details) || has_bcube_int(table_exp, avoid) || interior->is_blocked_by_stairs_or_elevator(table_exp)) continue; // check roof objs, doors, and stairs
 			int const room_id(get_room_containing_pt(point(table.xc(), table.yc(), (best_roof.z1() - 0.5*floor_spacing)))); // use the room under the roof
 			objs.emplace_back(table, TYPE_PICNIC, max(room_id, 0), dim, 0, RO_FLAG_EXTERIOR, 1.0); // Note: doesn't cast an exterior shadow
 			details.emplace_back(table, DETAIL_OBJ_COLLIDER); // for player collision

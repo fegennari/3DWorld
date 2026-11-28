@@ -2579,7 +2579,7 @@ void building_t::gen_details(rand_gen_t &rgen, unsigned num_levels, bool is_rect
 		avoid_bcube = details.back();
 		// Note: orient is chosen to point away from the roof later later since there's no dim/dir in roof objects
 	}
-	for (unsigned i = 0; i < num_blocks; ++i) {
+	for (unsigned i = 0; i < num_blocks; ++i) { // place blocks; top roof only, don't need to avoid roof access doors from higher parts
 		roof_obj_t c(ROOF_OBJ_BLOCK); // generic block
 		float const height_scale(0.0035f*(tsz.z + bcube.dz())); // based on avg height of current section and entire building
 		float height(height_scale*rgen.rand_uniform(1.0, 4.0));
@@ -2641,6 +2641,7 @@ void building_t::gen_details(rand_gen_t &rgen, unsigned num_levels, bool is_rect
 		for (cube_t const &s : skylights) {ac_avoid.push_back(s); ac_avoid.back().expand_in_z(0.25*window_vspacing);} // avoid skylights
 		if (!avoid_bcube .is_all_zeros()) {ac_avoid.push_back(avoid_bcube );}
 		if (!door_blocker.is_all_zeros()) {ac_avoid.push_back(door_blocker);}
+		get_roof_door_avoid(ac_avoid);
 		place_roof_ac_units(num_ac_units, xy_sz*rgen.rand_uniform(0.012, 0.02), bounds, ac_avoid, rgen);
 	}
 	if (add_walls) {
@@ -2651,6 +2652,17 @@ void building_t::gen_details(rand_gen_t &rgen, unsigned num_levels, bool is_rect
 	if (add_smokestack) {add_smokestacks(rgen);}
 	for (roof_obj_t const &o : details) {assert(o.is_strictly_normalized()); max_eq(bcube.z2(), o.z2());} // extend bcube z2 to contain details
 	if (has_flat_top) {gen_grayscale_detail_color(rgen, 0.2, 0.6);} // for antenna and roof
+}
+
+void building_t::get_roof_door_avoid(vect_cube_t &avoid) const {
+	if (!have_rooftop_door) return;
+
+	for (ext_door_t const &door : doors) { // avoid roof access doors, with a border
+		if (!door.to_roof) continue;
+		cube_t door_exp(door.get_bcube());
+		door_exp.expand_by_xy(max(door_exp.dx(), door_exp.dy())); // expand by doorway width
+		avoid.push_back(door_exp);
+	}
 }
 
 cube_t building_t::get_helipad_bcube() const {
