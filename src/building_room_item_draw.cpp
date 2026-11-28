@@ -2045,6 +2045,14 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, shader_t &am
 	
 	if (draw_ext_only) {
 		draw_bcube_xlate = zero_vector;
+		if (!bbd_in || shadow_only || reflection_pass || is_rotated || player_in_basement) return; // models not drawn in these cases
+
+		for (auto i = obj_model_insts.begin(); i != obj_model_insts.end(); ++i) { // draw exterior object models
+			room_object_t &obj(get_room_object_by_index(i->obj_id));
+			if (!obj.is_exterior() || !camera_pdu.cube_visible(obj + xlate)) continue;
+			if (check_occlusion && building.check_obj_occluded(obj, camera_bs, oc, reflection_pass)) continue;
+			bbd_in->models_to_draw.emplace_back(*i, obj);
+		}
 		return; // done
 	}
 	bool const disable_cull_face(0); // better but slower?
