@@ -3121,14 +3121,13 @@ void building_t::add_ext_door_steps(unsigned ext_objs_start) {
 	vect_room_object_t &objs(interior->room_geom->objs);
 	vector<unsigned> to_add_stairs;
 
-	// add step at the base of each exterior door
-	for (auto const &d : doors) {
-		if (d.type == tquad_with_ix_t::TYPE_RDOOR) continue; // skip roof access door
+	// add step at the base of each exterior door; includes house upper floor doors and office building rooftop doors
+	for (ext_door_t const &d : doors) {
+		if (d.type == tquad_with_ix_t::TYPE_RDOOR || d.to_walkway) continue; // skip roof access and walkway doors
 		cube_t const c(d.get_bcube());
-		bool const above_ground(c.z1() > ground_floor_z1 + 2.0*fc_thickness);
+		bool const above_ground(!d.to_roof && c.z1() > ground_floor_z1 + 2.0*fc_thickness); // house doors only
 		bool const dim(c.dy() < c.dx()), dir(d.get_norm()[dim] > 0.0);
 		bool const is_garage(d.type == tquad_with_ix_t::TYPE_GDOOR);
-		if (above_ground &&  !d.is_house_ext_door()) continue; // only house exterior doors above ground have stairs; office buildings have walkways
 		cube_t step(get_step_for_ext_door(d));
 		// skip if over a pool deck? but we don't have that info here
 		point const step_center(step.get_cube_center());
