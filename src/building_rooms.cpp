@@ -1982,9 +1982,15 @@ void building_t::add_rooftop_items(rand_gen_t rgen) {
 	float best_score(0.0);
 
 	for (cube_t const &r : roofs) {
-		float const score(r.get_area_xy()*(has_bcube_int_no_adj(r, interior->stairwells) ? 4 : 1));
+		if (min(r.dx(), r.dy()) < 4.0*floor_spacing) continue; // too small/narrow
+		float score(r.get_area_xy());
+		if (has_bcube_int_no_adj(r, interior->stairwells)) {score *= 4.0;}
+
+		for (ext_door_t const &d : doors) {
+			if (d.to_roof && d.get_bcube().intersects(r)) {score *= 4.0;}
+		}
 		if (score > best_score) {best_roof = r; best_score = score;}
-	}
+	} // for r
 	bool const add_umbrellas(building_obj_model_loader.is_model_valid(OBJ_MODEL_BIG_UMBRELLA) && rgen.rand_bool()); // 50% of the time
 	float const umbrella_radius(min(pt_hwidth, pt_hdepth) + 0.6*pt_spacing);
 	float umbrella_height(0.0);
