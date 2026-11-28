@@ -1962,7 +1962,7 @@ struct building_t : public building_geom_t {
 	float gen_sloped_roof_for_stacked_parts(cube_t const &bot, cube_t const &top);
 	void place_roof_ac_units(unsigned num, float sz_scale, cube_t const &bounds, vect_cube_t const &avoid, rand_gen_t &rgen);
 	void add_roof_walls(cube_t const &c, float wall_width, bool overlap_corners, cube_t out[4]);
-	void gen_details(rand_gen_t &rgen, bool is_rectangle);
+	void gen_details(rand_gen_t &rgen, unsigned num_levels, bool is_rectangle);
 	cube_t get_flat_roof_section_bcube() const;
 	void add_smokestacks(rand_gen_t &rgen);
 	void maybe_add_skylight(rand_gen_t &rgen);

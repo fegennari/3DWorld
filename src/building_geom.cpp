@@ -328,7 +328,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 				btype = BTYPE_PRISON; // large, single level cube; copy rgen
 				assign_name(rgen); // re-assign a name
 			}
-			gen_details(rgen, 0);
+			gen_details(rgen, num_levels, 0);
 		}
 		else { // single part, entire cube/cylinder
 			parts.push_back(base);
@@ -371,7 +371,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 				parts.push_back(base);
 				parts[0].z2() = parts[1].z1() = base.z1() + retail_floor_levels*floor_spacing; // split in Z: parts[0] is the bottom, parts[1] is the top
 			}
-			gen_details(rgen, 1);
+			gen_details(rgen, num_levels, 1);
 		}
 		finish_gen_geometry(rgen, 0);
 		return; // for now the bounding cube
@@ -428,7 +428,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 			parts.shrink_to_fit(); // optional
 			std::reverse(parts.begin(), parts.end()); // highest part should be last so that it gets the roof details (remember to update basement_part_ix if needed)
 			calc_bcube_from_parts(); // update bcube
-			gen_details(rgen, 1);
+			gen_details(rgen, num_levels, 1);
 			finish_gen_geometry(rgen, 1);
 			return;
 		}
@@ -495,11 +495,11 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 	if (do_split && split_cube.dx() > 0.4*bcube.dx() && split_cube.dy() > 0.4*bcube.dy()) { // generate L, T, or U shape for top level if not too small
 		parts.pop_back();
 		split_in_xy(split_cube, rgen);
-		if (num_levels <= 3) {gen_details(rgen, 0);}
+		gen_details(rgen, num_levels, 0);
 	}
 	else {
 		if (was_custom_placed || (rgen.rand()&3) != 0) {maybe_add_special_roof(rgen);} // 67% chance
-		if (num_levels <= 3) {gen_details(rgen, 1);}
+		gen_details(rgen, num_levels, 1);
 	}
 	finish_gen_geometry(rgen, 0);
 }
@@ -2436,11 +2436,12 @@ void merge_cubes_xy(vect_cube_t &cubes) {
 	} // for i
 }
 
-void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the roof; office buildings, not houses
+void building_t::gen_details(rand_gen_t &rgen, unsigned num_levels, bool is_rectangle) { // for the roof; office buildings, not houses
 
 	bool const flat_roof(roof_type == ROOF_TYPE_FLAT), add_walls(is_cube() && flat_roof); // simple cube buildings with flat roofs
 	cube_t flat_roof_area(get_flat_roof_section_bcube());
 	bool const has_flat_upper_roof(!flat_roof_area.is_all_zeros()), has_flat_top(flat_roof || has_flat_upper_roof);
+	bool const many_levels(num_levels > 3); // fewer roof details for many level buildings
 	unsigned num_ac_units(0); // cube buildings only for now, no parking structures; 0-8 for industrial, otherwise 0-6
 	
 	if (has_flat_top && is_cube() && !is_parking()) {
@@ -2533,12 +2534,12 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 	bool const add_rooftop_door(!is_cube() && has_complex_floorplan /*&& has_helipad*/); // add if there's no interior/stairs to the roof
 	unsigned num_blocks(0);
 	
-	if (flat_roof && !is_parking() && !is_datacenter()) { // no roof blocks if there are roof quads (houses, etc.), or this is a parking garage or data center
+	if (flat_roof && !is_parking() && !is_datacenter() && !many_levels) { // no roof blocks if there are roof quads (houses, etc.), or this is a parking garage or data center
 		num_blocks = (rgen.rand() % 9); // 0-8
 		if (add_rooftop_door) {max_eq(num_blocks, 1U);} // at least one for the door
 	}
-	bool const add_antenna((flat_roof || roof_type == ROOF_TYPE_SLOPE) && !has_helipad && !is_parking() && rgen.rand_bool());
-	bool const can_add_special_obj(has_flat_top && !has_helipad && !add_antenna && !is_parking() && skylights.empty()); // open roof space with no blocker
+	bool const add_antenna((flat_roof || roof_type == ROOF_TYPE_SLOPE) && !has_helipad && !is_parking() && !many_levels && rgen.rand_bool());
+	bool const can_add_special_obj(has_flat_top && !has_helipad && !add_antenna && !is_parking() && skylights.empty() && !many_levels); // open roof space with no blocker
 	bool const add_water_tower(can_add_special_obj && !is_datacenter() && (tsz.x < 2.0*tsz.y && tsz.y < 2.0*tsz.x) && (tsz.x > 0.5*tpsz.x && tsz.y > 0.5*tpsz.y) && rgen.rand_bool());
 	bool const add_sat_dish(can_add_special_obj && !add_water_tower && is_cube() && !is_industrial());
 	bool const add_smokestack(is_heavy_industrial() /*&& roof_type != ROOF_TYPE_CURVED*/); // for all roof types?
